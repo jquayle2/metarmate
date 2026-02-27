@@ -53,7 +53,7 @@ struct FlyingWeatherIntent: AppIntent {
         let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
 
         // 5. Derive trend
-        let trend = WeatherTrendAnalyzer.derive(metar: metar, taf: taf)
+        let trend: WeatherTrend? = taf != nil ? WeatherTrend.derive(metar: metar, taf: taf) : nil
 
         // 6. Build spoken dialog
         let dialog = buildDialog(airportName: airport.name, metar: metar, taf: taf, trend: trend)
@@ -68,7 +68,7 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     // MARK: - Dialog Builder
-    private func buildDialog(airportName: String, metar: Metar, taf: Taf?, trend: WeatherTrend) -> String {
+    private func buildDialog(airportName: String, metar: Metar, taf: Taf?, trend: WeatherTrend?) -> String {
         var parts: [String] = []
 
         // Category
@@ -92,8 +92,8 @@ struct FlyingWeatherIntent: AppIntent {
         parts.append(windPhrase(metar.wind))
 
         // Trend
-        if taf != nil && trend != .unknown {
-            parts.append("Conditions are \(trend.spokenDescription).")
+        if let trend = trend, taf != nil, trend.overall != .unknown {
+            parts.append("Conditions are \(trend.overall.rawValue.lowercased()).")
         } else {
             parts.append("No forecast available for trend.")
         }
