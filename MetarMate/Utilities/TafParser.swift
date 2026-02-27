@@ -55,8 +55,8 @@ struct TafParser {
             // Clouds — API returns full cloud data in TAF forecasts
             let clouds = parseClouds(dict)
 
-            // Flight category
-            let cat = FlightCategory(rawValue: dict["fltCat"]?.value as? String ?? "") ?? .unknown
+            // Calculate flight category from visibility and ceiling
+            let cat = calculateFlightCategory(visibility: vis, clouds: clouds)
 
             // Weather phenomena
             let wx = (dict["wxString"]?.value as? String)?.components(separatedBy: " ").filter { !$0.isEmpty } ?? []
@@ -144,5 +144,30 @@ struct TafParser {
         if let date = formatter.date(from: str) { return date }
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: str)
+    }
+
+    // MARK: - Flight category from visibility + ceiling
+    nonisolated private static func calculateFlightCategory(visibility: Double?, clouds: [CloudLayer]) -> FlightCategory {
+        let vis = visibility ?? 10.0
+
+        // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count)
+        let ceilingFeet: Int? = clouds
+            .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
+            .map { $0.altitude * 100 }
+
+        // LIFR: ceiling < 500 OR visibility < 1
+        if let ceil = ceilingFeet, ceil < 500 { return .lifr }
+        if vis < 1.0 { return .lifr }
+
+        // IFR: ceiling 500-999 OR visibility 1-2.99
+        if let ceil = ceilingFeet, ceil < 1000 { return .ifr }
+        if vis < 3.0 { return .ifr }
+
+        // MVFR: ceiling 1000-3000 OR visibility 3-5
+        if let ceil = ceilingFeet, ceil <= 3000 { return .mvfr }
+        if vis <= 5.0 { return .mvfr }
+
+        // VFR: ceiling > 3000 AND visibility > 5
+        return .vfr
     }
 }
