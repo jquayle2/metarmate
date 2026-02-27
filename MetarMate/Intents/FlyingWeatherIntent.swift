@@ -8,8 +8,7 @@ import SwiftUI
 struct FlyingWeatherIntent: AppIntent {
     static var title: LocalizedStringResource = "Check Flying Weather"
     static var description = IntentDescription(
-        "Get current METAR and weather trend for your nearest airport.",
-        categoryName: .information
+        "Get current METAR and weather trend for your nearest airport."
     )
 
     // No parameters — location is resolved automatically
@@ -30,7 +29,7 @@ struct FlyingWeatherIntent: AppIntent {
         }
 
         // 2. Find nearest airport
-        let airports = AirportService.shared.nearest(to: location, count: 1)
+        let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
         guard let airport = airports.first else {
             return .result(
                 dialog: "I couldn't find a nearby airport. Make sure you're within range of a reporting station.",

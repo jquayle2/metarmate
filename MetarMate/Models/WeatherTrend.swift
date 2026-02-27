@@ -28,7 +28,7 @@ struct WeatherTrend: Codable {
     var summaryText: String
 
     // Derive from a METAR + TAF pair
-    static func derive(metar: Metar, taf: Taf?) -> WeatherTrend {
+    nonisolated static func derive(metar: Metar, taf: Taf?) -> WeatherTrend {
         guard let taf = taf, let current = taf.currentForecast,
               let next = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) else {
             return WeatherTrend(visibility: .unknown, ceiling: .unknown,
