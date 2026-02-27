@@ -3,7 +3,7 @@ import Foundation
 // MARK: - METAR Parser
 // Parses raw aviationweather.gov JSON responses into Metar structs
 struct MetarParser {
-    static func parse(raw: RawMetar) throws -> Metar {
+    nonisolated static func parse(raw: RawMetar) throws -> Metar {
         guard let icao = raw.icaoId else { throw WeatherError.parseError("Missing station ID") }
         guard let rawText = raw.rawOb else { throw WeatherError.parseError("Missing raw METAR text") }
 
@@ -41,7 +41,7 @@ struct MetarParser {
     }
 
     // MARK: - Private helpers
-    private static func parseWind(wdir: String?, wspd: Int?, wgst: Int?) -> Wind {
+    nonisolated private static func parseWind(wdir: String?, wspd: Int?, wgst: Int?) -> Wind {
         let speed = wspd ?? 0
         let gust = wgst
         if wdir == "VRB" {
@@ -51,13 +51,13 @@ struct MetarParser {
         return Wind(direction: dir, speed: speed, gust: gust, isVariable: false)
     }
 
-    private static func parseVisibility(_ vis: String?) -> Double {
+    nonisolated private static func parseVisibility(_ vis: String?) -> Double {
         guard let vis = vis else { return 10.0 }
         if vis == "10+" { return 10.0 }
         return Double(vis) ?? 10.0
     }
 
-    private static func parseClouds(_ clouds: [[String: AnyCodable]]?) -> [CloudLayer] {
+    nonisolated private static func parseClouds(_ clouds: [[String: AnyCodable]]?) -> [CloudLayer] {
         guard let clouds = clouds else { return [] }
         return clouds.compactMap { dict -> CloudLayer? in
             guard let coverageStr = dict["cover"]?.value as? String,
@@ -68,7 +68,7 @@ struct MetarParser {
         }
     }
 
-    private static func parseWeatherPhenomena(_ raw: String) -> [String] {
+    nonisolated private static func parseWeatherPhenomena(_ raw: String) -> [String] {
         let wxCodes = ["TS", "RA", "SN", "GR", "BR", "FG", "HZ", "DU", "SA",
                        "FC", "SQ", "SS", "DS", "FU", "VA", "PL", "GS", "IC", "UP"]
         let tokens = raw.components(separatedBy: " ")

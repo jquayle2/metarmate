@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - TAF Parser
 struct TafParser {
-    static func parse(raw: RawTaf) throws -> Taf {
+    nonisolated static func parse(raw: RawTaf) throws -> Taf {
         guard let icao = raw.icaoId else { throw WeatherError.parseError("Missing station ID") }
         guard let rawText = raw.rawTAF else { throw WeatherError.parseError("Missing raw TAF text") }
 
@@ -29,7 +29,7 @@ struct TafParser {
     }
 
     // MARK: - Parse forecast periods from the fcsts array
-    private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]], rawText: String) -> [TafForecast] {
+    nonisolated private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]], rawText: String) -> [TafForecast] {
         return fcsts.compactMap { dict -> TafForecast? in
             guard let fromEpoch = dict["timeFrom"]?.value as? Int,
                   let toEpoch = dict["timeTo"]?.value as? Int else { return nil }
@@ -69,7 +69,7 @@ struct TafParser {
         }
     }
 
-    private static func parseDate(_ str: String) -> Date? {
+    nonisolated private static func parseDate(_ str: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         return formatter.date(from: str)
     }
