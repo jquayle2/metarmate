@@ -212,16 +212,16 @@ private enum IntentLocationError: Error {
 private final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation, Error>?
-    private var timer: Timer?
+    private var timeoutTask: Task<Void, Never>?
+
+    // Static strong reference to keep the helper alive during the async call
+    private static var activeHelper: IntentLocationHelper?
 
     static func currentLocation() async throws -> CLLocation {
         try await withCheckedThrowingContinuation { continuation in
             let helper = IntentLocationHelper()
+            activeHelper = helper
             helper.start(continuation: continuation)
-            // Retain helper for the duration of the async call
-            Task { @MainActor in
-                _ = helper // keep alive
-            }
         }
     }
 
@@ -236,19 +236,23 @@ private final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @
             return
         }
 
-        // 5-second timeout
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { [weak self] _ in
-            self?.finish(with: .failure(IntentLocationError.timeout))
+        // 5-second timeout using Task.sleep instead of Timer (no run loop needed)
+        timeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if !Task.isCancelled {
+                self?.finish(with: .failure(IntentLocationError.timeout))
+            }
         }
 
         manager.requestLocation()
     }
 
     private func finish(with result: Result<CLLocation, Error>) {
-        timer?.invalidate()
-        timer = nil
+        timeoutTask?.cancel()
+        timeoutTask = nil
         guard let continuation else { return }
         self.continuation = nil
+        Self.activeHelper = nil
         continuation.resume(with: result)
     }
 
