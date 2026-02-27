@@ -17,13 +17,86 @@ enum TrendDirection: String, Codable {
     }
 }
 
-// MARK: - Shared trend comparison
-private func trendFor(old: Double, new: Double, higherIsBetter: Bool) -> TrendDirection {
-    let threshold = max(abs(old) * 0.1, 1.0)
-    let delta = new - old
-    if abs(delta) < threshold { return .steady }
-    let improving = higherIsBetter ? delta > 0 : delta < 0
-    return improving ? .improving : .deteriorating
+// MARK: - Aviation-aware trend helpers
+// These use operationally meaningful thresholds instead of raw percentages.
+// A ceiling dropping from 30,000 to 25,000 doesn't matter.
+// A ceiling dropping from 2,000 to 1,200 absolutely matters.
+
+private enum TrendThresholds {
+    // Ceiling: only flag changes that cross or approach flight category boundaries
+    // VFR > 3000, MVFR 1000-3000, IFR 500-1000, LIFR < 500
+    static func ceilingTrend(old: Int?, new: Int?) -> TrendDirection {
+        let oldFt = old ?? 99900
+        let newFt = new ?? 99900
+
+        // Both above 5000 — nobody cares
+        if oldFt > 5000 && newFt > 5000 { return .steady }
+
+        // Both are "no ceiling" (clear/FEW/SCT only)
+        if oldFt >= 99000 && newFt >= 99000 { return .steady }
+
+        let delta = newFt - oldFt
+
+        // When ceilings are lower, smaller changes matter more
+        let threshold: Int
+        if min(oldFt, newFt) < 1000 {
+            threshold = 200   // sub-IFR: 200ft matters
+        } else if min(oldFt, newFt) < 3000 {
+            threshold = 500   // MVFR range: 500ft matters
+        } else {
+            threshold = 1000  // VFR: need 1000ft change to care
+        }
+
+        if abs(delta) < threshold { return .steady }
+        return delta > 0 ? .improving : .deteriorating
+    }
+
+    // Visibility: only flag changes that cross or approach category boundaries
+    // VFR > 5, MVFR 3-5, IFR 1-3, LIFR < 1
+    static func visibilityTrend(old: Double, new: Double) -> TrendDirection {
+        // Both 6+ SM — great vis, don't care about small changes
+        if old >= 6.0 && new >= 6.0 { return .steady }
+
+        let delta = new - old
+
+        // When vis is low, smaller changes matter more
+        let threshold: Double
+        if min(old, new) < 1.0 {
+            threshold = 0.25  // sub-LIFR: quarter mile matters
+        } else if min(old, new) < 3.0 {
+            threshold = 0.5   // IFR range: half mile matters
+        } else if min(old, new) < 5.0 {
+            threshold = 1.0   // MVFR range: 1 mile matters
+        } else {
+            threshold = 2.0   // VFR: need 2 mile change to care
+        }
+
+        if abs(delta) < threshold { return .steady }
+        return delta > 0 ? .improving : .deteriorating
+    }
+
+    // Wind: flag when operationally significant
+    // Light winds < 10kt — most pilots don't care about changes
+    // Moderate 10-20kt — changes of 5+ kt matter
+    // Strong > 20kt — any increase matters
+    static func windTrend(old: Int, new: Int) -> TrendDirection {
+        let delta = new - old
+
+        // Both light and calm — doesn't matter
+        if old <= 10 && new <= 10 { return .steady }
+
+        // Threshold scales with wind speed
+        let threshold: Int
+        if max(old, new) > 20 {
+            threshold = 3    // strong winds: 3kt change matters
+        } else {
+            threshold = 5    // moderate winds: 5kt change matters
+        }
+
+        if abs(delta) < threshold { return .steady }
+        // For wind, increasing = deteriorating
+        return delta > 0 ? .deteriorating : .improving
+    }
 }
 
 // MARK: - Observed Trend (derived from METAR history)
@@ -49,24 +122,13 @@ struct ObservedTrend: Codable {
         let newest = metars.first!
         let oldest = metars.last!
 
-        // Visibility trend
-        let visTrend = trendFor(
-            old: oldest.visibility,
-            new: newest.visibility,
-            higherIsBetter: true
-        )
+        let visTrend = TrendThresholds.visibilityTrend(old: oldest.visibility, new: newest.visibility)
+        let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
 
-        // Ceiling trend — use ceiling in feet, treat nil (no ceiling) as 99900
-        let oldCeiling = Double(oldest.ceilingFeet ?? 99900)
-        let newCeiling = Double(newest.ceilingFeet ?? 99900)
-        let ceilTrend = trendFor(old: oldCeiling, new: newCeiling, higherIsBetter: true)
+        let oldWind = oldest.wind.gust ?? oldest.wind.speed
+        let newWind = newest.wind.gust ?? newest.wind.speed
+        let windTrend = TrendThresholds.windTrend(old: oldWind, new: newWind)
 
-        // Wind trend — compare effective wind (use gust if present)
-        let oldWind = Double(oldest.wind.gust ?? oldest.wind.speed)
-        let newWind = Double(newest.wind.gust ?? newest.wind.speed)
-        let windTrend = trendFor(old: oldWind, new: newWind, higherIsBetter: false)
-
-        // Overall: weight visibility and ceiling more heavily than wind
         let overall = deriveOverall(visibility: visTrend, ceiling: ceilTrend, wind: windTrend)
 
         let hoursSpan = newest.observationTime.timeIntervalSince(oldest.observationTime) / 3600
@@ -86,9 +148,11 @@ struct ObservedTrend: Codable {
 
         if critical.contains(.deteriorating) { return .deteriorating }
         if critical.allSatisfy({ $0 == .improving }) { return .improving }
-        if critical.allSatisfy({ $0 == .steady || $0 == .unknown }) { return .steady }
-
-        // Mixed — one improving, one steady
+        if critical.allSatisfy({ $0 == .steady || $0 == .unknown }) {
+            // If vis and ceiling are steady but wind is deteriorating significantly, note it
+            if wind == .deteriorating { return .steady }
+            return .steady
+        }
         if critical.contains(.improving) && !critical.contains(.deteriorating) { return .improving }
 
         return .steady
@@ -115,20 +179,17 @@ struct ForecastTrend: Codable {
             )
         }
 
-        // Compare current conditions to next TAF period
-        let visTrend = trendFor(
+        let visTrend = TrendThresholds.visibilityTrend(
             old: metar.visibility,
-            new: next.visibility ?? metar.visibility,
-            higherIsBetter: true
+            new: next.visibility ?? metar.visibility
         )
 
-        let currentCeiling = Double(metar.ceilingFeet ?? 99900)
-        let nextCeiling = Double(ceilingFromClouds(next.clouds) ?? 99900)
-        let ceilTrend = trendFor(old: currentCeiling, new: nextCeiling, higherIsBetter: true)
+        let nextCeiling = ceilingFromClouds(next.clouds)
+        let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: nextCeiling)
 
-        let currentWind = Double(metar.wind.gust ?? metar.wind.speed)
-        let nextWind = Double(next.wind?.gust ?? next.wind?.speed ?? metar.wind.speed)
-        let windTrend = trendFor(old: currentWind, new: nextWind, higherIsBetter: false)
+        let currentWind = metar.wind.gust ?? metar.wind.speed
+        let nextWind = next.wind?.gust ?? next.wind?.speed ?? metar.wind.speed
+        let windTrend = TrendThresholds.windTrend(old: currentWind, new: nextWind)
 
         let critical = [visTrend, ceilTrend]
         let overall: TrendDirection
@@ -164,7 +225,6 @@ struct WeatherTrend: Codable {
         let observed = ObservedTrend.derive(from: metars)
         let forecast = ForecastTrend.derive(metar: currentMetar, taf: taf)
 
-        // Overall: if both agree, use that; if they disagree, lean toward the worse signal
         let overall: TrendDirection
         if observed.overall == forecast.overall {
             overall = observed.overall
