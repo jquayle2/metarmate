@@ -8,7 +8,7 @@ extension FlightCategory {
         case .vfr: return .green
         case .mvfr: return .blue
         case .ifr: return .red
-        case .lifr: return Color(red: 0.5, green: 0, blue: 0.5)
+        case .lifr: return Color(red: 0.84, green: 0, blue: 0.98)
         case .unknown: return .gray
         }
     }
@@ -34,6 +34,8 @@ extension Double {
 // MARK: - Int - Altitude formatting
 extension Int {
     nonisolated var altitudeFeetString: String { "\(self.formatted()) ft AGL" }
+
+    nonisolated var formattedAltitude: String { self.formatted() }
 }
 
 // MARK: - Date - METAR time display

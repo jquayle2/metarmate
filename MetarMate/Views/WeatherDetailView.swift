@@ -66,6 +66,11 @@ struct WeatherDetailView: View {
                     observationTimeView(metar)
                 }
             }
+            if airport.elevation != 0 {
+                Text("Elev \(airport.elevation.formatted()) ft MSL")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -73,10 +78,12 @@ struct WeatherDetailView: View {
     }
 
     private func observationTimeView(_ metar: Metar) -> some View {
-        let minutes = Int(Date().timeIntervalSince(metar.observationTime) / 60)
-        return Text("Observed \(minutes) min ago")
-            .font(.caption)
-            .foregroundColor(metar.isOld ? Color.red : .secondary)
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let minutes = Int(context.date.timeIntervalSince(metar.observationTime) / 60)
+            Text("Observed \(minutes) min ago")
+                .font(.caption)
+                .foregroundColor(metar.isOld ? Color.red : .secondary)
+        }
     }
 
     // MARK: - Raw METAR
@@ -96,7 +103,7 @@ struct WeatherDetailView: View {
     private func decodedConditionsSection(_ metar: Metar) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Conditions")
-            conditionRow("wind.fill", "Wind", windText(metar.wind))
+            conditionRow("wind", "Wind", windText(metar.wind))
             conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility))
             conditionRow("cloud.fill", "Ceiling", ceilingText(metar))
             if !metar.clouds.isEmpty {
@@ -142,7 +149,8 @@ struct WeatherDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(layers.indices, id: \.self) { i in
                     let layer = layers[i]
-                    Text("\(layer.coverage.rawValue) \(layer.altitude * 100) ft\(layer.isCumulonimbus ? " CB" : "")")
+                    let alt = (layer.altitude * 100).formatted()
+                    Text("\(layer.coverage.rawValue) \(alt) ft\(layer.isCumulonimbus ? " CB" : "")")
                         .font(.subheadline)
                 }
             }
@@ -255,12 +263,12 @@ struct WeatherDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 if let vis = period.visibility {
-                    Text("Vis: \(vis >= 10 ? "10+SM" : "\(String(format: "%g", vis))SM")")
+                    Text("Vis: \(vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM")")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 if !period.clouds.isEmpty {
-                    Text(period.clouds.map { "\($0.coverage.rawValue) \($0.altitude * 100)" }.joined(separator: " · "))
+                    Text(period.clouds.map { "\($0.coverage.rawValue) \(($0.altitude * 100).formatted())" }.joined(separator: " · "))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -327,7 +335,7 @@ struct WeatherDetailView: View {
     }
 
     private func ceilingText(_ metar: Metar) -> String {
-        guard let ceiling = metar.ceilingFeet else { return "Clear" }
+        guard let ceiling = metar.ceilingFeet else { return "Clear / No ceiling" }
         let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
         let coverage = layer?.coverage == .overcast ? "Overcast" : "Broken"
         return "\(coverage) at \(ceiling.formatted()) ft"
