@@ -1,30 +1,43 @@
 import SwiftUI
 
 struct SearchView: View {
-    @EnvironmentObject var airportVM: AirportViewModel
+    @EnvironmentObject private var airportVM: AirportViewModel
+    @State private var searchText = ""
 
     var body: some View {
         NavigationStack {
-            List {
-                if airportVM.searchText.isEmpty {
-                    ContentUnavailableView(
-                        "Search Airports",
-                        systemImage: "magnifyingglass",
-                        description: Text("Search by ICAO, IATA code, or airport name.")
-                    )
+            Group {
+                if searchText.count < 2 {
+                    VStack(spacing: 12) {
+                        Image(systemName: "airplane.departure")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text("Search Airports")
+                            .font(.headline)
+                        Text("Enter an ICAO code, IATA code, or airport name")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if airportVM.searchResults.isEmpty {
-                    Text("No airports found for \"\(airportVM.searchText)\"")
-                        .foregroundStyle(.secondary)
+                    ContentUnavailableView.search(text: searchText)
                 } else {
-                    ForEach(airportVM.searchResults) { airport in
+                    List(airportVM.searchResults) { airport in
                         NavigationLink(destination: WeatherDetailView(airport: airport)) {
                             AirportRowView(airport: airport, metar: nil, distance: nil)
                         }
+                        .listRowBackground(Color(.systemGray6).opacity(0.2))
                     }
+                    .listStyle(.plain)
                 }
             }
             .navigationTitle("Search")
-            .searchable(text: $airportVM.searchText, prompt: "KLAS, LAX, Denver…")
+            .searchable(text: $searchText, prompt: "ICAO, IATA, or airport name")
+            .onChange(of: searchText) {
+                airportVM.searchText = searchText
+            }
         }
     }
 }

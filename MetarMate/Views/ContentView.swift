@@ -9,9 +9,10 @@ struct ContentView: View {
         TabView {
             NearestAirportsView()
                 .tabItem {
-                    Label("Nearest", systemImage: "location.fill")
+                    Label("Nearest", systemImage: "location.circle.fill")
                 }
                 .environmentObject(airportVM)
+                .environmentObject(locationService)
 
             SearchView()
                 .tabItem {
@@ -23,8 +24,8 @@ struct ContentView: View {
                 .tabItem {
                     Label("Favorites", systemImage: "star.fill")
                 }
-                .environmentObject(airportVM)
         }
+        .preferredColorScheme(.dark)
         .onAppear {
             locationService.requestPermission()
             locationService.startUpdating()
@@ -34,4 +35,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .modelContainer(for: AirportFavorite.self, inMemory: true)
 }
