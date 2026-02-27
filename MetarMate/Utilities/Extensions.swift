@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - FlightCategory SwiftUI Color
 extension FlightCategory {
-    var swiftUIColor: Color {
+    nonisolated var swiftUIColor: Color {
         switch self {
         case .vfr: return .green
         case .mvfr: return .blue
@@ -14,30 +14,38 @@ extension FlightCategory {
     }
 }
 
-// MARK: - Double - Visibility formatting
+// MARK: - Double - Visibility / distance formatting
 extension Double {
-    var visibilityString: String {
+    nonisolated var visibilityString: String {
         if self >= 10 { return "10+" }
         if self == Double(Int(self)) { return "\(Int(self))" }
         return String(format: "%.1f", self)
     }
+
+    nonisolated var metersToNauticalMiles: Double { self / 1852.0 }
+
+    nonisolated var nmString: String {
+        let nm = self.metersToNauticalMiles
+        if nm < 10 { return String(format: "%.1f nm", nm) }
+        return "\(Int(nm)) nm"
+    }
 }
 
-// MARK: - Int - Wind / altitude formatting
+// MARK: - Int - Altitude formatting
 extension Int {
-    var altitudeFeetString: String { "\(self.formatted()) ft AGL" }
+    nonisolated var altitudeFeetString: String { "\(self.formatted()) ft AGL" }
 }
 
 // MARK: - Date - METAR time display
 extension Date {
-    var metarTimeString: String {
+    nonisolated var metarTimeString: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter.string(from: self)
     }
 
-    var relativeString: String {
+    nonisolated var relativeString: String {
         let interval = Date().timeIntervalSince(self)
         if interval < 60 { return "Just now" }
         if interval < 3600 { return "\(Int(interval / 60))m ago" }
@@ -48,22 +56,11 @@ extension Date {
 
 // MARK: - Wind - Display string
 extension Wind {
-    var displayString: String {
+    nonisolated var displayString: String {
         if speed == 0 { return "Calm" }
         let dir = isVariable ? "VRB" : "\(direction ?? 0)°"
         let base = "\(dir) at \(speed)kt"
         if let g = gust { return "\(base) gusting \(g)kt" }
         return base
-    }
-}
-
-// MARK: - CLLocationDistance - NM
-extension Double {
-    var metersToNauticalMiles: Double { self / 1852.0 }
-
-    var nmString: String {
-        let nm = self.metersToNauticalMiles
-        if nm < 10 { return String(format: "%.1f nm", nm) }
-        return "\(Int(nm)) nm"
     }
 }

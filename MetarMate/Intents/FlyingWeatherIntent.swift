@@ -10,8 +10,17 @@ struct FlyingWeatherIntent: AppIntent {
 
     func perform() async throws -> some ReturnsValue<String> & ProvidesDialog {
         let metar = try await WeatherService.shared.fetchMetar(for: airportCode.uppercased())
-        let summary = "\(airportCode.uppercased()) is \(metar.flightCategory.rawValue). " +
-                      "Wind \(metar.wind.displayString), visibility \(metar.visibility.visibilityString) sm."
+        let wind = metar.wind
+        let windStr: String
+        if wind.speed == 0 {
+            windStr = "Calm"
+        } else {
+            let dir = wind.isVariable ? "Variable" : "\(wind.direction ?? 0) degrees"
+            windStr = "\(dir) at \(wind.speed) knots"
+            + (wind.gust.map { ", gusting \($0)" } ?? "")
+        }
+        let visStr = metar.visibility >= 10 ? "10 or more" : String(format: "%.1f", metar.visibility)
+        let summary = "\(airportCode.uppercased()) is \(metar.flightCategory.rawValue). Wind \(windStr), visibility \(visStr) statute miles."
         return .result(value: summary, dialog: "\(summary)")
     }
 }
