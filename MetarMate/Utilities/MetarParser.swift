@@ -115,20 +115,126 @@ struct MetarParser {
 
     // MARK: - Weather Phenomena
     // Prefer the wxString field from the API; fall back to parsing rawOb
+    // Filter out remark codes that aren't actual weather
     nonisolated private static func parseWeatherPhenomena(_ wxString: String?, rawOb: String) -> [String] {
+        let raw: [String]
         if let wx = wxString, !wx.isEmpty {
-            return wx.components(separatedBy: " ").filter { !$0.isEmpty }
+            raw = wx.components(separatedBy: " ").filter { !$0.isEmpty }
+        } else {
+            let wxCodes = ["TS", "RA", "SN", "GR", "BR", "FG", "HZ", "DU", "SA",
+                           "FC", "SQ", "SS", "DS", "FU", "VA", "PL", "GS", "IC",
+                           "UP", "DZ", "SG", "FZRA", "FZDZ", "FZFG"]
+            let tokens = rawOb.components(separatedBy: " ")
+            raw = tokens.filter { token in
+                let clean = token.trimmingCharacters(in: CharacterSet(charactersIn: "+-"))
+                return wxCodes.contains(where: { clean.contains($0) }) &&
+                       !token.hasPrefix("A") && !token.hasPrefix("Q") && !token.hasPrefix("RMK")
+            }
         }
 
-        // Fallback: scan raw METAR for known wx codes
-        let wxCodes = ["TS", "RA", "SN", "GR", "BR", "FG", "HZ", "DU", "SA",
-                       "FC", "SQ", "SS", "DS", "FU", "VA", "PL", "GS", "IC",
-                       "UP", "DZ", "SG", "FZRA", "FZDZ", "FZFG"]
-        let tokens = rawOb.components(separatedBy: " ")
-        return tokens.filter { token in
-            let clean = token.trimmingCharacters(in: CharacterSet(charactersIn: "+-"))
-            return wxCodes.contains(where: { clean.contains($0) }) &&
-                   !token.hasPrefix("A") && !token.hasPrefix("Q") && !token.hasPrefix("RMK")
-        }
+        // Filter out remark-type codes that aren't actual weather phenomena
+        let remarkCodes: Set<String> = [
+            "TSNO", "PNO", "RVRNO", "SLPNO", "FZRANO", "VISNO",
+            "CHINO", "PWINO", "PRESRR", "PRESFR"
+        ]
+        return raw.filter { !remarkCodes.contains($0.uppercased()) }
     }
+}
+
+// MARK: - Weather Phenomena Decoder
+// Translates METAR weather codes to plain English
+struct WeatherDecoder {
+
+    static func decode(_ code: String) -> String {
+        let upper = code.uppercased()
+
+        // Check for exact match first
+        if let exact = descriptions[upper] { return exact }
+
+        // Parse intensity + descriptor + type
+        var remaining = upper
+        var parts: [String] = []
+
+        // Intensity prefix
+        if remaining.hasPrefix("+") {
+            parts.append("Heavy")
+            remaining = String(remaining.dropFirst())
+        } else if remaining.hasPrefix("-") {
+            parts.append("Light")
+            remaining = String(remaining.dropFirst())
+        } else if remaining.hasPrefix("VC") {
+            parts.append("Vicinity")
+            remaining = String(remaining.dropFirst(2))
+        }
+
+        // Descriptors (2-char codes that modify the type)
+        let descriptors: [(String, String)] = [
+            ("MI", "Shallow"), ("PR", "Partial"), ("BC", "Patches"),
+            ("DR", "Low Drifting"), ("BL", "Blowing"), ("SH", "Showers"),
+            ("TS", "Thunderstorm"), ("FZ", "Freezing")
+        ]
+        for (abbr, desc) in descriptors {
+            if remaining.hasPrefix(abbr) {
+                parts.append(desc)
+                remaining = String(remaining.dropFirst(abbr.count))
+                break
+            }
+        }
+
+        // Precipitation / obscuration types
+        let types: [(String, String)] = [
+            ("RA", "Rain"), ("SN", "Snow"), ("DZ", "Drizzle"),
+            ("PL", "Ice Pellets"), ("GR", "Hail"), ("GS", "Small Hail"),
+            ("SG", "Snow Grains"), ("IC", "Ice Crystals"), ("UP", "Unknown Precip"),
+            ("FG", "Fog"), ("BR", "Mist"), ("HZ", "Haze"),
+            ("FU", "Smoke"), ("DU", "Dust"), ("SA", "Sand"),
+            ("VA", "Volcanic Ash"), ("PY", "Spray"),
+            ("SQ", "Squall"), ("FC", "Funnel Cloud"),
+            ("SS", "Sandstorm"), ("DS", "Duststorm"),
+            ("PO", "Dust Whirls")
+        ]
+        for (abbr, name) in types {
+            if remaining.contains(abbr) {
+                parts.append(name)
+                remaining = remaining.replacingOccurrences(of: abbr, with: "")
+            }
+        }
+
+        if parts.isEmpty { return code }
+        return parts.joined(separator: " ")
+    }
+
+    static func decodeAll(_ codes: [String]) -> String {
+        codes.map { decode($0) }.joined(separator: ", ")
+    }
+
+    // Common exact matches
+    private static let descriptions: [String: String] = [
+        "RA": "Rain", "+RA": "Heavy Rain", "-RA": "Light Rain",
+        "SN": "Snow", "+SN": "Heavy Snow", "-SN": "Light Snow",
+        "DZ": "Drizzle", "+DZ": "Heavy Drizzle", "-DZ": "Light Drizzle",
+        "FG": "Fog", "BR": "Mist", "HZ": "Haze", "FU": "Smoke",
+        "FZRA": "Freezing Rain", "+FZRA": "Heavy Freezing Rain", "-FZRA": "Light Freezing Rain",
+        "FZDZ": "Freezing Drizzle", "+FZDZ": "Heavy Freezing Drizzle", "-FZDZ": "Light Freezing Drizzle",
+        "FZFG": "Freezing Fog",
+        "TSRA": "Thunderstorm Rain", "+TSRA": "Heavy Thunderstorm Rain",
+        "TSSN": "Thunderstorm Snow", "+TSSN": "Heavy Thunderstorm Snow",
+        "TSPL": "Thunderstorm Ice Pellets",
+        "TSGR": "Thunderstorm Hail", "+TSGR": "Heavy Thunderstorm Hail",
+        "TS": "Thunderstorm",
+        "SQ": "Squall", "FC": "Funnel Cloud", "+FC": "Tornado/Waterspout",
+        "SS": "Sandstorm", "DS": "Duststorm",
+        "BLSN": "Blowing Snow", "BLDU": "Blowing Dust", "BLSA": "Blowing Sand",
+        "DRSN": "Low Drifting Snow", "DRDU": "Low Drifting Dust",
+        "SHRA": "Rain Showers", "+SHRA": "Heavy Rain Showers", "-SHRA": "Light Rain Showers",
+        "SHSN": "Snow Showers", "+SHSN": "Heavy Snow Showers", "-SHSN": "Light Snow Showers",
+        "SHGR": "Hail Showers",
+        "PL": "Ice Pellets", "+PL": "Heavy Ice Pellets", "-PL": "Light Ice Pellets",
+        "GR": "Hail", "+GR": "Heavy Hail",
+        "GS": "Small Hail", "IC": "Ice Crystals", "SG": "Snow Grains",
+        "UP": "Unknown Precipitation",
+        "VCFG": "Fog in Vicinity", "VCTS": "Thunderstorm in Vicinity",
+        "VCSH": "Showers in Vicinity",
+        "MIFG": "Shallow Fog", "PRFG": "Partial Fog", "BCFG": "Fog Patches"
+    ]
 }

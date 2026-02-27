@@ -114,7 +114,7 @@ struct WeatherDetailView: View {
             conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", metar.altimeter))
             if !metar.weatherPhenomena.isEmpty {
                 conditionRow("cloud.bolt.rain.fill", "Weather",
-                             metar.weatherPhenomena.joined(separator: ", "))
+                             WeatherDecoder.decodeAll(metar.weatherPhenomena))
             }
         }
         .padding()
@@ -273,7 +273,7 @@ struct WeatherDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 if !period.weatherPhenomena.isEmpty {
-                    Text(period.weatherPhenomena.joined(separator: ", "))
+                    Text(WeatherDecoder.decodeAll(period.weatherPhenomena))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

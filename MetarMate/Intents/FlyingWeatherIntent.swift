@@ -91,7 +91,7 @@ struct FlyingWeatherIntent: AppIntent {
 
         // Visibility
         let visStr = metar.visibility >= 10 ? "10 or more" : String(format: "%.0f", metar.visibility)
-        let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(metar.weatherPhenomena.joined(separator: ", "))"
+        let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased())"
         parts.append("Visibility \(visStr) miles\(wxSuffix).")
 
         // Wind
