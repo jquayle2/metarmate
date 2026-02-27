@@ -13,7 +13,7 @@ struct SearchView: View {
                         description: Text("Search by ICAO, IATA code, or airport name.")
                     )
                 } else if airportVM.searchResults.isEmpty {
-                    Text("No airports found for "\(airportVM.searchText)"")
+                    Text("No airports found for \"\(airportVM.searchText)\"")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(airportVM.searchResults) { airport in
