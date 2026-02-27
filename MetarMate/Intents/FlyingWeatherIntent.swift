@@ -23,7 +23,7 @@ struct FlyingWeatherIntent: AppIntent {
             location = try await IntentLocationHelper.currentLocation()
         } catch {
             return .result(
-                dialog: "I need location access to find your nearest airport. Please enable it in Settings.",
+                dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
                 view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
             )
         }
@@ -32,7 +32,7 @@ struct FlyingWeatherIntent: AppIntent {
         let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
         guard let airport = airports.first else {
             return .result(
-                dialog: "I couldn't find a nearby airport. Make sure you're within range of a reporting station.",
+                dialog: IntentDialog("I couldn't find a nearby airport."),
                 view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
             )
         }
@@ -43,14 +43,14 @@ struct FlyingWeatherIntent: AppIntent {
             metarHistory = try await WeatherService.shared.fetchMetarHistory(for: airport.icao, hours: 6)
         } catch {
             return .result(
-                dialog: "No weather data available for \(airport.name). Try again in a few minutes.",
+                dialog: IntentDialog("No weather data available for \(airport.name)."),
                 view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
             )
         }
 
         guard let metar = metarHistory.first else {
             return .result(
-                dialog: "No weather data available for \(airport.name). Try again in a few minutes.",
+                dialog: IntentDialog("No weather data available for \(airport.name)."),
                 view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
             )
         }
@@ -62,13 +62,13 @@ struct FlyingWeatherIntent: AppIntent {
         let trend = WeatherTrend.derive(metars: metarHistory, taf: taf)
 
         // 6. Build spoken dialog
-        let dialog = buildDialog(airportName: airport.name, metar: metar, trend: trend)
+        let spokenText = buildDialog(airportName: airport.name, metar: metar, trend: trend)
 
         // 7. Build one-line summary for snippet
         let detail = buildSummaryLine(metar: metar)
 
         return .result(
-            dialog: "\(dialog)",
+            dialog: IntentDialog(stringLiteral: spokenText),
             view: snippetView(label: "\(airport.icao) · \(airport.name)", category: metar.flightCategory, detail: detail)
         )
     }
