@@ -76,7 +76,7 @@ struct WeatherDetailView: View {
         let minutes = Int(Date().timeIntervalSince(metar.observationTime) / 60)
         return Text("Observed \(minutes) min ago")
             .font(.caption)
-            .foregroundColor(metar.isOld ? Color(hex: "FF1744") : .secondary)
+            .foregroundColor(metar.isOld ? Color.red : .secondary)
     }
 
     // MARK: - Raw METAR

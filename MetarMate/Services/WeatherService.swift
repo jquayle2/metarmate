@@ -131,8 +131,8 @@ enum WeatherError: LocalizedError {
 }
 
 // MARK: - AnyCodable helper
-struct AnyCodable: Codable {
-    let value: Any
+struct AnyCodable: Codable, @unchecked Sendable {
+    nonisolated(unsafe) let value: Any
 
     init(_ value: Any) { self.value = value }
 
