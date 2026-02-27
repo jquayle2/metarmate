@@ -19,6 +19,15 @@ actor WeatherService {
         return try MetarParser.parse(raw: first)
     }
 
+    // Fetch METAR history for trend analysis (returns newest first)
+    func fetchMetarHistory(for icao: String, hours: Int = 6) async throws -> [Metar] {
+        let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "\(hours)"])
+        let (data, response) = try await session.data(from: url)
+        try validateResponse(response)
+        let raws = try JSONDecoder().decode([RawMetar].self, from: data)
+        return raws.compactMap { try? MetarParser.parse(raw: $0) }
+    }
+
     func fetchMetars(for icaos: [String]) async throws -> [String: Metar] {
         let ids = icaos.joined(separator: ",")
         let url = try buildURL(path: "metar", params: ["ids": ids, "format": "json", "hours": "2"])

@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 class WeatherViewModel: ObservableObject {
     @Published var metar: Metar?
+    @Published var metarHistory: [Metar] = []
     @Published var taf: Taf?
     @Published var trend: WeatherTrend?
     @Published var isLoading = false
@@ -18,15 +19,20 @@ class WeatherViewModel: ObservableObject {
         isLoading = true
         error = nil
         do {
-            async let metarResult = weatherService.fetchMetar(for: icao)
+            async let historyResult = weatherService.fetchMetarHistory(for: icao, hours: 6)
             async let tafResult = try? weatherService.fetchTaf(for: icao)
 
-            let fetchedMetar = try await metarResult
+            let fetchedHistory = try await historyResult
             let fetchedTaf = await tafResult
 
-            metar = fetchedMetar
+            metarHistory = fetchedHistory
+            metar = fetchedHistory.first
             taf = fetchedTaf
-            trend = WeatherTrend.derive(metar: fetchedMetar, taf: fetchedTaf)
+
+            if !fetchedHistory.isEmpty {
+                trend = WeatherTrend.derive(metars: fetchedHistory, taf: fetchedTaf)
+            }
+
             lastUpdated = Date()
         } catch {
             self.error = error

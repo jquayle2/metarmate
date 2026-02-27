@@ -37,11 +37,18 @@ struct FlyingWeatherIntent: AppIntent {
             )
         }
 
-        // 3. Fetch METAR (required)
-        let metar: Metar
+        // 3. Fetch METAR history (for observed trend)
+        let metarHistory: [Metar]
         do {
-            metar = try await WeatherService.shared.fetchMetar(for: airport.icao)
+            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: airport.icao, hours: 6)
         } catch {
+            return .result(
+                dialog: "No weather data available for \(airport.name). Try again in a few minutes.",
+                view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
+            )
+        }
+
+        guard let metar = metarHistory.first else {
             return .result(
                 dialog: "No weather data available for \(airport.name). Try again in a few minutes.",
                 view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
@@ -51,11 +58,11 @@ struct FlyingWeatherIntent: AppIntent {
         // 4. Fetch TAF (optional — not all stations have one)
         let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
 
-        // 5. Derive trend
-        let trend: WeatherTrend? = taf != nil ? WeatherTrend.derive(metar: metar, taf: taf) : nil
+        // 5. Derive trend from history + TAF
+        let trend = WeatherTrend.derive(metars: metarHistory, taf: taf)
 
         // 6. Build spoken dialog
-        let dialog = buildDialog(airportName: airport.name, metar: metar, taf: taf, trend: trend)
+        let dialog = buildDialog(airportName: airport.name, metar: metar, trend: trend)
 
         // 7. Build one-line summary for snippet
         let detail = buildSummaryLine(metar: metar)
@@ -67,7 +74,7 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     // MARK: - Dialog Builder
-    private func buildDialog(airportName: String, metar: Metar, taf: Taf?, trend: WeatherTrend?) -> String {
+    private func buildDialog(airportName: String, metar: Metar, trend: WeatherTrend) -> String {
         var parts: [String] = []
 
         // Category
@@ -90,11 +97,13 @@ struct FlyingWeatherIntent: AppIntent {
         // Wind
         parts.append(windPhrase(metar.wind))
 
-        // Trend
-        if let trend = trend, taf != nil, trend.overall != .unknown {
-            parts.append("Conditions are \(trend.overall.rawValue.lowercased()).")
+        // Trend — use observed if we have enough history, otherwise forecast
+        if trend.observed.overall != .unknown {
+            parts.append("Conditions are \(trend.observed.overall.rawValue.lowercased()).")
+        } else if trend.forecast.overall != .unknown {
+            parts.append("Forecast shows conditions \(trend.forecast.overall.rawValue.lowercased()).")
         } else {
-            parts.append("No forecast available for trend.")
+            parts.append("No trend data available.")
         }
 
         return parts.joined(separator: " ")

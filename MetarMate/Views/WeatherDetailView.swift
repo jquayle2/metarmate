@@ -154,6 +154,8 @@ struct WeatherDetailView: View {
     private func trendSection(_ trend: WeatherTrend) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Trend")
+
+            // Overall summary
             HStack {
                 Image(systemName: trend.overall.systemImage)
                     .foregroundColor(trend.overall.color)
@@ -165,10 +167,36 @@ struct WeatherDetailView: View {
             Text(trend.summaryText)
                 .font(.caption)
                 .foregroundColor(.secondary)
+
             Divider()
-            TrendIndicator(direction: trend.visibility, label: "Visibility")
-            TrendIndicator(direction: trend.ceiling, label: "Ceiling")
-            TrendIndicator(direction: trend.wind, label: "Wind")
+
+            // Observed trend (from METAR history)
+            Text("OBSERVED")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
+            TrendIndicator(direction: trend.observed.visibility, label: "Visibility")
+            TrendIndicator(direction: trend.observed.ceiling, label: "Ceiling")
+            TrendIndicator(direction: trend.observed.wind, label: "Wind")
+            if trend.observed.metarCount > 0 {
+                Text(trend.observed.summaryText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            Divider()
+
+            // Forecast trend (METAR vs TAF)
+            Text("FORECAST")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
+            TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
+            TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
+            TrendIndicator(direction: trend.forecast.wind, label: "Wind")
+            Text(trend.forecast.summaryText)
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
         .padding()
         .background(cardBackground)
