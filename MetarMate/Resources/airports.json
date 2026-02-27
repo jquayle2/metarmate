@@ -1,0 +1,17 @@
+[
+  {"icao":"KLAS","iata":"LAS","name":"Harry Reid International","latitude":36.0801,"longitude":-115.1522,"elevation":2141},
+  {"icao":"KLAX","iata":"LAX","name":"Los Angeles International","latitude":33.9425,"longitude":-118.4081,"elevation":126},
+  {"icao":"KSFO","iata":"SFO","name":"San Francisco International","latitude":37.6213,"longitude":-122.3790,"elevation":13},
+  {"icao":"KORD","iata":"ORD","name":"O'Hare International","latitude":41.9742,"longitude":-87.9073,"elevation":672},
+  {"icao":"KATL","iata":"ATL","name":"Hartsfield-Jackson Atlanta International","latitude":33.6407,"longitude":-84.4277,"elevation":1026},
+  {"icao":"KJFK","iata":"JFK","name":"John F. Kennedy International","latitude":40.6398,"longitude":-73.7789,"elevation":13},
+  {"icao":"KDEN","iata":"DEN","name":"Denver International","latitude":39.8561,"longitude":-104.6737,"elevation":5431},
+  {"icao":"KSEA","iata":"SEA","name":"Seattle-Tacoma International","latitude":47.4502,"longitude":-122.3088,"elevation":433},
+  {"icao":"KPHX","iata":"PHX","name":"Phoenix Sky Harbor International","latitude":33.4373,"longitude":-112.0078,"elevation":1135},
+  {"icao":"KDFW","iata":"DFW","name":"Dallas/Fort Worth International","latitude":32.8998,"longitude":-97.0403,"elevation":607},
+  {"icao":"KMIA","iata":"MIA","name":"Miami International","latitude":25.7959,"longitude":-80.2870,"elevation":8},
+  {"icao":"KBOS","iata":"BOS","name":"Boston Logan International","latitude":42.3656,"longitude":-71.0096,"elevation":20},
+  {"icao":"KMSN","iata":"MSN","name":"Dane County Regional","latitude":43.1399,"longitude":-89.3375,"elevation":887},
+  {"icao":"KOSH","iata":"OSH","name":"Wittman Regional","latitude":43.9844,"longitude":-88.5570,"elevation":808},
+  {"icao":"KVNY","iata":"VNY","name":"Van Nuys Airport","latitude":34.2098,"longitude":-118.4898,"elevation":802}
+]

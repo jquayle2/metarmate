@@ -1,0 +1,69 @@
+import Foundation
+import SwiftUI
+
+// MARK: - FlightCategory SwiftUI Color
+extension FlightCategory {
+    var swiftUIColor: Color {
+        switch self {
+        case .vfr: return .green
+        case .mvfr: return .blue
+        case .ifr: return .red
+        case .lifr: return Color(red: 0.5, green: 0, blue: 0.5)
+        case .unknown: return .gray
+        }
+    }
+}
+
+// MARK: - Double - Visibility formatting
+extension Double {
+    var visibilityString: String {
+        if self >= 10 { return "10+" }
+        if self == Double(Int(self)) { return "\(Int(self))" }
+        return String(format: "%.1f", self)
+    }
+}
+
+// MARK: - Int - Wind / altitude formatting
+extension Int {
+    var altitudeFeetString: String { "\(self.formatted()) ft AGL" }
+}
+
+// MARK: - Date - METAR time display
+extension Date {
+    var metarTimeString: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: self)
+    }
+
+    var relativeString: String {
+        let interval = Date().timeIntervalSince(self)
+        if interval < 60 { return "Just now" }
+        if interval < 3600 { return "\(Int(interval / 60))m ago" }
+        if interval < 86400 { return "\(Int(interval / 3600))h ago" }
+        return metarTimeString
+    }
+}
+
+// MARK: - Wind - Display string
+extension Wind {
+    var displayString: String {
+        if speed == 0 { return "Calm" }
+        let dir = isVariable ? "VRB" : "\(direction ?? 0)°"
+        let base = "\(dir) at \(speed)kt"
+        if let g = gust { return "\(base) gusting \(g)kt" }
+        return base
+    }
+}
+
+// MARK: - CLLocationDistance - NM
+extension Double {
+    var metersToNauticalMiles: Double { self / 1852.0 }
+
+    var nmString: String {
+        let nm = self.metersToNauticalMiles
+        if nm < 10 { return String(format: "%.1f nm", nm) }
+        return "\(Int(nm)) nm"
+    }
+}
