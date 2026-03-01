@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import CoreLocation
 
 // MARK: - FlightCategory SwiftUI Color
 extension FlightCategory {
@@ -64,5 +65,16 @@ extension Wind {
         let base = "\(dir) at \(speed)kt"
         if let g = gust { return "\(base) gusting \(g)kt" }
         return base
+    }
+}
+
+// MARK: - CLLocationDistance - Nautical Miles
+extension CLLocationDistance {
+    var nmString: String {
+        let nm = self / 1852.0
+        if nm < 10 {
+            return String(format: "%.1f nm", nm)
+        }
+        return String(format: "%.0f nm", nm)
     }
 }

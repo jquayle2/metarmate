@@ -271,7 +271,7 @@ struct WeatherDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 if !period.clouds.isEmpty {
-                    Text(period.clouds.map { "\($0.coverage.rawValue) \(($0.altitude * 100).formatted())" }.joined(separator: " · "))
+                    Text(period.clouds.map { cloudLayerText($0) }.joined(separator: " · "))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -412,6 +412,24 @@ struct WeatherDetailView: View {
         let utcTo = utcFmt.string(from: period.toTime)
 
         return "\(localFrom)–\(localTo) (\(utcFrom)–\(utcTo))"
+    }
+
+    private func cloudLayerText(_ layer: CloudLayer) -> String {
+        if layer.coverage == .clear || layer.coverage == .skyClear || layer.altitude == 0 {
+            return layer.coverage.rawValue
+        }
+        return "\(layer.coverage.rawValue) \((layer.altitude * 100).formatted())"
+    }
+
+    private func quickWeatherSummary(metar: Metar) -> String {
+        var parts: [String] = []
+        let vis = metar.visibility >= 10 ? "10+" : String(format: "%g", metar.visibility)
+        parts.append("Vis \(vis) SM")
+        if let ceil = metar.ceilingFeet {
+            parts.append("Ceil \(ceil.formatted()) ft")
+        }
+        parts.append("Wind \(metar.wind.speed) kt")
+        return parts.joined(separator: " · ")
     }
 
     private func toggleFavorite() {
