@@ -384,7 +384,17 @@ struct WeatherDetailView: View {
     // MARK: - TAF
     private func tafSection(_ taf: Taf) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("TAF")
+            HStack {
+                sectionHeader("TAF")
+                if taf.validFrom > Date() {
+                    Text("UPCOMING")
+                        .font(.caption2.bold())
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
+                }
+            }
             DisclosureGroup("Raw TAF") {
                 Text(taf.rawText)
                     .font(.system(.caption, design: .monospaced))

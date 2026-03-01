@@ -34,11 +34,20 @@ struct Taf: Identifiable, Codable {
 
     var isValid: Bool {
         let now = Date()
-        return now >= validFrom && now <= validTo
+        // Valid if active, or starts within 2 hours
+        return now <= validTo && (now >= validFrom || validFrom.timeIntervalSinceNow < 7200)
     }
 
     var currentForecast: TafForecast? {
         let now = Date()
-        return forecasts.last(where: { $0.fromTime <= now })
+        // Use the last period that has already started
+        if let current = forecasts.last(where: { $0.fromTime <= now }) {
+            return current
+        }
+        // TAF hasn't started yet — if it begins within 2 hours, use the first period
+        if let first = forecasts.first, first.fromTime.timeIntervalSinceNow < 7200 {
+            return first
+        }
+        return nil
     }
 }
