@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 struct WeatherDetailView: View {
     let airport: Airport
@@ -18,6 +19,8 @@ struct WeatherDetailView: View {
                 if vm.isLoading && vm.metar == nil {
                     ProgressView("Loading weather…")
                         .frame(maxWidth: .infinity, minHeight: 200)
+                } else if vm.noWeatherReporting {
+                    noReportingView
                 } else if let error = vm.error, vm.metar == nil {
                     errorView(error)
                 } else {
@@ -284,6 +287,59 @@ struct WeatherDetailView: View {
         .cornerRadius(6)
     }
 
+    // MARK: - No Reporting
+    private var noReportingView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary)
+            Text("No Weather Reporting")
+                .font(.headline)
+            Text("\(airport.icao) does not have an active METAR station.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            if !vm.nearbyReportingAirports.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("NEARBY REPORTING STATIONS")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+                        .padding(.top, 8)
+
+                    ForEach(vm.nearbyReportingAirports) { item in
+                        NavigationLink(destination: WeatherDetailView(airport: item.airport)) {
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(item.metar.flightCategory.swiftUIColor)
+                                    .frame(width: 8, height: 8)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(item.airport.icao) · \(item.airport.name)")
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                        .lineLimit(1)
+                                    Text(quickWeatherSummary(metar: item.metar))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                let dist = item.airport.distance(from: CLLocation(latitude: airport.latitude, longitude: airport.longitude))
+                                Text(dist.nmString)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding()
+                .background(cardBackground)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 200)
+    }
+
     // MARK: - Error
     private func errorView(_ error: Error) -> some View {
         VStack(spacing: 12) {
@@ -342,10 +398,20 @@ struct WeatherDetailView: View {
     }
 
     private func periodTimeLabel(_ period: TafForecast) -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "HH'Z'"
-        fmt.timeZone = TimeZone(identifier: "UTC")
-        return "\(fmt.string(from: period.fromTime))–\(fmt.string(from: period.toTime))"
+        let localFmt = DateFormatter()
+        localFmt.dateFormat = "h:mm a"
+        localFmt.timeZone = .current
+
+        let utcFmt = DateFormatter()
+        utcFmt.dateFormat = "HH'Z'"
+        utcFmt.timeZone = TimeZone(identifier: "UTC")
+
+        let localFrom = localFmt.string(from: period.fromTime)
+        let localTo = localFmt.string(from: period.toTime)
+        let utcFrom = utcFmt.string(from: period.fromTime)
+        let utcTo = utcFmt.string(from: period.toTime)
+
+        return "\(localFrom)–\(localTo) (\(utcFrom)–\(utcTo))"
     }
 
     private func toggleFavorite() {

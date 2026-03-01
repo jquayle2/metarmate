@@ -169,8 +169,7 @@ struct ForecastTrend: Codable {
     var summaryText: String
 
     static func derive(metar: Metar, taf: Taf?) -> ForecastTrend {
-        guard let taf = taf, let current = taf.currentForecast,
-              let next = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) else {
+        guard let taf = taf, let current = taf.currentForecast else {
             return ForecastTrend(
                 visibility: .unknown, ceiling: .unknown,
                 wind: .unknown, overall: .unknown,
@@ -179,16 +178,21 @@ struct ForecastTrend: Codable {
             )
         }
 
+        // Try to find the next period after current for forward-looking trend
+        // If no next period, compare current METAR against the current TAF period
+        let compareBlock = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) ?? current
+        let isForwardLooking = compareBlock.fromTime > current.fromTime
+
         let visTrend = TrendThresholds.visibilityTrend(
             old: metar.visibility,
-            new: next.visibility ?? metar.visibility
+            new: compareBlock.visibility ?? metar.visibility
         )
 
-        let nextCeiling = ceilingFromClouds(next.clouds)
-        let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: nextCeiling)
+        let compareCeiling = ceilingFromClouds(compareBlock.clouds)
+        let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: compareCeiling)
 
         let currentWind = metar.wind.gust ?? metar.wind.speed
-        let nextWind = next.wind?.gust ?? next.wind?.speed ?? metar.wind.speed
+        let nextWind = compareBlock.wind?.gust ?? compareBlock.wind?.speed ?? metar.wind.speed
         let windTrend = TrendThresholds.windTrend(old: currentWind, new: nextWind)
 
         let critical = [visTrend, ceilTrend]
@@ -197,12 +201,13 @@ struct ForecastTrend: Codable {
         else if critical.allSatisfy({ $0 == .improving }) { overall = .improving }
         else { overall = .steady }
 
-        let summary = "Forecast expects conditions to be \(overall.rawValue.lowercased()) over the next few hours."
+        let timeframe = isForwardLooking ? "over the next few hours" : "for the current period"
+        let summary = "Forecast expects conditions to be \(overall.rawValue.lowercased()) \(timeframe)."
 
         return ForecastTrend(
             visibility: visTrend, ceiling: ceilTrend,
             wind: windTrend, overall: overall,
-            forecastCategory: next.flightCategory,
+            forecastCategory: compareBlock.flightCategory,
             summaryText: summary
         )
     }
