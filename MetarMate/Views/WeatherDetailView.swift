@@ -177,40 +177,51 @@ struct WeatherDetailView: View {
             fieldElevationFt: airport.elevation
         )
         return VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Performance")
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    statBlock("Density Altitude", da.densityAltitudeText)
-                    statBlock("Pressure Altitude", "\(da.pressureAltitudeFt.formatted()) ft MSL")
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    statBlock("ISA Deviation", da.isaDeviationText, rightAlign: true)
-                    statBlock("DA Penalty", da.penaltyText, rightAlign: true)
-                }
-            }
-
-            Divider()
-
-            HStack(spacing: 8) {
-                Image(systemName: hpLossIcon(da.hpLossPercent))
-                    .foregroundColor(hpLossColor(da.hpLossPercent))
-                    .font(.title3)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(da.hpLossText)
-                        .font(.subheadline.bold())
-                        .foregroundColor(hpLossColor(da.hpLossPercent))
-                    Text("Normally aspirated engine estimate")
-                        .font(.caption2)
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            statBlock("Density Altitude", da.densityAltitudeText)
+                            statBlock("Pressure Altitude", "\(da.pressureAltitudeFt.formatted()) ft MSL")
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 6) {
+                            statBlock("ISA Deviation", da.isaDeviationText, rightAlign: true)
+                            statBlock("DA Penalty", da.penaltyText, rightAlign: true)
+                        }
+                    }
+                    Divider()
+                    HStack(spacing: 8) {
+                        Image(systemName: hpLossIcon(da.hpLossPercent))
+                            .foregroundColor(hpLossColor(da.hpLossPercent))
+                            .font(.title3)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(da.hpLossText)
+                                .font(.subheadline.bold())
+                                .foregroundColor(hpLossColor(da.hpLossPercent))
+                            Text("Normally aspirated engine estimate")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    Text(da.summary)
+                        .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 8)
+            } label: {
+                HStack {
+                    sectionHeader("Performance")
+                    Spacer()
+                    Text(da.densityAltitudeText)
+                        .font(.caption.bold())
+                        .foregroundColor(hpLossColor(da.hpLossPercent))
+                    Text("· \(da.hpLossText)")
+                        .font(.caption)
+                        .foregroundColor(hpLossColor(da.hpLossPercent))
                 }
             }
-
-            Text(da.summary)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
         .background(cardBackground)
@@ -249,7 +260,7 @@ struct WeatherDetailView: View {
                 Image(systemName: trend.overall.systemImage)
                     .foregroundColor(trend.overall.color)
                     .font(.title3)
-                Text("Conditions \(trend.overall.rawValue)")
+                Text(trend.headline)
                     .font(.headline)
                     .foregroundColor(trend.overall.color)
             }
@@ -441,16 +452,16 @@ struct WeatherDetailView: View {
         .cornerRadius(6)
     }
 
-    // MARK: - TAF Verification
+    // MARK: - TAF Verification (Forecast Reliability)
     private func tafVerificationSection(_ verification: TafVerification) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("TAF Verification")
+            sectionHeader("Forecast Reliability")
 
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(verification.accuracyPercent)%")
+                    Text("\(verification.categoryAccuracyPct)%")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(accuracyColor(verification.overallAccuracy))
+                        .foregroundColor(accuracyColor(verification.categoryAccuracy))
                     Text("Category accuracy")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -472,6 +483,13 @@ struct WeatherDetailView: View {
                 }
             }
 
+            // Per-parameter accuracy grid
+            HStack(spacing: 16) {
+                accuracyCell("Wind", verification.windAccuracyPct)
+                accuracyCell("Ceiling", verification.ceilingAccuracyPct)
+                accuracyCell("Visibility", verification.visibilityAccuracyPct)
+            }
+
             Text(verification.summary)
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -489,7 +507,7 @@ struct WeatherDetailView: View {
                         .foregroundColor(point.categoryMatch ? .green : .red)
                         .frame(width: 20)
 
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(shortTime(point.observationTime))
                                 .font(.caption.bold())
@@ -514,6 +532,21 @@ struct WeatherDetailView: View {
         }
         .padding()
         .background(cardBackground)
+    }
+
+    private func accuracyCell(_ label: String, _ pct: Int) -> some View {
+        VStack(spacing: 3) {
+            Text("\(pct)%")
+                .font(.subheadline.bold())
+                .foregroundColor(accuracyColor(Double(pct) / 100))
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray5).opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private func accuracyColor(_ accuracy: Double) -> Color {

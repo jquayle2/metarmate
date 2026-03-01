@@ -2,7 +2,6 @@ import Foundation
 
 // MARK: - TAF Verification
 // Compares what the TAF predicted for past time periods against what was actually observed.
-// This is the "killer feature" — pilots can see how accurate the TAF was.
 
 struct TafVerificationPoint: Identifiable, Codable {
     var id = UUID()
@@ -13,26 +12,45 @@ struct TafVerificationPoint: Identifiable, Codable {
     var forecastCeilingFt: Int?
     var actualVisibilitySM: Double
     var forecastVisibilitySM: Double?
+    var actualWindKt: Int           // sustained
+    var actualGustKt: Int?
+    var forecastWindKt: Int?
+    var forecastGustKt: Int?
 
     var categoryMatch: Bool { actualCategory == forecastCategory }
 
     var ceilingDivergenceFt: Int? {
         guard let actual = actualCeilingFt, let forecast = forecastCeilingFt else { return nil }
-        return actual - forecast  // positive = actual was higher (better) than forecast
+        return actual - forecast
     }
 
     var visibilityDivergenceSM: Double? {
         guard let forecast = forecastVisibilitySM else { return nil }
-        return actualVisibilitySM - forecast  // positive = actual was better than forecast
+        return actualVisibilitySM - forecast
+    }
+
+    var windDivergenceKt: Int? {
+        guard let forecast = forecastWindKt else { return nil }
+        return actualWindKt - forecast
+    }
+
+    // Shows the "show your math" actual vs forecast comparison
+    var windComparisonText: String? {
+        guard let fcstWind = forecastWindKt else { return nil }
+        var actual = "\(actualWindKt) kt"
+        if let g = actualGustKt { actual += " G\(g)" }
+        var forecast = "\(fcstWind) kt"
+        if let g = forecastGustKt { forecast += " G\(g)" }
+        if actual == forecast { return nil }
+        return "Wind: actual \(actual) · fcst \(forecast)"
     }
 
     var divergenceText: String {
         var parts: [String] = []
-        if let ceilDiv = ceilingDivergenceFt {
-            if abs(ceilDiv) >= 300 {
-                let sign = ceilDiv > 0 ? "+" : ""
-                parts.append("Ceiling \(sign)\(ceilDiv.formatted()) ft vs fcst")
-            }
+
+        if let ceilDiv = ceilingDivergenceFt, abs(ceilDiv) >= 300 {
+            let sign = ceilDiv > 0 ? "+" : ""
+            parts.append("Ceiling \(sign)\(ceilDiv.formatted()) ft vs fcst")
         } else if actualCeilingFt == nil && forecastCeilingFt != nil {
             parts.append("Ceiling cleared (fcst \(forecastCeilingFt!.formatted()) ft)")
         } else if actualCeilingFt != nil && forecastCeilingFt == nil {
@@ -44,6 +62,10 @@ struct TafVerificationPoint: Identifiable, Codable {
             parts.append("Vis \(sign)\(String(format: "%g", visDiv)) SM vs fcst")
         }
 
+        if let windComp = windComparisonText {
+            parts.append(windComp)
+        }
+
         if parts.isEmpty {
             return categoryMatch ? "On target" : "\(actualCategory.rawValue) vs forecast \(forecastCategory.rawValue)"
         }
@@ -52,7 +74,6 @@ struct TafVerificationPoint: Identifiable, Codable {
 
     var divergenceSeverity: DivergenceSeverity {
         if !categoryMatch {
-            // Category miss — how bad?
             let categories: [FlightCategory] = [.vfr, .mvfr, .ifr, .lifr]
             let actualIdx = categories.firstIndex(of: actualCategory) ?? 0
             let forecastIdx = categories.firstIndex(of: forecastCategory) ?? 0
@@ -61,84 +82,93 @@ struct TafVerificationPoint: Identifiable, Codable {
         }
         if let ceilDiv = ceilingDivergenceFt, abs(ceilDiv) >= 800 { return .minor }
         if let visDiv = visibilityDivergenceSM, abs(visDiv) >= 1.5 { return .minor }
+        if let windDiv = windDivergenceKt, abs(windDiv) >= 10 { return .minor }
         return .none
     }
 
     enum DivergenceSeverity {
         case none, minor, significant
-
-        var color: String {
-            switch self {
-            case .none: return "green"
-            case .minor: return "yellow"
-            case .significant: return "red"
-            }
-        }
     }
 }
 
 struct TafVerification: Codable {
     var points: [TafVerificationPoint]
-    var overallAccuracy: Double        // 0-1, fraction of periods where category matched
+    var categoryAccuracy: Double      // fraction of periods where flight category matched
+    var windAccuracy: Double          // fraction where wind was within 10 kt of forecast
+    var ceilingAccuracy: Double       // fraction where ceiling was within 500 ft of forecast
+    var visibilityAccuracy: Double    // fraction where vis was within 1 SM of forecast
     var significantMisses: Int
     var summary: String
 
-    var accuracyPercent: Int { Int((overallAccuracy * 100).rounded()) }
-
-    var accuracyText: String {
-        "\(accuracyPercent)% category accuracy (\(points.count) obs)"
-    }
+    var categoryAccuracyPct: Int { Int((categoryAccuracy * 100).rounded()) }
+    var windAccuracyPct: Int { Int((windAccuracy * 100).rounded()) }
+    var ceilingAccuracyPct: Int { Int((ceilingAccuracy * 100).rounded()) }
+    var visibilityAccuracyPct: Int { Int((visibilityAccuracy * 100).rounded()) }
 
     static func derive(metars: [Metar], taf: Taf) -> TafVerification? {
-        // Only use historical METARs (skip the most recent — we want past comparisons)
-        // metars are newest-first; skip index 0 (current), use the rest
         let historical = metars.count > 1 ? Array(metars.dropFirst()) : []
         guard !historical.isEmpty else { return nil }
 
         var points: [TafVerificationPoint] = []
 
         for metar in historical {
-            // Find the TAF period that was valid at the time of this observation
-            guard let forecastPeriod = taf.forecasts.last(where: { $0.fromTime <= metar.observationTime }) else {
-                continue
-            }
+            guard let period = taf.forecasts.last(where: { $0.fromTime <= metar.observationTime }) else { continue }
 
-            let forecastCeiling = forecastPeriod.clouds
+            let forecastCeiling = period.clouds
                 .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
                 .map { $0.altitude * 100 }
 
             let point = TafVerificationPoint(
                 observationTime: metar.observationTime,
                 actualCategory: metar.flightCategory,
-                forecastCategory: forecastPeriod.flightCategory,
+                forecastCategory: period.flightCategory,
                 actualCeilingFt: metar.ceilingFeet,
                 forecastCeilingFt: forecastCeiling,
                 actualVisibilitySM: metar.visibility,
-                forecastVisibilitySM: forecastPeriod.visibility
+                forecastVisibilitySM: period.visibility,
+                actualWindKt: metar.wind.speed,
+                actualGustKt: metar.wind.gust,
+                forecastWindKt: period.wind?.speed,
+                forecastGustKt: period.wind?.gust
             )
             points.append(point)
         }
 
         guard !points.isEmpty else { return nil }
+        let n = Double(points.count)
 
-        let matches = points.filter { $0.categoryMatch }.count
-        let accuracy = Double(matches) / Double(points.count)
+        let catMatches = Double(points.filter { $0.categoryMatch }.count)
+
+        let windClose = Double(points.filter {
+            guard let div = $0.windDivergenceKt else { return true }
+            return abs(div) <= 10
+        }.count)
+
+        let ceilClose = Double(points.filter {
+            guard let div = $0.ceilingDivergenceFt else { return true }
+            return abs(div) <= 500
+        }.count)
+
+        let visClose = Double(points.filter {
+            guard let div = $0.visibilityDivergenceSM else { return true }
+            return abs(div) <= 1.0
+        }.count)
+
         let sigMisses = points.filter { $0.divergenceSeverity == .significant }.count
+        let catAcc = catMatches / n
 
         let summary: String
-        if accuracy >= 0.9 {
-            summary = "TAF was highly accurate for the observation window."
-        } else if accuracy >= 0.7 {
-            summary = "TAF was generally accurate with some divergence."
-        } else if accuracy >= 0.5 {
-            summary = "TAF had notable divergence from actual conditions."
-        } else {
-            summary = "TAF significantly missed actual conditions. Use caution relying on forecasts."
-        }
+        if catAcc >= 0.9 { summary = "TAF was highly accurate for the observation window." }
+        else if catAcc >= 0.7 { summary = "TAF was generally accurate with some divergence." }
+        else if catAcc >= 0.5 { summary = "TAF had notable divergence from actual conditions." }
+        else { summary = "TAF significantly missed actual conditions. Use caution relying on forecasts." }
 
         return TafVerification(
             points: points,
-            overallAccuracy: accuracy,
+            categoryAccuracy: catAcc,
+            windAccuracy: windClose / n,
+            ceilingAccuracy: ceilClose / n,
+            visibilityAccuracy: visClose / n,
             significantMisses: sigMisses,
             summary: summary
         )

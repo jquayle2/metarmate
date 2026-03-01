@@ -274,7 +274,8 @@ struct WeatherTrend: Codable {
     var observed: ObservedTrend
     var forecast: ForecastTrend
     var overall: TrendDirection
-    var summaryText: String
+    var headline: String        // short, specific — surfaces the most important thing
+    var summaryText: String     // supporting detail
 
     static func derive(metars: [Metar], taf: Taf?) -> WeatherTrend {
         let currentMetar = metars.first ?? metars[0]
@@ -294,6 +295,10 @@ struct WeatherTrend: Codable {
             overall = .steady
         }
 
+        // Headline: surface the single most operationally significant thing happening.
+        // Priority: ceiling > visibility > wind. Forecast divergence noted when it conflicts.
+        let headline = deriveHeadline(observed: observed, forecast: forecast)
+
         let summary: String
         switch (observed.overall, forecast.overall) {
         case (.improving, .improving):
@@ -305,11 +310,11 @@ struct WeatherTrend: Codable {
         case (.improving, .deteriorating):
             summary = "Conditions have been improving but forecast shows deterioration ahead."
         case (.steady, .steady):
-            summary = "Conditions are steady with no significant changes expected."
+            summary = "No significant changes observed or forecast."
         case (.steady, .improving):
-            summary = "Conditions are steady with improvement expected."
+            summary = "Conditions steady. Improvement expected ahead."
         case (.steady, .deteriorating):
-            summary = "Conditions are steady but deterioration is expected."
+            summary = "Conditions steady now but deterioration is forecast."
         case (.improving, .steady):
             summary = "Conditions have been improving and are expected to stabilize."
         case (.deteriorating, .steady):
@@ -322,7 +327,63 @@ struct WeatherTrend: Codable {
             observed: observed,
             forecast: forecast,
             overall: overall,
+            headline: headline,
             summaryText: summary
         )
+    }
+
+    private static func deriveHeadline(observed: ObservedTrend, forecast: ForecastTrend) -> String {
+        let roc = observed.rateOfChange
+
+        // Ceiling is the most safety-critical — lead with it if it's moving
+        if observed.ceiling == .deteriorating {
+            if let delta = roc?.ceilingDeltaFt, abs(delta) > 0 {
+                return "Ceiling Falling (\(delta.formatted()) ft)"
+            }
+            return "Ceiling Falling"
+        }
+        if observed.ceiling == .improving {
+            if let delta = roc?.ceilingDeltaFt, abs(delta) > 0 {
+                let sign = delta > 0 ? "+" : ""
+                return "Ceiling Rising (\(sign)\(delta.formatted()) ft)"
+            }
+            return "Ceiling Rising"
+        }
+
+        // Visibility next
+        if observed.visibility == .deteriorating {
+            if let delta = roc.map({ $0.visibilityDeltaSM }), abs(delta) >= 0.5 {
+                return "Visibility Decreasing (\(String(format: "%g", delta)) SM)"
+            }
+            return "Visibility Decreasing"
+        }
+        if observed.visibility == .improving {
+            if let delta = roc.map({ $0.visibilityDeltaSM }), abs(delta) >= 0.5 {
+                let sign = delta > 0 ? "+" : ""
+                return "Visibility Increasing (\(sign)\(String(format: "%g", delta)) SM)"
+            }
+            return "Visibility Increasing"
+        }
+
+        // Wind — operationally significant even when flight category is VFR
+        if observed.wind == .deteriorating {
+            if let delta = roc?.windDeltaKt, delta > 0 {
+                return "Wind Increasing (+\(delta) kt)"
+            }
+            return "Wind Increasing"
+        }
+        if observed.wind == .improving {
+            return "Wind Decreasing"
+        }
+
+        // Forecast divergence — conditions are steady but something is coming
+        if forecast.overall == .deteriorating {
+            return "Deterioration Forecast"
+        }
+        if forecast.overall == .improving {
+            return "Improvement Forecast"
+        }
+
+        return "Stable Conditions"
     }
 }
