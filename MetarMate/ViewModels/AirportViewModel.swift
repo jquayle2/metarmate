@@ -46,7 +46,7 @@ class AirportViewModel: ObservableObject {
     func distance(to airport: Airport) -> String? {
         guard let location = locationService.currentLocation else { return nil }
         let dist = airport.distance(from: location)
-        return dist.nmString
+        return dist.distanceNmString
     }
 
     // MARK: - Favorites helpers (work with @Query in views)

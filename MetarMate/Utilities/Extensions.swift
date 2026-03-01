@@ -70,7 +70,7 @@ extension Wind {
 
 // MARK: - CLLocationDistance - Nautical Miles
 extension CLLocationDistance {
-    var nmString: String {
+    var distanceNmString: String {
         let nm = self / 1852.0
         if nm < 10 {
             return String(format: "%.1f nm", nm)

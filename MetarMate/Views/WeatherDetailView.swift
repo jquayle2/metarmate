@@ -325,7 +325,7 @@ struct WeatherDetailView: View {
                                 }
                                 Spacer()
                                 let dist = item.airport.distance(from: CLLocation(latitude: airport.latitude, longitude: airport.longitude))
-                                Text(dist.nmString)
+                                Text(dist.distanceNmString)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
