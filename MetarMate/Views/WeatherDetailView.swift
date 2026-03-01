@@ -211,20 +211,18 @@ struct WeatherDetailView: View {
                 }
                 .padding(.top, 8)
             } label: {
-                HStack {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("PERFORMANCE")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                         .tracking(1)
-                        .fixedSize()
-                    Spacer()
-                    Text(da.densityAltitudeText)
-                        .font(.caption.bold())
-                        .foregroundColor(hpLossColor(da.hpLossPercent))
-                    Text("· \(da.hpLossText)")
-                        .font(.caption)
-                        .foregroundColor(hpLossColor(da.hpLossPercent))
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Image(systemName: hpLossIcon(da.hpLossPercent))
+                            .foregroundColor(hpLossColor(da.hpLossPercent))
+                        Text("\(da.densityAltitudeText)  ·  \(da.hpLossText)")
+                            .font(.subheadline.bold())
+                            .foregroundColor(hpLossColor(da.hpLossPercent))
+                    }
                 }
             }
         }
