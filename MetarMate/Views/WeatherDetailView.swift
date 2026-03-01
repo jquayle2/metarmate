@@ -258,34 +258,61 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Trend")
 
-            // Overall summary
-            HStack {
+            // Alert card with background tint (Point 2)
+            HStack(spacing: 10) {
                 Image(systemName: trend.overall.systemImage)
                     .foregroundColor(trend.overall.color)
-                    .font(.title3)
-                Text(trend.headline)
-                    .font(.headline)
-                    .foregroundColor(trend.overall.color)
+                    .font(.title2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(trend.headline)
+                        .font(.headline)
+                        .foregroundColor(trend.overall.color)
+                    Text(trend.summaryText)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
             }
-            Text(trend.summaryText)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            .padding(10)
+            .background(trend.overall.color.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
 
             Divider()
 
-            // Observed trend (from METAR history)
+            // OBSERVED (Point 7 — quantitative, Point 1 — objective labels, Point 4 — no redundant pills)
             Text("OBSERVED")
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
                 .tracking(0.5)
+
             let roc = trend.observed.rateOfChange
-            TrendIndicator(direction: trend.observed.visibility, label: "Visibility",
-                           delta: roc.map { $0.visibilityChangeText + " / " + $0.spanText })
-            TrendIndicator(direction: trend.observed.ceiling, label: "Ceiling",
-                           delta: roc.map { $0.ceilingChangeText + " / " + $0.spanText })
-            TrendIndicator(direction: trend.observed.wind, label: "Wind",
-                           delta: roc.map { $0.windChangeText + " / " + $0.spanText })
-            if trend.observed.metarCount > 0 {
+
+            // Wind row — always show, with quantitative breakdown when changing
+            observedWindRow(trend.observed.wind, roc: roc)
+
+            // Visibility row — only show pill/detail when changing
+            if trend.observed.visibility != .steady {
+                observedRow(
+                    direction: trend.observed.visibility,
+                    label: "Visibility",
+                    detail: roc?.visibilityQuantitativeText
+                )
+            } else {
+                observedRowSteady(label: "Visibility", span: roc?.spanText)
+            }
+
+            // Ceiling row
+            if trend.observed.ceiling != .steady {
+                observedRow(
+                    direction: trend.observed.ceiling,
+                    label: "Ceiling",
+                    detail: roc?.ceilingQuantitativeText
+                )
+            } else {
+                observedRowSteady(label: "Ceiling", span: roc?.spanText)
+            }
+
+            if trend.observed.metarCount > 1 {
                 Text(trend.observed.summaryText)
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -293,20 +320,100 @@ struct WeatherDetailView: View {
 
             Divider()
 
-            // Forecast trend (METAR vs TAF)
+            // FORECAST (Point 3 marker — deviation strip placeholder)
             Text("FORECAST")
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
                 .tracking(0.5)
+
+            TrendIndicator(direction: trend.forecast.wind, label: "Wind")
             TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
             TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
-            TrendIndicator(direction: trend.forecast.wind, label: "Wind")
+
             Text(trend.forecast.summaryText)
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
         .padding()
         .background(cardBackground)
+    }
+
+    // Wind row with full quantitative breakdown (Point 7)
+    private func observedWindRow(_ direction: TrendDirection, roc: RateOfChange?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: direction.systemImage)
+                    .foregroundColor(direction.color)
+                Text("Wind")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .leading)
+                // Objective label (Point 1) — "Increasing" not "Deteriorating"
+                Text(windDirectionLabel(direction))
+                    .font(.subheadline.bold())
+                    .foregroundColor(direction.color)
+            }
+            if let roc = roc, roc.hasWindChange {
+                Text(roc.windQuantitativeText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 26)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let span = roc?.spanText {
+                Text("No change · \(span)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 26)
+            }
+        }
+    }
+
+    // Changing parameter row with detail line (Point 7)
+    private func observedRow(direction: TrendDirection, label: String, detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: direction.systemImage)
+                    .foregroundColor(direction.color)
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 80, alignment: .leading)
+                Text(direction.rawValue)
+                    .font(.subheadline.bold())
+                    .foregroundColor(direction.color)
+            }
+            if let detail = detail {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 26)
+            }
+        }
+    }
+
+    // Steady parameter row — compact, no pill clutter (Point 4)
+    private func observedRowSteady(label: String, span: String?) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: TrendDirection.steady.systemImage)
+                .foregroundColor(.secondary.opacity(0.5))
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
+            Text(span.map { "Steady · \($0)" } ?? "Steady")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // Objective wind label (Point 1) — no "Deteriorating" judgment
+    private func windDirectionLabel(_ direction: TrendDirection) -> String {
+        switch direction {
+        case .improving: return "Decreasing"
+        case .deteriorating: return "Increasing"
+        case .steady: return "Steady"
+        case .unknown: return "Unknown"
+        }
     }
 
     // MARK: - METAR History

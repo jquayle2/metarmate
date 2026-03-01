@@ -101,34 +101,78 @@ private enum TrendThresholds {
 
 // MARK: - Rate of Change (actual numeric deltas over observation window)
 struct RateOfChange: Codable {
-    var ceilingDeltaFt: Int?        // positive = rising, negative = falling, nil = no ceiling either end
-    var visibilityDeltaSM: Double   // positive = improving
-    var windDeltaKt: Int            // positive = increasing (using peak speed/gust)
-    var spanHours: Double           // observation window in hours
+    var ceilingDeltaFt: Int?
+    var visibilityDeltaSM: Double
+    var windDeltaKt: Int
+    var spanHours: Double
 
-    // Human-readable delta strings
-    var ceilingChangeText: String {
-        guard let delta = ceilingDeltaFt else { return "—" }
-        if delta == 0 { return "No change" }
-        let sign = delta > 0 ? "+" : ""
-        return "\(sign)\(delta.formatted()) ft"
-    }
-
-    var visibilityChangeText: String {
-        if abs(visibilityDeltaSM) < 0.1 { return "No change" }
-        let sign = visibilityDeltaSM > 0 ? "+" : ""
-        return "\(sign)\(String(format: "%g", visibilityDeltaSM)) SM"
-    }
-
-    var windChangeText: String {
-        if windDeltaKt == 0 { return "No change" }
-        let sign = windDeltaKt > 0 ? "+" : ""
-        return "\(sign)\(windDeltaKt) kt"
-    }
+    // Endpoints for "from → to" display
+    var oldCeilingFt: Int?
+    var newCeilingFt: Int?
+    var oldVisibilitySM: Double
+    var newVisibilitySM: Double
+    var oldWindKt: Int          // sustained
+    var newWindKt: Int
+    var oldGustKt: Int?
+    var newGustKt: Int?
 
     var spanText: String {
         spanHours < 1.5 ? "~1 hr" : "~\(Int(spanHours)) hrs"
     }
+
+    // "5 → 20 kt (+15)" style — only shown when there's a meaningful change
+    var windQuantitativeText: String {
+        var parts: [String] = []
+        let sustainedDelta = newWindKt - oldWindKt
+        if abs(sustainedDelta) >= 3 || oldWindKt != newWindKt {
+            let sign = sustainedDelta > 0 ? "+" : ""
+            parts.append("Sustained: \(oldWindKt) → \(newWindKt) kt (\(sign)\(sustainedDelta))")
+        }
+        if let og = oldGustKt, let ng = newGustKt {
+            let gDelta = ng - og
+            let sign = gDelta > 0 ? "+" : ""
+            parts.append("Gust: \(og) → \(ng) kt (\(sign)\(gDelta))")
+        } else if oldGustKt == nil, let ng = newGustKt {
+            parts.append("Gust: none → \(ng) kt")
+        } else if let og = oldGustKt, newGustKt == nil {
+            parts.append("Gust: \(og) kt → none")
+        }
+        return parts.joined(separator: "\n")
+    }
+
+    var visibilityQuantitativeText: String? {
+        if abs(visibilityDeltaSM) < 0.1 { return nil }
+        let sign = visibilityDeltaSM > 0 ? "+" : ""
+        let oldStr = oldVisibilitySM >= 10 ? "10+" : String(format: "%g", oldVisibilitySM)
+        let newStr = newVisibilitySM >= 10 ? "10+" : String(format: "%g", newVisibilitySM)
+        return "\(oldStr) → \(newStr) SM (\(sign)\(String(format: "%g", visibilityDeltaSM)))"
+    }
+
+    var ceilingQuantitativeText: String? {
+        guard let delta = ceilingDeltaFt, abs(delta) > 0 else { return nil }
+        let sign = delta > 0 ? "+" : ""
+        if let old = oldCeilingFt, let new = newCeilingFt {
+            return "\(old.formatted()) → \(new.formatted()) ft (\(sign)\(delta.formatted()))"
+        }
+        if oldCeilingFt == nil, let new = newCeilingFt {
+            return "Ceiling formed at \(new.formatted()) ft"
+        }
+        if let old = oldCeilingFt, newCeilingFt == nil {
+            return "Ceiling cleared (was \(old.formatted()) ft)"
+        }
+        return nil
+    }
+
+    // Simple change text for steady conditions (no pill shown if truly no change)
+    var windChangeText: String {
+        if windDeltaKt == 0 && oldGustKt == newGustKt { return "No change" }
+        let sign = windDeltaKt > 0 ? "+" : ""
+        return "\(sign)\(windDeltaKt) kt"
+    }
+
+    var hasWindChange: Bool { windDeltaKt != 0 || oldGustKt != newGustKt }
+    var hasVisibilityChange: Bool { abs(visibilityDeltaSM) >= 0.1 }
+    var hasCeilingChange: Bool { ceilingDeltaFt != nil && ceilingDeltaFt != 0 }
 }
 
 // MARK: - Observed Trend (derived from METAR history)
@@ -159,6 +203,8 @@ struct ObservedTrend: Codable {
         let visTrend = TrendThresholds.visibilityTrend(old: oldest.visibility, new: newest.visibility)
         let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
 
+        let oldWindSustained = oldest.wind.speed
+        let newWindSustained = newest.wind.speed
         let oldWind = oldest.wind.gust ?? oldest.wind.speed
         let newWind = newest.wind.gust ?? newest.wind.speed
         let windTrend = TrendThresholds.windTrend(old: oldWind, new: newWind)
@@ -167,7 +213,15 @@ struct ObservedTrend: Codable {
 
         let hoursSpan = newest.observationTime.timeIntervalSince(oldest.observationTime) / 3600
         let hoursText = hoursSpan < 1.5 ? "the past hour" : "the past \(Int(hoursSpan)) hours"
-        let summary = "Conditions have been \(overall.rawValue.lowercased()) over \(hoursText) (\(metars.count) observations)."
+
+        // Summary reflects what's actually moving, not just overall consensus
+        let summary: String
+        let activeChanges = [visTrend, ceilTrend, windTrend].filter { $0 != .steady && $0 != .unknown }
+        if activeChanges.isEmpty {
+            summary = "No significant changes over \(hoursText) (\(metars.count) obs)."
+        } else {
+            summary = "\(metars.count) observations over \(hoursText)."
+        }
 
         // Compute rate of change deltas (newest - oldest)
         let ceilDelta: Int?
@@ -182,8 +236,16 @@ struct ObservedTrend: Codable {
         let roc = RateOfChange(
             ceilingDeltaFt: ceilDelta,
             visibilityDeltaSM: newest.visibility - oldest.visibility,
-            windDeltaKt: newWind - oldWind,
-            spanHours: hoursSpan
+            windDeltaKt: newWindSustained - oldWindSustained,
+            spanHours: hoursSpan,
+            oldCeilingFt: oldest.ceilingFeet,
+            newCeilingFt: newest.ceilingFeet,
+            oldVisibilitySM: oldest.visibility,
+            newVisibilitySM: newest.visibility,
+            oldWindKt: oldWindSustained,
+            newWindKt: newWindSustained,
+            oldGustKt: oldest.wind.gust,
+            newGustKt: newest.wind.gust
         )
 
         return ObservedTrend(
