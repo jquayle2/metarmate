@@ -407,15 +407,16 @@ struct WeatherDetailView: View {
 
             Divider()
 
+            let tafIsUpcoming = taf.validFrom > Date()
             ForEach(taf.forecasts) { period in
-                tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id)
+                tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
             }
         }
         .padding()
         .background(cardBackground)
     }
 
-    private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool) -> some View {
+    private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool, isUpcoming: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
                 .fill(period.flightCategory.swiftUIColor)
@@ -428,12 +429,12 @@ struct WeatherDetailView: View {
                         .font(.caption.bold())
                         .foregroundColor(isCurrent ? .yellow : .primary)
                     if isCurrent {
-                        Text("NOW")
+                        Text(isUpcoming ? "NEXT" : "NOW")
                             .font(.caption2.bold())
-                            .foregroundColor(.yellow)
+                            .foregroundColor(isUpcoming ? .orange : .yellow)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .overlay(Capsule().stroke(Color.yellow, lineWidth: 1))
+                            .overlay(Capsule().stroke(isUpcoming ? Color.orange : Color.yellow, lineWidth: 1))
                     }
                     Spacer()
                     FlightCategoryBadge(category: period.flightCategory)
