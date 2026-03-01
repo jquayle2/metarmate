@@ -45,6 +45,7 @@ struct FlightCategoryBadge: View {
 struct TrendIndicator: View {
     let direction: TrendDirection
     let label: String
+    var delta: String? = nil
 
     var body: some View {
         HStack(spacing: 4) {
@@ -53,9 +54,19 @@ struct TrendIndicator: View {
             Text(label)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .frame(width: 80, alignment: .leading)
             Text(direction.rawValue)
                 .font(.subheadline.bold())
                 .foregroundColor(direction.color)
+            if let delta = delta {
+                Text(delta)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(.systemGray5))
+                    .clipShape(Capsule())
+            }
         }
     }
 }

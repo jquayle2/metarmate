@@ -99,6 +99,38 @@ private enum TrendThresholds {
     }
 }
 
+// MARK: - Rate of Change (actual numeric deltas over observation window)
+struct RateOfChange: Codable {
+    var ceilingDeltaFt: Int?        // positive = rising, negative = falling, nil = no ceiling either end
+    var visibilityDeltaSM: Double   // positive = improving
+    var windDeltaKt: Int            // positive = increasing (using peak speed/gust)
+    var spanHours: Double           // observation window in hours
+
+    // Human-readable delta strings
+    var ceilingChangeText: String {
+        guard let delta = ceilingDeltaFt else { return "—" }
+        if delta == 0 { return "No change" }
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(delta.formatted()) ft"
+    }
+
+    var visibilityChangeText: String {
+        if abs(visibilityDeltaSM) < 0.1 { return "No change" }
+        let sign = visibilityDeltaSM > 0 ? "+" : ""
+        return "\(sign)\(String(format: "%g", visibilityDeltaSM)) SM"
+    }
+
+    var windChangeText: String {
+        if windDeltaKt == 0 { return "No change" }
+        let sign = windDeltaKt > 0 ? "+" : ""
+        return "\(sign)\(windDeltaKt) kt"
+    }
+
+    var spanText: String {
+        spanHours < 1.5 ? "~1 hr" : "~\(Int(spanHours)) hrs"
+    }
+}
+
 // MARK: - Observed Trend (derived from METAR history)
 struct ObservedTrend: Codable {
     var visibility: TrendDirection
@@ -107,6 +139,7 @@ struct ObservedTrend: Codable {
     var overall: TrendDirection
     var summaryText: String
     var metarCount: Int
+    var rateOfChange: RateOfChange?
 
     static func derive(from metars: [Metar]) -> ObservedTrend {
         guard metars.count >= 2 else {
@@ -114,7 +147,8 @@ struct ObservedTrend: Codable {
                 visibility: .unknown, ceiling: .unknown,
                 wind: .unknown, overall: .unknown,
                 summaryText: "Not enough observations for trend analysis.",
-                metarCount: metars.count
+                metarCount: metars.count,
+                rateOfChange: nil
             )
         }
 
@@ -135,11 +169,29 @@ struct ObservedTrend: Codable {
         let hoursText = hoursSpan < 1.5 ? "the past hour" : "the past \(Int(hoursSpan)) hours"
         let summary = "Conditions have been \(overall.rawValue.lowercased()) over \(hoursText) (\(metars.count) observations)."
 
+        // Compute rate of change deltas (newest - oldest)
+        let ceilDelta: Int?
+        if let oldCeil = oldest.ceilingFeet, let newCeil = newest.ceilingFeet {
+            ceilDelta = newCeil - oldCeil
+        } else if oldest.ceilingFeet == nil && newest.ceilingFeet == nil {
+            ceilDelta = 0
+        } else {
+            ceilDelta = nil  // ceiling appeared or disappeared
+        }
+
+        let roc = RateOfChange(
+            ceilingDeltaFt: ceilDelta,
+            visibilityDeltaSM: newest.visibility - oldest.visibility,
+            windDeltaKt: newWind - oldWind,
+            spanHours: hoursSpan
+        )
+
         return ObservedTrend(
             visibility: visTrend, ceiling: ceilTrend,
             wind: windTrend, overall: overall,
             summaryText: summary,
-            metarCount: metars.count
+            metarCount: metars.count,
+            rateOfChange: roc
         )
     }
 
@@ -149,7 +201,6 @@ struct ObservedTrend: Codable {
         if critical.contains(.deteriorating) { return .deteriorating }
         if critical.allSatisfy({ $0 == .improving }) { return .improving }
         if critical.allSatisfy({ $0 == .steady || $0 == .unknown }) {
-            // If vis and ceiling are steady but wind is deteriorating significantly, note it
             if wind == .deteriorating { return .steady }
             return .steady
         }

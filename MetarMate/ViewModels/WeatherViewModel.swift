@@ -17,6 +17,7 @@ class WeatherViewModel: ObservableObject {
     @Published var metarHistory: [Metar] = []
     @Published var taf: Taf?
     @Published var trend: WeatherTrend?
+    @Published var tafVerification: TafVerification?
     @Published var isLoading = false
     @Published var error: Error?
     @Published var lastUpdated: Date?
@@ -48,6 +49,9 @@ class WeatherViewModel: ObservableObject {
 
                 if !fetchedHistory.isEmpty {
                     trend = WeatherTrend.derive(metars: fetchedHistory, taf: fetchedTaf)
+                    if let taf = fetchedTaf {
+                        tafVerification = TafVerification.derive(metars: fetchedHistory, taf: taf)
+                    }
                 }
             }
 

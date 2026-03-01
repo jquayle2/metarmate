@@ -28,12 +28,19 @@ struct WeatherDetailView: View {
                     if let metar = vm.metar {
                         rawMetarSection(metar)
                         decodedConditionsSection(metar)
+                        densityAltitudeSection(metar)
                     }
                     if let trend = vm.trend {
                         trendSection(trend)
                     }
+                    if vm.metarHistory.count > 1 {
+                        metarHistorySection(vm.metarHistory)
+                    }
                     if let taf = vm.taf {
                         tafSection(taf)
+                    }
+                    if let verification = vm.tafVerification {
+                        tafVerificationSection(verification)
                     }
                 }
             }
@@ -161,6 +168,77 @@ struct WeatherDetailView: View {
         }
     }
 
+    // MARK: - Density Altitude
+    private func densityAltitudeSection(_ metar: Metar) -> some View {
+        let da = DensityAltitude.calculate(
+            temperatureC: Double(metar.temperature),
+            dewpointC: Double(metar.dewpoint),
+            altimeterInHg: metar.altimeter,
+            fieldElevationFt: airport.elevation
+        )
+        return VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Performance")
+
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    statBlock("Density Altitude", da.densityAltitudeText)
+                    statBlock("Pressure Altitude", "\(da.pressureAltitudeFt.formatted()) ft MSL")
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    statBlock("ISA Deviation", da.isaDeviationText, rightAlign: true)
+                    statBlock("DA Penalty", da.penaltyText, rightAlign: true)
+                }
+            }
+
+            Divider()
+
+            HStack(spacing: 8) {
+                Image(systemName: hpLossIcon(da.hpLossPercent))
+                    .foregroundColor(hpLossColor(da.hpLossPercent))
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(da.hpLossText)
+                        .font(.subheadline.bold())
+                        .foregroundColor(hpLossColor(da.hpLossPercent))
+                    Text("Normally aspirated engine estimate")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Text(da.summary)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func statBlock(_ label: String, _ value: String, rightAlign: Bool = false) -> some View {
+        VStack(alignment: rightAlign ? .trailing : .leading, spacing: 1) {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Text(value)
+                .font(.subheadline.bold())
+                .foregroundColor(.primary)
+        }
+    }
+
+    private func hpLossColor(_ percent: Double) -> Color {
+        if percent < 8 { return .green }
+        if percent < 15 { return .yellow }
+        return .red
+    }
+
+    private func hpLossIcon(_ percent: Double) -> String {
+        if percent < 8 { return "checkmark.circle.fill" }
+        if percent < 15 { return "exclamationmark.triangle.fill" }
+        return "xmark.octagon.fill"
+    }
+
     // MARK: - Trend
     private func trendSection(_ trend: WeatherTrend) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -186,9 +264,13 @@ struct WeatherDetailView: View {
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
                 .tracking(0.5)
-            TrendIndicator(direction: trend.observed.visibility, label: "Visibility")
-            TrendIndicator(direction: trend.observed.ceiling, label: "Ceiling")
-            TrendIndicator(direction: trend.observed.wind, label: "Wind")
+            let roc = trend.observed.rateOfChange
+            TrendIndicator(direction: trend.observed.visibility, label: "Visibility",
+                           delta: roc.map { $0.visibilityChangeText + " / " + $0.spanText })
+            TrendIndicator(direction: trend.observed.ceiling, label: "Ceiling",
+                           delta: roc.map { $0.ceilingChangeText + " / " + $0.spanText })
+            TrendIndicator(direction: trend.observed.wind, label: "Wind",
+                           delta: roc.map { $0.windChangeText + " / " + $0.spanText })
             if trend.observed.metarCount > 0 {
                 Text(trend.observed.summaryText)
                     .font(.caption2)
@@ -211,6 +293,78 @@ struct WeatherDetailView: View {
         }
         .padding()
         .background(cardBackground)
+    }
+
+    // MARK: - METAR History
+    private func metarHistorySection(_ metars: [Metar]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Observation History")
+            ForEach(Array(metars.enumerated()), id: \.element.id) { index, metar in
+                HStack(spacing: 10) {
+                    FlightCategoryBadge(category: metar.flightCategory)
+                        .frame(width: 50)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(historyTimeLabel(metar))
+                            .font(.caption.bold())
+                            .foregroundColor(index == 0 ? .yellow : .primary)
+                        Text(historyConditionLine(metar))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    if index == 0 {
+                        Text("LATEST")
+                            .font(.caption2.bold())
+                            .foregroundColor(.yellow)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(Capsule().stroke(Color.yellow, lineWidth: 1))
+                    }
+                }
+                .padding(.vertical, 2)
+                if index < metars.count - 1 {
+                    HStack {
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.2))
+                            .frame(width: 1, height: 12)
+                            .padding(.leading, 24)
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func historyTimeLabel(_ metar: Metar) -> String {
+        let localFmt = DateFormatter()
+        localFmt.dateFormat = "h:mm a"
+        localFmt.timeZone = .current
+        let utcFmt = DateFormatter()
+        utcFmt.dateFormat = "HH'Z'"
+        utcFmt.timeZone = TimeZone(identifier: "UTC")
+        return "\(localFmt.string(from: metar.observationTime))  (\(utcFmt.string(from: metar.observationTime)))"
+    }
+
+    private func historyConditionLine(_ metar: Metar) -> String {
+        var parts: [String] = []
+        if let ceil = metar.ceilingFeet {
+            let cov = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })?.coverage.rawValue ?? "BKN"
+            parts.append("\(cov) \(ceil.formatted()) ft")
+        } else {
+            parts.append("Clear")
+        }
+        parts.append("Vis \(visibilityText(metar.visibility))")
+        if metar.wind.speed == 0 {
+            parts.append("Calm")
+        } else {
+            let dir = metar.wind.isVariable ? "VRB" : "\(metar.wind.direction ?? 0)°"
+            var w = "\(dir) \(metar.wind.speed) kt"
+            if let g = metar.wind.gust { w += " G\(g)" }
+            parts.append(w)
+        }
+        return parts.joined(separator: " · ")
     }
 
     // MARK: - TAF
@@ -285,6 +439,94 @@ struct WeatherDetailView: View {
         .padding(.vertical, 4)
         .background(isCurrent ? Color.yellow.opacity(0.05) : Color.clear)
         .cornerRadius(6)
+    }
+
+    // MARK: - TAF Verification
+    private func tafVerificationSection(_ verification: TafVerification) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("TAF Verification")
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(verification.accuracyPercent)%")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundColor(accuracyColor(verification.overallAccuracy))
+                    Text("Category accuracy")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(verification.points.count) observations")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if verification.significantMisses > 0 {
+                        Text("\(verification.significantMisses) significant miss\(verification.significantMisses == 1 ? "" : "es")")
+                            .font(.caption.bold())
+                            .foregroundColor(.red)
+                    } else {
+                        Text("No significant misses")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                }
+            }
+
+            Text(verification.summary)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Divider()
+
+            Text("RECENT PERIODS")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
+
+            ForEach(verification.points) { point in
+                HStack(spacing: 10) {
+                    Image(systemName: point.categoryMatch ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundColor(point.categoryMatch ? .green : .red)
+                        .frame(width: 20)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 6) {
+                            Text(shortTime(point.observationTime))
+                                .font(.caption.bold())
+                            FlightCategoryBadge(category: point.actualCategory)
+                            if !point.categoryMatch {
+                                Text("fcst \(point.forecastCategory.rawValue)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .overlay(Capsule().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                            }
+                        }
+                        Text(point.divergenceText)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func accuracyColor(_ accuracy: Double) -> Color {
+        if accuracy >= 0.9 { return .green }
+        if accuracy >= 0.7 { return .yellow }
+        return .red
+    }
+
+    private func shortTime(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "h:mm a"
+        fmt.timeZone = .current
+        return fmt.string(from: date)
     }
 
     // MARK: - No Reporting
