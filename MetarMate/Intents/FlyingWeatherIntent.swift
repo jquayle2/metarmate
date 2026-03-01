@@ -59,7 +59,7 @@ struct FlyingWeatherIntent: AppIntent {
         let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
 
         // 5. Derive trend from history + TAF
-        let trend = WeatherTrend.derive(metars: metarHistory, taf: taf)
+        let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
 
         // 6. Build spoken dialog
         let spokenText = buildDialog(airportName: airport.name, metar: metar, trend: trend)
