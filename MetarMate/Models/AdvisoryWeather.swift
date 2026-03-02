@@ -147,21 +147,34 @@ struct AdvisoryWeather: Codable {
     // MARK: - Static helpers (shared with AdvisoryForecastHour)
 
     /// Estimates FlightCategory from visibility and cloud cover %.
-    /// Cloud cover → ceiling: ≥75% (OVC) ≈ 1500 ft; 50–74% (BKN) ≈ 3000 ft; <50% = no ceiling.
+    /// Cloud cover % from NWP models is unreliable for ceiling estimation — it can read OVC
+    /// in perfectly clear desert conditions due to grid aliasing and orographic effects.
+    /// Rule: if visibility is solidly VFR (>=5 SM), visibility wins — cloud cover alone
+    /// cannot push the category below VFR. Only use cloud cover when visibility is
+    /// marginal or unknown, as a secondary signal.
     static func estimateFlightCategory(visibilityKm: Double?, cloudCoverPercent: Int) -> FlightCategory {
         let visMi = visibilityKm.map { $0 * 0.621371 }
+
+        // Visibility check first — most reliable NWP parameter
+        if let v = visMi {
+            if v < 1.0 { return .lifr }
+            if v < 3.0 { return .ifr }
+            if v < 5.0 { return .mvfr }
+            // Vis >=5 SM = solidly VFR. Cloud cover % from NWP is too unreliable
+            // to push below VFR when visibility confirms clear conditions.
+            return .vfr
+        }
+
+        // No visibility data — fall back to cloud cover heuristic only
         let approxCeilingFt: Int?
         switch cloudCoverPercent {
         case 75...:    approxCeilingFt = 1500
         case 50..<75:  approxCeilingFt = 3000
         default:       approxCeilingFt = nil
         }
-        if let v = visMi, v < 1.0                { return .lifr }
-        if let c = approxCeilingFt, c < 500      { return .lifr }
-        if let v = visMi, v < 3.0                { return .ifr }
-        if let c = approxCeilingFt, c < 1000     { return .ifr }
-        if let v = visMi, v < 5.0                { return .mvfr }
-        if let c = approxCeilingFt, c < 3000     { return .mvfr }
+        if let c = approxCeilingFt, c < 500  { return .lifr }
+        if let c = approxCeilingFt, c < 1000 { return .ifr }
+        if let c = approxCeilingFt, c < 3000 { return .mvfr }
         return .vfr
     }
 

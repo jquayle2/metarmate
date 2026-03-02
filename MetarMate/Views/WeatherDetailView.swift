@@ -1295,14 +1295,26 @@ struct WeatherDetailView: View {
 
     private func advisoryFlightCatRationale(_ wx: AdvisoryWeather) -> String {
         var parts: [String] = []
-        if let vis = wx.visibilityMiles {
+        let visMi = wx.visibilityMiles
+        if let vis = visMi {
             parts.append("Vis ~\(String(format: "%g", (vis * 2).rounded() / 2)) SM")
         }
-        switch wx.cloudCoverPercent {
-        case 75...:    parts.append("OVC ceiling ~1500 ft est.")
-        case 50..<75:  parts.append("BKN ceiling ~3000 ft est.")
-        case 13..<50:  parts.append("SCT/FEW clouds")
-        default:        parts.append("Sky clear")
+        // Only estimate ceiling from cloud cover when visibility is marginal or unknown.
+        // When vis >=5 SM, cloud cover % from NWP is unreliable for ceiling inference.
+        let visSolidlyVFR = visMi.map { $0 >= 5.0 } ?? false
+        if visSolidlyVFR {
+            switch wx.cloudCoverPercent {
+            case 75...:   parts.append("\(wx.cloudCoverDescription) clouds (ceiling uncertain)")
+            case 13...:   parts.append("\(wx.cloudCoverDescription) clouds")
+            default:      parts.append("Sky clear")
+            }
+        } else {
+            switch wx.cloudCoverPercent {
+            case 75...:    parts.append("OVC ceiling ~1500 ft est.")
+            case 50..<75:  parts.append("BKN ceiling ~3000 ft est.")
+            case 13..<50:  parts.append("SCT/FEW clouds")
+            default:        parts.append("Sky clear")
+            }
         }
         return parts.isEmpty ? "Based on estimated visibility and cloud cover" : parts.joined(separator: " · ")
     }
