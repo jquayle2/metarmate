@@ -967,7 +967,6 @@ struct WeatherDetailView: View {
 
         // Ceiling: threshold >300ft
         if let cd = ceilDiv, abs(cd) > 300 {
-            let sign = cd > 0 ? "+" : ""
             let higher = cd > 0 ? "higher" : "lower"
             let color: Color = abs(cd) >= 800 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
             items.append(("cloud.fill", "Ceiling \(abs(cd).formatted()) ft \(higher) than forecast", color))
@@ -1363,11 +1362,17 @@ struct WeatherDetailView: View {
                              color: .primary)
             }
 
-            // Altimeter (estimated)
+            // Altimeter (estimated) — with explicit accuracy warning
             if let inHg = wx.altimeterInHg {
-                conditionRow("gauge", "Altimeter (est.)",
-                             String(format: "~%.2f inHg", inHg),
-                             color: altimeterConditionColor(inHg))
+                VStack(alignment: .leading, spacing: 4) {
+                    conditionRow("gauge", "Altimeter (est.)",
+                                 String(format: "~%.2f inHg", inHg),
+                                 color: altimeterConditionColor(inHg))
+                    Text("⚠ Model-derived — may be off ±0.2–0.3 inHg. Use ATIS/ASOS for actual setting.")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                        .padding(.leading, 30)
+                }
             }
 
             // Precipitation

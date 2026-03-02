@@ -20,7 +20,10 @@ actor OpenMeteoService {
             throw OpenMeteoError.badResponse
         }
 
-        let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+        // Decode on a detached task to avoid main-actor isolation inference on Decodable
+        let decoded: OpenMeteoResponse = try await Task.detached(priority: .utility) { @Sendable in
+            try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+        }.value
         return buildAdvisory(airport: airport, response: decoded)
     }
 
@@ -205,10 +208,12 @@ enum OpenMeteoError: LocalizedError {
 
 // MARK: - Response models
 
-private struct OpenMeteoResponse: Decodable, Sendable {
+private struct OpenMeteoResponse: @unchecked Sendable {
     let current: CurrentBlock
     let hourly:  HourlyBlock
 }
+
+extension OpenMeteoResponse: Decodable {}
 
 private struct CurrentBlock: Decodable, Sendable {
     let temperature_2m:            Double
@@ -239,13 +244,13 @@ private struct HourlyBlock: Decodable, Sendable {
 
 // MARK: - Safe array subscript
 private extension Array {
-    subscript(safe index: Int) -> Element? {
+    nonisolated subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
 }
 
 // MARK: - Optional zip helper
-private func zip<A, B>(_ a: A?, _ b: B?) -> (A, B)? {
+nonisolated private func zip<A, B>(_ a: A?, _ b: B?) -> (A, B)? {
     guard let a = a, let b = b else { return nil }
     return (a, b)
 }
