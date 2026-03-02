@@ -32,16 +32,24 @@ def fetch_station_batch(icao_ids):
             return set()
     return {s["id"] for s in stations if "METAR" in s.get("siteType", [])}
 
+def is_icao_format(identifier):
+    """NOAA stationinfo API only reliably handles 4-character ICAO-format IDs."""
+    return len(identifier) == 4 and identifier.isalpha()
+
 def main():
     print(f"Loading {AIRPORTS_IN}...")
     airports = json.loads(AIRPORTS_IN.read_text())
     print(f"  {len(airports)} airports loaded.")
     all_icaos = [a["icao"] for a in airports]
+    # Only query NOAA for ICAO-format identifiers (4 alpha chars like KLAS, EGLL, YSSY)
+    queryable = [i for i in all_icaos if is_icao_format(i)]
+    skipped_local = len(all_icaos) - len(queryable)
+    print(f"  {len(queryable)} ICAO-format IDs to query, {skipped_local} local/FAA IDs skipped (auto hasMetar=false)")
     metar_stations = set()
-    total_batches = (len(all_icaos) + BATCH_SIZE - 1) // BATCH_SIZE
+    total_batches = (len(queryable) + BATCH_SIZE - 1) // BATCH_SIZE
     print(f"\nQuerying NOAA in {total_batches} batches of {BATCH_SIZE}...")
-    for i in range(0, len(all_icaos), BATCH_SIZE):
-        batch = all_icaos[i:i+BATCH_SIZE]
+    for i in range(0, len(queryable), BATCH_SIZE):
+        batch = queryable[i:i+BATCH_SIZE]
         batch_num = i // BATCH_SIZE + 1
         found = fetch_station_batch(batch)
         metar_stations |= found
