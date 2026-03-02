@@ -242,14 +242,16 @@ struct WeatherDetailView: View {
     }
 
     private func hpLossColor(_ percent: Double) -> Color {
-        if percent < 8 { return .green }
-        if percent < 15 { return .yellow }
+        if percent < 10 { return .green }
+        if percent < 20 { return .yellow }
+        if percent < 30 { return Color.orange }
         return .red
     }
 
     private func hpLossIcon(_ percent: Double) -> String {
-        if percent < 8 { return "checkmark.circle.fill" }
-        if percent < 15 { return "exclamationmark.triangle.fill" }
+        if percent < 10 { return "checkmark.circle.fill" }
+        if percent < 20 { return "exclamationmark.triangle.fill" }
+        if percent < 30 { return "exclamationmark.triangle.fill" }
         return "xmark.octagon.fill"
     }
 

@@ -33,11 +33,13 @@ struct DensityAltitudeResult {
         if densityAltitudeFt < 2000 && abs(isaDeviationC) < 10 {
             return "Performance near normal. Standard day conditions."
         } else if hpLossPercent < 10 {
-            return "Slight performance reduction. Check POH for your aircraft."
+            return "Minor performance reduction. Check POH for your aircraft."
         } else if hpLossPercent < 20 {
-            return "Noticeable performance reduction. Verify takeoff/climb performance."
+            return "Noticeable reduction. Verify takeoff distance and climb rate."
+        } else if hpLossPercent < 30 {
+            return "Significant reduction. Density altitude briefing required. Review POH limits carefully."
         } else {
-            return "Significant performance reduction. Carefully verify POH limits before flight."
+            return "Severe performance penalty. Aircraft may be near or beyond performance limits. Do not depart without thorough POH analysis."
         }
     }
 }
