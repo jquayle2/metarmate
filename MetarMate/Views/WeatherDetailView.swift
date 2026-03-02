@@ -1177,91 +1177,536 @@ struct WeatherDetailView: View {
     private func advisoryWeatherView(_ wx: AdvisoryWeather) -> some View {
         VStack(spacing: 16) {
 
-            VStack(spacing: 6) {
-                Text(airport.name)
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.yellow)
-                        .font(.caption)
-                    Text("Advisory Weather Only — No Official METAR")
-                        .font(.caption.bold())
-                        .foregroundColor(.yellow)
-                }
-                if airport.elevation != 0 {
-                    Text("Elev \(airport.elevation.formatted()) ft MSL")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+            // ── Header ────────────────────────────────────────────────────────────
+            advisoryHeader(wx)
+
+            // ── Estimated Flight Category ─────────────────────────────────────────
+            advisoryFlightCategoryCard(wx)
+
+            // ── Current Conditions ────────────────────────────────────────────────
+            advisoryConditionsCard(wx)
+
+            // ── Density Altitude ──────────────────────────────────────────────────
+            if wx.densityAltitudeFt != nil {
+                advisoryDensityAltitudeCard(wx)
             }
 
-            VStack(spacing: 0) {
-                advisoryRow(label: "Temperature",
-                            value: String(format: "%.0f°C (%.0f°F)", wx.temperatureC, wx.temperatureF))
-                Divider()
-                if let dp = wx.dewpointC {
-                    advisoryRow(label: "Dewpoint",
-                                value: String(format: "%.0f°C (%.0f°F)", dp, dp * 9/5 + 32))
-                    Divider()
-                }
-                if let rh = wx.relativeHumidityPercent {
-                    advisoryRow(label: "Humidity", value: "\(rh)%")
-                    Divider()
-                }
-                let windDir = wx.windDirectionDeg.map { "\($0)°" } ?? "VRB"
-                let gustStr = wx.windGustKtRounded.map { " G\($0)kt" } ?? ""
-                advisoryRow(label: "Wind", value: "\(windDir) \(wx.windSpeedKtRounded)kt\(gustStr)")
-                Divider()
-                advisoryRow(label: "Clouds", value: "\(wx.cloudCoverDescription) (\(wx.cloudCoverPercent)% cover)")
-                Divider()
-                if let vis = wx.visibilityMiles {
-                    advisoryRow(label: "Visibility", value: String(format: "%.1f SM", vis))
-                    Divider()
-                }
-                advisoryRow(label: "Precipitation", value: wx.precipDescription)
-                if let pct = wx.precipitationProbability {
-                    Divider()
-                    advisoryRow(label: "Precip Probability", value: "\(pct)%")
-                }
-                if let inHg = wx.pressureInHg {
-                    Divider()
-                    advisoryRow(label: "Altimeter", value: String(format: "%.2f inHg", inHg))
-                }
+            // ── Pilot Advisories ──────────────────────────────────────────────────
+            let advisories = advisoryPilotAdvisories(wx)
+            if !advisories.isEmpty {
+                advisoryPilotAdvisoriesCard(advisories)
             }
-            .background(cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            if let updated = vm.lastUpdated {
-                Text("Updated \(updated, style: .relative) ago · Source: Open-Meteo")
+            // ── 6-Hour Trends ─────────────────────────────────────────────────────
+            if let trends = wx.trends {
+                advisoryTrendsCard(trends)
+            }
+
+            // ── 6-Hour Forecast Strip ─────────────────────────────────────────────
+            if !wx.forecast.isEmpty {
+                advisoryForecastStrip(wx.forecast)
+            }
+
+            // ── Footer ────────────────────────────────────────────────────────────
+            advisoryFooter(wx)
+        }
+    }
+
+    // MARK: - Advisory Header
+    private func advisoryHeader(_ wx: AdvisoryWeather) -> some View {
+        VStack(spacing: 8) {
+            Text(airport.name)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+
+            // Dashed advisory banner — visually distinct from the official METAR header
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.caption)
+                Text("Advisory Weather  ·  Estimated Only")
+                    .font(.caption.bold())
+                    .foregroundColor(.orange)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.orange.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundColor(Color.orange.opacity(0.5))
+            )
+
+            if airport.elevation != 0 {
+                Text("Elev \(airport.elevation.formatted()) ft MSL")
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(cardBackground)
+    }
+
+    // MARK: - Estimated Flight Category Card
+    private func advisoryFlightCategoryCard(_ wx: AdvisoryWeather) -> some View {
+        let cat = wx.estimatedFlightCategory
+        return HStack(spacing: 14) {
+            // Badge with "~" prefix to signal estimation
+            ZStack(alignment: .topTrailing) {
+                FlightCategoryBadge(category: cat)
+                    .scaleEffect(1.4)
+                    .padding(.trailing, 4)
+                Text("~")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .offset(x: -2, y: -2)
+            }
+            .frame(width: 64)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Text("Estimated \(cat.displayName)")
+                        .font(.headline)
+                        .foregroundColor(cat.swiftUIColor)
+                    Text("(~)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Text(advisoryFlightCatRationale(wx))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(cat.swiftUIColor.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                        .foregroundColor(cat.swiftUIColor.opacity(0.4))
+                )
+        )
+    }
+
+    private func advisoryFlightCatRationale(_ wx: AdvisoryWeather) -> String {
+        var parts: [String] = []
+        if let vis = wx.visibilityMiles {
+            parts.append("Vis ~\(String(format: "%g", (vis * 2).rounded() / 2)) SM")
+        }
+        switch wx.cloudCoverPercent {
+        case 75...:    parts.append("OVC ceiling ~1500 ft est.")
+        case 50..<75:  parts.append("BKN ceiling ~3000 ft est.")
+        case 13..<50:  parts.append("SCT/FEW clouds")
+        default:        parts.append("Sky clear")
+        }
+        return parts.isEmpty ? "Based on estimated visibility and cloud cover" : parts.joined(separator: " · ")
+    }
+
+    // MARK: - Advisory Conditions Card
+    private func advisoryConditionsCard(_ wx: AdvisoryWeather) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Conditions")
+
+            // Wind
+            let windDir = wx.windDirectionDeg.map { "\($0)°" } ?? "Variable"
+            let gustStr = wx.windGustKtRounded.map { " G\($0) kt" } ?? ""
+            conditionRow("wind", "Wind",
+                         "\(windDir)  \(wx.windSpeedKtRounded) kt\(gustStr)",
+                         color: advisoryWindColor(wx))
+
+            // Visibility
+            if let vis = wx.visibilityMiles {
+                conditionRow("eye.fill", "Visibility",
+                             String(format: "~%.1f SM", vis),
+                             color: visibilityConditionColor(vis))
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Label("Not certified aviation weather. Use for situational awareness only. Consult official sources (ForeFlight, 1800wxbrief) before flight.", systemImage: "info.circle")
+            // Cloud cover / ceiling
+            conditionRow("cloud.fill", "Clouds",
+                         "~\(wx.cloudCoverDescription) (\(wx.cloudCoverPercent)%)",
+                         color: advisoryCloudColor(wx.cloudCoverPercent))
+
+            // Temp / Dewpoint / Spread
+            if let dp = wx.dewpointC, let spread = wx.tdSpreadC {
+                conditionRow("thermometer", "Temp / Dewpoint",
+                             String(format: "%.0f°C / %.0f°C  (spread %.0f°)",
+                                    wx.temperatureC, dp, spread),
+                             color: tempDewConditionColor(temp: Int(wx.temperatureC.rounded()),
+                                                          dew: Int(dp.rounded())))
+                // Fog risk row
+                let fogColor: Color = wx.fogRisk == .high ? .red : wx.fogRisk == .moderate ? Color(red:1,green:0.6,blue:0) : .secondary
+                if wx.fogRisk != .low {
+                    conditionRow("cloud.fog.fill", "Fog Risk",
+                                 "~\(wx.fogRisk.rawValue)  (T-D spread \(String(format: "%.0f", spread))°C)",
+                                 color: fogColor)
+                }
+            } else {
+                conditionRow("thermometer", "Temperature",
+                             String(format: "%.0f°C  (%.0f°F)", wx.temperatureC, wx.temperatureF),
+                             color: .primary)
+            }
+
+            // Altimeter (estimated)
+            if let inHg = wx.altimeterInHg {
+                conditionRow("gauge", "Altimeter (est.)",
+                             String(format: "~%.2f inHg", inHg),
+                             color: altimeterConditionColor(inHg))
+            }
+
+            // Precipitation
+            if wx.precipitationMm >= 0.1 {
+                let precipColor: Color = wx.precipitationMm >= 4.0 ? .red : wx.precipitationMm >= 1.0 ? Color(red:1,green:0.6,blue:0) : .primary
+                conditionRow("cloud.rain.fill", "Precipitation",
+                             wx.precipDescription + (wx.precipitationProbability.map { " (\($0)% prob)" } ?? ""),
+                             color: precipColor)
+            } else if let pct = wx.precipitationProbability, pct >= 30 {
+                conditionRow("cloud.rain", "Precip Chance", "\(pct)%",
+                             color: pct >= 60 ? Color(red:1,green:0.6,blue:0) : .primary)
+            }
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    // Color helpers for advisory conditions
+    private func advisoryWindColor(_ wx: AdvisoryWeather) -> Color {
+        let speed = wx.windSpeedKtRounded
+        let gust  = wx.windGustKtRounded ?? 0
+        if gust >= 20 || speed >= 25 { return .orange }
+        if gust >= 15 || speed >= 20 { return Color(red:1,green:0.6,blue:0) }
+        if speed > 0 { return .green }
+        return .primary
+    }
+
+    private func advisoryCloudColor(_ pct: Int) -> Color {
+        switch pct {
+        case 75...:   return Color(red: 0.2, green: 0.5, blue: 1.0)
+        case 50..<75: return Color(red: 0.2, green: 0.5, blue: 1.0)
+        case 13..<50: return Color(red: 1.0, green: 0.6, blue: 0.0)
+        default:       return .green
+        }
+    }
+
+    // MARK: - Advisory Density Altitude Card
+    private func advisoryDensityAltitudeCard(_ wx: AdvisoryWeather) -> some View {
+        guard let daFt = wx.densityAltitudeFt else { return AnyView(EmptyView()) }
+        let elevFt  = Double(airport.elevation)
+        let penalty = daFt - elevFt
+        let hpLoss  = max(0, penalty / 1000.0 * 3.0)
+
+        let daColor: Color = hpLoss < 10 ? .green : hpLoss < 20 ? .yellow : hpLoss < 30 ? .orange : .red
+        let daIcon  = hpLoss < 10 ? "checkmark.circle.fill" : hpLoss < 20 ? "exclamationmark.triangle.fill" : "xmark.octagon.fill"
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 10) {
+                sectionHeader("Performance (estimated)")
+
+                HStack(spacing: 12) {
+                    Image(systemName: daIcon)
+                        .foregroundColor(daColor)
+                        .font(.title3)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(String(format: "Density Alt ~%.0f ft MSL", daFt))
+                            .font(.subheadline.bold())
+                            .foregroundColor(daColor)
+                        if hpLoss >= 1 {
+                            Text(String(format: "~%.0f%% HP loss est. · +%.0f ft above field elev", hpLoss, penalty))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Near standard atmosphere — minimal performance impact")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    Spacer()
+                }
+
+                Text("Estimated from model pressure and temperature. Verify with POH and official weather.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(cardBackground)
+        )
+    }
+
+    // MARK: - Advisory Pilot Advisories
+
+    private struct AdvisoryNote: Identifiable {
+        let id = UUID()
+        let icon: String
+        let text: String
+        let isWarning: Bool
+        var color: Color { isWarning ? .orange : Color(red:1,green:0.6,blue:0) }
+    }
+
+    private func advisoryPilotAdvisories(_ wx: AdvisoryWeather) -> [AdvisoryNote] {
+        var notes: [AdvisoryNote] = []
+
+        // High density altitude
+        if let da = wx.densityAltitudeFt {
+            let elevFt = Double(airport.elevation)
+            let penalty = da - elevFt
+            if penalty >= 3000 {
+                notes.append(.init(icon: "arrow.up.to.line", text: String(format: "High density altitude ~%.0f ft — significant power loss, extended takeoff roll expected", da), isWarning: true))
+            } else if penalty >= 1500 {
+                notes.append(.init(icon: "arrow.up", text: String(format: "Elevated density altitude ~%.0f ft — reduced performance; verify POH", da), isWarning: false))
+            }
+        }
+
+        // Fog risk
+        if let spread = wx.tdSpreadC {
+            if spread <= 2 {
+                notes.append(.init(icon: "cloud.fog.fill", text: String(format: "T-D spread %.0f°C — fog or low stratus possible; low-level IMC risk", spread), isWarning: true))
+            } else if spread <= 4 {
+                notes.append(.init(icon: "cloud.fog", text: String(format: "T-D spread %.0f°C — fog risk; watch for rapid deterioration at night or dawn", spread), isWarning: false))
+            }
+        }
+
+        // Strong gusts
+        if let gust = wx.windGustKtRounded, gust >= 20 {
+            notes.append(.init(icon: "wind", text: "Gusts ~\(gust) kt estimated — check crosswind component for your runway", isWarning: gust >= 25))
+        } else if wx.windSpeedKtRounded >= 20 {
+            notes.append(.init(icon: "wind", text: "Sustained wind ~\(wx.windSpeedKtRounded) kt estimated — crosswind likely significant", isWarning: false))
+        }
+
+        // Rapid pressure change (falling)
+        if let delta = wx.trends?.pressureDeltaHpa, delta <= -2.0 {
+            notes.append(.init(icon: "arrow.down.circle.fill", text: String(format: "Pressure falling ~%.1f hPa over 6h — deepening system; check area weather", abs(delta)), isWarning: abs(delta) >= 4))
+        }
+
+        // Low visibility
+        if let vis = wx.visibilityMiles {
+            if vis < 3 {
+                notes.append(.init(icon: "eye.slash.fill", text: String(format: "Estimated visibility ~%.1f SM — IFR conditions possible", vis), isWarning: true))
+            } else if vis < 5 {
+                notes.append(.init(icon: "eye.slash", text: String(format: "Estimated visibility ~%.1f SM — marginal VFR", vis), isWarning: false))
+            }
+        }
+
+        // High precipitation
+        if wx.precipitationMm >= 1.0 {
+            notes.append(.init(icon: "cloud.rain.fill", text: "\(wx.precipDescription) estimated — reduced visibility likely", isWarning: wx.precipitationMm >= 4.0))
+        }
+
+        return notes
+    }
+
+    private func advisoryPilotAdvisoriesCard(_ notes: [AdvisoryNote]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(notes.contains(where: { $0.isWarning }) ? .orange : Color(red:1,green:0.6,blue:0))
+                    .font(.caption)
+                Text("ESTIMATED ADVISORIES")
+                    .font(.caption.bold())
+                    .foregroundColor(.secondary)
+                    .tracking(1)
+            }
+            ForEach(notes) { note in
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: note.icon)
+                        .foregroundColor(note.color)
+                        .font(.subheadline)
+                        .frame(width: 20)
+                    Text(note.text)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Text("Based on model data — not certified aviation weather. Confirm with official sources.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.top, 2)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.orange.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+                )
+        )
+    }
+
+    // MARK: - Advisory Trends Card
+    private func advisoryTrendsCard(_ trends: AdvisoryTrends) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("6-Hour Trends (estimated)")
+
+            advisoryTrendRow(
+                direction: trends.pressure,
+                label: "Pressure",
+                delta: trends.pressureDeltaHpa.map { String(format: "%+.1f hPa", $0) }
+            )
+            advisoryTrendRow(
+                direction: trends.windSpeed,
+                label: "Wind",
+                delta: trends.windDeltaKt.map { String(format: "%+.0f kt", $0) }
+            )
+            advisoryTrendRow(
+                direction: trends.tdSpread,
+                label: "T-D Spread",
+                delta: trends.tdSpreadDeltaC.map { String(format: "%+.1f°C", $0) }
+            )
+            advisoryTrendRow(
+                direction: trends.visibility,
+                label: "Visibility",
+                delta: trends.visibilityDeltaKm.map { String(format: "%+.1f km", $0) }
+            )
+
+            Text("Trends derived from model history. Pressure ↑ = improving. Wind ↑ = deteriorating.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func advisoryTrendRow(direction: TrendDirection, label: String, delta: String?) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: direction.systemImage)
+                .foregroundColor(direction == .unknown ? .secondary.opacity(0.4) : direction.color)
+                .frame(width: 20)
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 88, alignment: .leading)
+            if direction != .unknown {
+                Text(direction.rawValue)
+                    .font(.subheadline.bold())
+                    .foregroundColor(direction.color)
+            } else {
+                Text("—")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            if let delta = delta {
+                Spacer()
+                Text(delta)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(.systemGray5))
+                    .clipShape(Capsule())
+            }
+        }
+    }
+
+    // MARK: - Advisory Forecast Strip
+    private func advisoryForecastStrip(_ hours: [AdvisoryForecastHour]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("6-Hour Forecast (estimated)")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(hours) { hour in
+                        advisoryForecastChip(hour)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .padding(.vertical, 4)
+            }
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func advisoryForecastChip(_ hour: AdvisoryForecastHour) -> some View {
+        let cat = hour.estimatedFlightCategory
+        let fmt = DateFormatter()
+        let _ = { fmt.dateFormat = "h a"; fmt.timeZone = .current }()
+
+        return VStack(spacing: 5) {
+            Text(fmt.string(from: hour.time))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary)
+
+            Circle()
+                .fill(cat.swiftUIColor)
+                .frame(width: 8, height: 8)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
+                )
+
+            let gStr = hour.windGustKtRounded.map { "G\($0)" } ?? ""
+            Text("\(hour.windSpeedKtRounded)\(gStr.isEmpty ? "" : " \(gStr)") kt")
+                .font(.system(size: 10))
+                .foregroundColor(.primary)
+
+            Text("~\(hour.cloudCoverDescription)")
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+
+            if hour.precipitationMm >= 0.1 {
+                Image(systemName: "drop.fill")
+                    .font(.system(size: 8))
+                    .foregroundColor(Color(red:0.2,green:0.5,blue:1.0))
+            } else {
+                Spacer().frame(height: 10)
+            }
+
+            Text("\(Int(hour.temperatureC.rounded()))°C")
+                .font(.system(size: 9))
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 58)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(cat.swiftUIColor.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(cat.swiftUIColor.opacity(0.25), lineWidth: 1)
+                )
+        )
+    }
+
+    // MARK: - Advisory Footer
+    private func advisoryFooter(_ wx: AdvisoryWeather) -> some View {
+        VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Not certified aviation weather. Use for situational awareness only. Always consult official sources (1800wxbrief, ForeFlight, ATIS) before flight.", systemImage: "info.circle")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             .padding(10)
-            .background(Color.yellow.opacity(0.08))
+            .background(Color.yellow.opacity(0.07))
             .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .padding()
-    }
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundColor(Color.yellow.opacity(0.4))
+            )
 
-    private func advisoryRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .font(.subheadline.monospacedDigit())
+            // Open-Meteo attribution (required by CC BY 4.0)
+            HStack(spacing: 4) {
+                Image(systemName: "network")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+                Text("Weather data: Open-Meteo.com (CC BY 4.0)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+
+            if let updated = vm.lastUpdated {
+                Text("Updated \(updated, style: .relative) ago")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
     }
 
     // MARK: - No Reporting
