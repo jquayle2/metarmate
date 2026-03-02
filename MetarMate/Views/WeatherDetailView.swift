@@ -191,7 +191,7 @@ struct WeatherDetailView: View {
     private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = .primary) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .foregroundColor(color == .primary || color == .green ? .secondary : color.opacity(0.8))
+                .foregroundColor(color == .primary ? .secondary : color.opacity(0.8))
                 .frame(width: 20)
             Text(label)
                 .font(.subheadline)
