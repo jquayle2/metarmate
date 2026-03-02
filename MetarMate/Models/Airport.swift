@@ -59,7 +59,7 @@ final class AirportFavorite {
     var latitude: Double
     var longitude: Double
     var elevation: Int
-    var hasMetar: Bool
+    var hasMetar: Bool = true
     var addedDate: Date
 
     init(from airport: Airport) {
