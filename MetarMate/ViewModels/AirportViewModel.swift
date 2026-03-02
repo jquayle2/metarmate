@@ -53,8 +53,8 @@ class AirportViewModel: ObservableObject {
 
         nearestAirports = airportService.nearest(to: location, count: 15)
 
-        // Fetch METARs for nearest airports
-        let icaos = nearestAirports.map { $0.icao }
+        // Fetch METARs only for airports with official reporting stations
+        let icaos = nearestAirports.filter { $0.hasMetar }.map { $0.icao }
         if let metars = try? await weatherService.fetchMetars(for: icaos) {
             nearestMetars = metars
         }

@@ -449,5 +449,6 @@ struct WeatherTrend: Codable {
         }
 
         return "Stable Conditions"
+
     }
 }

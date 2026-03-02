@@ -61,7 +61,8 @@ struct FavoritesView: View {
     private func fetchMetars() async {
         guard !favorites.isEmpty else { return }
         isLoading = true
-        let icaos = favorites.map { $0.icao }
+        let icaos = favorites.filter { $0.hasMetar }.map { $0.icao }
+        guard !icaos.isEmpty else { isLoading = false; return }
         if let metars = try? await WeatherService.shared.fetchMetars(for: icaos) {
             favMetars = metars
         }

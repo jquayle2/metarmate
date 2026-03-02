@@ -117,9 +117,16 @@ struct AirportRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Circle()
-                .fill(metar?.flightCategory.swiftUIColor ?? Color.gray)
-                .frame(width: 10, height: 10)
+            if airport.hasMetar {
+                Circle()
+                    .fill(metar?.flightCategory.swiftUIColor ?? Color.gray)
+                    .frame(width: 10, height: 10)
+            } else {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                    .font(.system(size: 10))
+                    .frame(width: 10, height: 10)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -136,7 +143,11 @@ struct AirportRowView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                if let metar = metar {
+                if !airport.hasMetar {
+                    Text("Advisory weather only")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                } else if let metar = metar {
                     Text(quickWeatherSummary(metar: metar))
                         .font(.caption)
                         .foregroundColor(.secondary)
