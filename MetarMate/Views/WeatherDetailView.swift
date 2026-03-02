@@ -254,11 +254,11 @@ struct WeatherDetailView: View {
             notes.append(.init(icon: "bolt", text: "Cumulonimbus cloud reported — convective activity nearby", severity: .warning))
         }
 
-        // Low altimeter (below standard = possible storm)
+        // Low altimeter — only flag when pressure is genuinely low, not just below ISA standard
         if metar.altimeter < 29.70 {
-            notes.append(.init(icon: "gauge.low", text: "Low altimeter \(String(format: "%.2f", metar.altimeter)) inHg — significant pressure system; check area weather", severity: .warning))
-        } else if metar.altimeter < 29.90 {
-            notes.append(.init(icon: "gauge", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — below standard; verify altimeter setting", severity: .caution))
+            notes.append(.init(icon: "gauge.low", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — deep low pressure system; check area weather and PIREPs", severity: .warning))
+        } else if metar.altimeter < 29.80 {
+            notes.append(.init(icon: "gauge", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — notable low pressure; monitor for developing weather", severity: .caution))
         }
 
         // Falling altimeter trend from history
