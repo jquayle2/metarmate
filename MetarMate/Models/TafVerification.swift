@@ -57,9 +57,15 @@ struct TafVerificationPoint: Identifiable, Codable {
             parts.append("Ceiling formed (fcst clear)")
         }
 
-        if let visDiv = visibilityDivergenceSM, abs(visDiv) >= 0.5 {
-            let sign = visDiv > 0 ? "+" : ""
-            parts.append("Vis \(sign)\(String(format: "%g", visDiv)) SM vs fcst")
+        if let visDiv = visibilityDivergenceSM {
+            let fcst = forecastVisibilitySM ?? 0
+            let actual = actualVisibilitySM
+            // Only report if operationally significant (not both solidly VFR)
+            let bothVFR = actual > 5.0 && fcst > 5.0
+            if !bothVFR && abs(visDiv) >= 0.5 {
+                let sign = visDiv > 0 ? "+" : ""
+                parts.append("Vis \(sign)\(String(format: "%g", visDiv)) SM vs fcst")
+            }
         }
 
         if let windComp = windComparisonText {
@@ -94,16 +100,19 @@ struct TafVerificationPoint: Identifiable, Codable {
 struct TafVerification: Codable {
     var points: [TafVerificationPoint]
     var categoryAccuracy: Double      // fraction of periods where flight category matched
-    var windAccuracy: Double          // fraction where wind was within 10 kt of forecast
-    var ceilingAccuracy: Double       // fraction where ceiling was within 500 ft of forecast
-    var visibilityAccuracy: Double    // fraction where vis was within 1 SM of forecast
+    var windAccuracy: Double?         // nil = no scoreable wind periods
+    var ceilingAccuracy: Double?      // nil = no scoreable ceiling periods
+    var visibilityAccuracy: Double?   // nil = no scoreable visibility periods
+    var windSampleCount: Int
+    var ceilingSampleCount: Int
+    var visibilitySampleCount: Int
     var significantMisses: Int
     var summary: String
 
     var categoryAccuracyPct: Int { Int((categoryAccuracy * 100).rounded()) }
-    var windAccuracyPct: Int { Int((windAccuracy * 100).rounded()) }
-    var ceilingAccuracyPct: Int { Int((ceilingAccuracy * 100).rounded()) }
-    var visibilityAccuracyPct: Int { Int((visibilityAccuracy * 100).rounded()) }
+    var windAccuracyPct: Int? { windAccuracy.map { Int(($0 * 100).rounded()) } }
+    var ceilingAccuracyPct: Int? { ceilingAccuracy.map { Int(($0 * 100).rounded()) } }
+    var visibilityAccuracyPct: Int? { visibilityAccuracy.map { Int(($0 * 100).rounded()) } }
 
     static func derive(metars: [Metar], taf: Taf) -> TafVerification? {
         let historical = metars.count > 1 ? Array(metars.dropFirst()) : []
@@ -139,20 +148,34 @@ struct TafVerification: Codable {
 
         let catMatches = Double(points.filter { $0.categoryMatch }.count)
 
-        let windClose = Double(points.filter {
-            guard let div = $0.windDivergenceKt else { return true }
-            return abs(div) <= 10
+        // Wind: only score periods where TAF actually specified wind; ±7kt threshold
+        let windPoints = points.filter { $0.forecastWindKt != nil }
+        let windClose = windPoints.isEmpty ? nil : Double(windPoints.filter {
+            guard let div = $0.windDivergenceKt else { return false }
+            return abs(div) <= 7
         }.count)
+        let windN = Double(windPoints.count)
 
-        let ceilClose = Double(points.filter {
-            guard let div = $0.ceilingDivergenceFt else { return true }
-            return abs(div) <= 500
+        // Ceiling: only score periods where at least one side had a ceiling; ±300ft threshold
+        let ceilPoints = points.filter { $0.actualCeilingFt != nil || $0.forecastCeilingFt != nil }
+        let ceilClose = ceilPoints.isEmpty ? nil : Double(ceilPoints.filter {
+            guard let div = $0.ceilingDivergenceFt else {
+                return false
+            }
+            return abs(div) <= 300
         }.count)
+        let ceilN = Double(ceilPoints.count)
 
-        let visClose = Double(points.filter {
-            guard let div = $0.visibilityDivergenceSM else { return true }
-            return abs(div) <= 1.0
+        // Visibility: only score when forecast specified vis AND conditions aren't both solidly VFR; ±0.5SM threshold
+        let visPoints = points.filter {
+            guard let fcst = $0.forecastVisibilitySM else { return false }
+            return !($0.actualVisibilitySM > 5.0 && fcst > 5.0)
+        }
+        let visClose = visPoints.isEmpty ? nil : Double(visPoints.filter {
+            guard let fcst = $0.forecastVisibilitySM else { return false }
+            return abs($0.actualVisibilitySM - fcst) <= 0.5
         }.count)
+        let visN = Double(visPoints.count)
 
         let sigMisses = points.filter { $0.divergenceSeverity == .significant }.count
         let catAcc = catMatches / n
@@ -166,9 +189,12 @@ struct TafVerification: Codable {
         return TafVerification(
             points: points,
             categoryAccuracy: catAcc,
-            windAccuracy: windClose / n,
-            ceilingAccuracy: ceilClose / n,
-            visibilityAccuracy: visClose / n,
+            windAccuracy: windClose.map { $0 / windN },
+            ceilingAccuracy: ceilClose.map { $0 / ceilN },
+            visibilityAccuracy: visClose.map { $0 / visN },
+            windSampleCount: windPoints.count,
+            ceilingSampleCount: ceilPoints.count,
+            visibilitySampleCount: visPoints.count,
             significantMisses: sigMisses,
             summary: summary
         )

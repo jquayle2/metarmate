@@ -868,93 +868,126 @@ struct WeatherDetailView: View {
     // MARK: - TAF Verification (Forecast Reliability)
     private func tafVerificationSection(_ verification: TafVerification) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Forecast Reliability")
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider()
 
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(verification.categoryAccuracyPct)%")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(accuracyColor(verification.categoryAccuracy))
-                    Text("Category accuracy")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(verification.points.count) observations")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if verification.significantMisses > 0 {
-                        Text("\(verification.significantMisses) significant miss\(verification.significantMisses == 1 ? "" : "es")")
-                            .font(.caption.bold())
-                            .foregroundColor(.red)
-                    } else {
-                        Text("No significant misses")
-                            .font(.caption)
-                            .foregroundColor(.green)
+                    // Per-parameter accuracy grid — only show metrics with scoreable data
+                    HStack(spacing: 16) {
+                        accuracyCell("Wind", verification.windAccuracyPct, n: verification.windSampleCount)
+                        accuracyCell("Ceiling", verification.ceilingAccuracyPct, n: verification.ceilingSampleCount)
+                        accuracyCell("Visibility", verification.visibilityAccuracyPct, n: verification.visibilitySampleCount)
                     }
-                }
-            }
 
-            // Per-parameter accuracy grid
-            HStack(spacing: 16) {
-                accuracyCell("Wind", verification.windAccuracyPct)
-                accuracyCell("Ceiling", verification.ceilingAccuracyPct)
-                accuracyCell("Visibility", verification.visibilityAccuracyPct)
-            }
-
-            Text(verification.summary)
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            Divider()
-
-            Text("RECENT PERIODS")
-                .font(.caption2.bold())
-                .foregroundColor(.secondary)
-                .tracking(0.5)
-
-            ForEach(verification.points) { point in
-                HStack(spacing: 10) {
-                    Image(systemName: point.categoryMatch ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundColor(point.categoryMatch ? .green : .red)
-                        .frame(width: 20)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(shortTime(point.observationTime))
-                                .font(.caption.bold())
-                            FlightCategoryBadge(category: point.actualCategory)
-                            if !point.categoryMatch {
-                                Text("fcst \(point.forecastCategory.rawValue)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .overlay(Capsule().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
-                            }
-                        }
-                        Text(point.divergenceText)
+                    // Explainer text
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("How this is calculated")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                        Text("Category accuracy counts periods where the TAF's predicted flight category (VFR/MVFR/IFR/LIFR) matched the actual observed category. Individual metrics are only scored when the TAF explicitly forecast that parameter and conditions were operationally significant — missing forecast data is excluded rather than counted as accurate. Thresholds: wind ±7 kt, ceiling ±300 ft, visibility ±0.5 SM.")
                             .font(.caption2)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 2)
+
+                    Divider()
+
+                    Text("RECENT PERIODS")
+                        .font(.caption2.bold())
+                        .foregroundColor(.secondary)
+                        .tracking(0.5)
+
+                    ForEach(verification.points) { point in
+                        HStack(spacing: 10) {
+                            Image(systemName: point.categoryMatch ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundColor(point.categoryMatch ? .green : .red)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(shortTime(point.observationTime))
+                                        .font(.caption.bold())
+                                    FlightCategoryBadge(category: point.actualCategory)
+                                    if !point.categoryMatch {
+                                        Text("fcst \(point.forecastCategory.rawValue)")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 1)
+                                            .overlay(Capsule().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                                    }
+                                }
+                                Text(point.divergenceText)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
+                    }
+
+                    Text(verification.summary)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("FORECAST RELIABILITY")
+                            .font(.caption.bold())
+                            .foregroundColor(.secondary)
+                            .tracking(1)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("\(verification.categoryAccuracyPct)%")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundColor(accuracyColor(verification.categoryAccuracy))
+                            Text("category accuracy")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     Spacer()
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text("\(verification.points.count) obs")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        if verification.significantMisses > 0 {
+                            Text("\(verification.significantMisses) sig miss\(verification.significantMisses == 1 ? "" : "es")")
+                                .font(.caption2.bold())
+                                .foregroundColor(.red)
+                        } else {
+                            Text("No sig misses")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                        }
+                    }
                 }
-                .padding(.vertical, 2)
             }
         }
         .padding()
         .background(cardBackground)
     }
 
-    private func accuracyCell(_ label: String, _ pct: Int) -> some View {
+    private func accuracyCell(_ label: String, _ pct: Int?, n: Int) -> some View {
         VStack(spacing: 3) {
-            Text("\(pct)%")
-                .font(.subheadline.bold())
-                .foregroundColor(accuracyColor(Double(pct) / 100))
+            if let pct = pct {
+                Text("\(pct)%")
+                    .font(.subheadline.bold())
+                    .foregroundColor(accuracyColor(Double(pct) / 100))
+            } else {
+                Text("N/A")
+                    .font(.subheadline.bold())
+                    .foregroundColor(.secondary)
+            }
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.secondary)
+            if n > 0 {
+                Text("\(n) obs")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
