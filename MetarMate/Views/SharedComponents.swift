@@ -182,38 +182,34 @@ struct AirportRowView: View {
         return nil
     }
 
-    @ViewBuilder
-    private func airportWeatherSummaryRow(metar: Metar) -> some View {
-        let wind = metar.wind
-        let windColor = airportWindColor(wind)
-
-        // Build sky+vis portion (always neutral)
-        var skyVisParts: [String] = []
+    private func skyVisString(metar: Metar) -> String {
+        var parts: [String] = []
         if let ceiling = metar.ceilingFeet {
             let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
             let cov = layer?.coverage.rawValue ?? "BKN"
-            skyVisParts.append("\(cov) \(ceiling / 100)")
+            parts.append("\(cov) \(ceiling / 100)")
         } else {
-            skyVisParts.append("CLR")
+            parts.append("CLR")
         }
         let vis = metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM"
-        skyVisParts.append(vis)
+        parts.append(vis)
+        return parts.joined(separator: " · ")
+    }
 
-        // Build wind portion
-        var windStr = ""
-        if wind.speed == 0 {
-            windStr = "Calm"
-        } else {
-            let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
-            if let gust = wind.gust {
-                windStr = "\(dir)@\(wind.speed)G\(gust)"
-            } else {
-                windStr = "\(dir)@\(wind.speed)"
-            }
-        }
+    private func windString(wind: Wind) -> String {
+        if wind.speed == 0 { return "Calm" }
+        let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
+        if let gust = wind.gust { return "\(dir)@\(wind.speed)G\(gust)" }
+        return "\(dir)@\(wind.speed)"
+    }
 
-        HStack(spacing: 0) {
-            Text(skyVisParts.joined(separator: " · "))
+    private func airportWeatherSummaryRow(metar: Metar) -> some View {
+        let skyVis = skyVisString(metar: metar)
+        let windStr = windString(wind: metar.wind)
+        let windColor = airportWindColor(metar.wind)
+
+        return HStack(spacing: 0) {
+            Text(skyVis)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)

@@ -20,10 +20,8 @@ actor OpenMeteoService {
             throw OpenMeteoError.badResponse
         }
 
-        // Decode on a detached task to avoid main-actor isolation inference on Decodable
-        let decoded: OpenMeteoResponse = try await Task.detached(priority: .utility) { @Sendable in
-            try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
-        }.value
+        // Decode directly — OpenMeteoResponse is Decodable + Sendable
+        let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
         return buildAdvisory(airport: airport, response: decoded)
     }
 
@@ -208,12 +206,19 @@ enum OpenMeteoError: LocalizedError {
 
 // MARK: - Response models
 
-private struct OpenMeteoResponse: @unchecked Sendable {
+private struct OpenMeteoResponse: Sendable {
     let current: CurrentBlock
     let hourly:  HourlyBlock
 }
 
-extension OpenMeteoResponse: Decodable {}
+extension OpenMeteoResponse: Decodable {
+    nonisolated init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        current = try c.decode(CurrentBlock.self, forKey: .current)
+        hourly  = try c.decode(HourlyBlock.self,  forKey: .hourly)
+    }
+    private enum CodingKeys: String, CodingKey { case current, hourly }
+}
 
 private struct CurrentBlock: Decodable, Sendable {
     let temperature_2m:            Double
