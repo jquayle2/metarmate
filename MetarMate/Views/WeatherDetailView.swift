@@ -528,28 +528,14 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Trend
+    @State private var trendPulse = false
+
     private func trendSection(_ trend: WeatherTrend) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Trend")
 
-            // Alert card with background tint (Point 2)
-            HStack(spacing: 10) {
-                Image(systemName: trend.overall.systemImage)
-                    .foregroundColor(trend.overall.color)
-                    .font(.title2)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(trend.headline)
-                        .font(.headline)
-                        .foregroundColor(trend.overall.color)
-                    Text(trend.summaryText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            }
-            .padding(10)
-            .background(trend.overall.color.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            // Alert card — left-edge status strip + prominent deltas
+            alertCard(trend)
 
             Divider()
 
@@ -615,6 +601,87 @@ struct WeatherDetailView: View {
         }
         .padding()
         .background(cardBackground)
+    }
+
+    // MARK: - Alert Card (Point 2)
+    private func alertCard(_ trend: WeatherTrend) -> some View {
+        let color = trend.overall.color
+        let roc = trend.observed.rateOfChange
+        let isDeteriorating = trend.overall == .deteriorating
+
+        return HStack(spacing: 0) {
+            // Left-edge status strip
+            Rectangle()
+                .fill(color)
+                .frame(width: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+
+            HStack(spacing: 10) {
+                // Animated icon — pulses when deteriorating
+                Image(systemName: trend.overall.systemImage)
+                    .foregroundColor(color)
+                    .font(.title2)
+                    .scaleEffect(trendPulse ? 1.15 : 1.0)
+                    .opacity(trendPulse ? 0.7 : 1.0)
+                    .animation(
+                        isDeteriorating
+                            ? .easeInOut(duration: 1.2).repeatForever(autoreverses: true)
+                            : .default,
+                        value: trendPulse
+                    )
+                    .onAppear { if isDeteriorating { trendPulse = true } }
+                    .onChange(of: trend.overall) { trendPulse = (trend.overall == .deteriorating) }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trend.headline)
+                        .font(.headline)
+                        .foregroundColor(color)
+
+                    // Prominent delta line — most important change front and center
+                    if let deltaLine = prominentDeltaLine(trend: trend, roc: roc) {
+                        Text(deltaLine)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.primary)
+                    }
+
+                    Text(trend.summaryText)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(10)
+        }
+        .background(color.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.2), lineWidth: 1)
+        )
+        .transition(.asymmetric(
+            insertion: .move(edge: .top).combined(with: .opacity),
+            removal: .opacity
+        ))
+        .id(trend.overall)
+    }
+
+    // Surface the single most actionable delta — wind sustained+gust, ceiling, or vis
+    private func prominentDeltaLine(trend: WeatherTrend, roc: RateOfChange?) -> String? {
+        guard let roc = roc else { return nil }
+
+        // Ceiling is highest priority
+        if trend.observed.ceiling != .steady, let ceilText = roc.ceilingQuantitativeText {
+            return ceilText
+        }
+        // Visibility next
+        if trend.observed.visibility != .steady, let visText = roc.visibilityQuantitativeText {
+            return visText
+        }
+        // Wind — show both sustained and gust if changed
+        if trend.observed.wind != .steady && roc.hasWindChange {
+            return roc.windQuantitativeText
+        }
+        return nil
     }
 
     // Wind row with full quantitative breakdown (Point 7)
