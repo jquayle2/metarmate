@@ -148,10 +148,7 @@ struct AirportRowView: View {
                         .font(.caption2)
                         .foregroundColor(.orange)
                 } else if let metar = metar {
-                    Text(quickWeatherSummary(metar: metar))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                    airportWeatherSummaryRow(metar: metar)
                 }
             }
 
@@ -164,5 +161,68 @@ struct AirportRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    // Wind color for airport list — orange/red only, matching detail view thresholds
+    private func airportWindColor(_ wind: Wind) -> Color? {
+        let speed = wind.speed
+        let gust = wind.gust ?? 0
+        let spread = gust - speed
+        if gust >= 20 || speed >= 25 || spread >= 15 { return .red }
+        if gust >= 15 || speed >= 20 || spread >= 10 { return .orange }
+        return nil
+    }
+
+    @ViewBuilder
+    private func airportWeatherSummaryRow(metar: Metar) -> some View {
+        let wind = metar.wind
+        let windColor = airportWindColor(wind)
+
+        // Build sky+vis portion (always neutral)
+        var skyVisParts: [String] = []
+        if let ceiling = metar.ceilingFeet {
+            let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
+            let cov = layer?.coverage.rawValue ?? "BKN"
+            skyVisParts.append("\(cov) \(ceiling / 100)")
+        } else {
+            skyVisParts.append("CLR")
+        }
+        let vis = metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM"
+        skyVisParts.append(vis)
+
+        // Build wind portion
+        var windStr = ""
+        if wind.speed == 0 {
+            windStr = "Calm"
+        } else {
+            let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
+            if let gust = wind.gust {
+                windStr = "\(dir)@\(wind.speed)G\(gust)"
+            } else {
+                windStr = "\(dir)@\(wind.speed)"
+            }
+        }
+
+        HStack(spacing: 0) {
+            Text(skyVisParts.joined(separator: " · "))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            if let color = windColor {
+                Text(" · ")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(windStr)
+                    .font(.caption)
+                    .foregroundColor(color)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+            } else {
+                Text(" · \(windStr)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+        }
     }
 }
