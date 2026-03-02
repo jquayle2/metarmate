@@ -531,6 +531,7 @@ struct WeatherDetailView: View {
 
     // MARK: - Trend
     @State private var trendPulse = false
+    @State private var showForecastDetail = false
 
     private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1623,12 +1624,27 @@ struct WeatherDetailView: View {
     // MARK: - Advisory Forecast Strip
     private func advisoryForecastStrip(_ hours: [AdvisoryForecastHour]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("6-Hour Forecast (estimated)")
+            HStack {
+                sectionHeader("6-Hour Forecast (estimated)")
+                Spacer()
+                Button {
+                    showForecastDetail = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Expand")
+                            .font(.caption)
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.secondary)
+                }
+            }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     ForEach(hours) { hour in
                         advisoryForecastChip(hour)
+                            .onTapGesture { showForecastDetail = true }
                     }
                 }
                 .padding(.horizontal, 2)
@@ -1637,6 +1653,9 @@ struct WeatherDetailView: View {
         }
         .padding()
         .background(cardBackground)
+        .sheet(isPresented: $showForecastDetail) {
+            advisoryForecastDetailSheet(hours)
+        }
     }
 
     private func advisoryForecastChip(_ hour: AdvisoryForecastHour) -> some View {
@@ -1644,51 +1663,137 @@ struct WeatherDetailView: View {
         let fmt = DateFormatter()
         let _ = { fmt.dateFormat = "h a"; fmt.timeZone = .current }()
 
-        return VStack(spacing: 5) {
+        return VStack(spacing: 6) {
             Text(fmt.string(from: hour.time))
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(.secondary)
 
             Circle()
                 .fill(cat.swiftUIColor)
-                .frame(width: 8, height: 8)
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5)
-                )
+                .frame(width: 10, height: 10)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.5))
 
-            let gStr = hour.windGustKtRounded.map { "G\($0)" } ?? ""
-            Text("\(hour.windSpeedKtRounded)\(gStr.isEmpty ? "" : " \(gStr)") kt")
-                .font(.system(size: 10))
+            let gStr = hour.windGustKtRounded.map { " G\($0)" } ?? ""
+            Text("\(hour.windSpeedKtRounded)\(gStr) kt")
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.primary)
 
             Text("~\(hour.cloudCoverDescription)")
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
 
             if hour.precipitationMm >= 0.1 {
                 Image(systemName: "drop.fill")
-                    .font(.system(size: 8))
-                    .foregroundColor(Color(red:0.2,green:0.5,blue:1.0))
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
             } else {
-                Spacer().frame(height: 10)
+                Color.clear.frame(height: 12)
             }
 
             Text("\(Int(hour.temperatureC.rounded()))°C")
-                .font(.system(size: 9))
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
         }
-        .frame(width: 58)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
+        .frame(width: 70)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 6)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(cat.swiftUIColor.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(cat.swiftUIColor.opacity(0.25), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(cat.swiftUIColor.opacity(0.3), lineWidth: 1))
         )
+    }
+
+    // MARK: - Forecast Detail Sheet
+    private func advisoryForecastDetailSheet(_ hours: [AdvisoryForecastHour]) -> some View {
+        NavigationStack {
+            List {
+                ForEach(hours) { hour in
+                    advisoryForecastDetailRow(hour)
+                        .listRowBackground(Color(.systemGray6).opacity(0.2))
+                }
+                Section {
+                    Text("Estimated from model data — not certified aviation weather.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .navigationTitle("6-Hour Forecast")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showForecastDetail = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func advisoryForecastDetailRow(_ hour: AdvisoryForecastHour) -> some View {
+        let cat = hour.estimatedFlightCategory
+        let timeFmt = DateFormatter()
+        let _ = { timeFmt.dateFormat = "h:mm a"; timeFmt.timeZone = .current }()
+        let gStr = hour.windGustKtRounded.map { " G\($0) kt" } ?? ""
+        let windDir = hour.windDirectionDeg.map { "\($0)°" } ?? "Variable"
+        let visStr = hour.visibilityMiles.map { String(format: "~%.0f SM", $0) } ?? "—"
+
+        return HStack(spacing: 14) {
+            // Time + category dot
+            VStack(alignment: .leading, spacing: 4) {
+                Text(timeFmt.string(from: hour.time))
+                    .font(.subheadline.bold())
+                    .foregroundColor(.primary)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(cat.swiftUIColor)
+                        .frame(width: 8, height: 8)
+                    Text("Est. \(cat.displayName)")
+                        .font(.caption)
+                        .foregroundColor(cat.swiftUIColor)
+                }
+            }
+            .frame(width: 90, alignment: .leading)
+
+            Divider()
+
+            // Conditions grid
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 16) {
+                    Label("\(windDir)  \(hour.windSpeedKtRounded) kt\(gStr)", systemImage: "wind")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                }
+                HStack(spacing: 16) {
+                    Label(visStr, systemImage: "eye.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Label("~\(hour.cloudCoverDescription) (\(hour.cloudCoverPercent)%)", systemImage: "cloud.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                HStack(spacing: 16) {
+                    Label("\(Int(hour.temperatureC.rounded()))°C", systemImage: "thermometer")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if hour.precipitationMm >= 0.1 {
+                        Label(hour.precipDescription, systemImage: "drop.fill")
+                            .font(.caption)
+                            .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                    }
+                    if let pHpa = hour.pressureHpa {
+                        Label(String(format: "~%.2f inHg", pHpa * 0.02953), systemImage: "gauge")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 6)
     }
 
     // MARK: - Advisory Footer
