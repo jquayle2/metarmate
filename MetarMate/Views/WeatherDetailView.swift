@@ -196,15 +196,16 @@ struct WeatherDetailView: View {
 
         // High sustained wind
         if speed >= 25 {
-            notes.append(.init(icon: "wind", text: "High winds \(speed) kt — check crosswind component for your runway", severity: .warning))
+            notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — crosswind likely significant; verify component against aircraft limits", severity: .warning))
         } else if speed >= 20 {
-            notes.append(.init(icon: "wind", text: "Wind \(speed) kt — consider crosswind component", severity: .caution))
+            notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — check crosswind component for your runway", severity: .caution))
         }
 
-        // Gusts
-        if gust >= 15 {
-            let sev: PilotNote.Severity = gust >= 20 ? .warning : .caution
-            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — add \(gust / 2) kt to approach speed per rule of thumb", severity: sev))
+        // Gusts — lead with crosswind concern, secondary approach speed tip
+        if gust >= 20 {
+            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — check crosswind component for your runway; add \(gust / 2) kt to approach speed", severity: .warning))
+        } else if gust >= 15 {
+            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed", severity: .caution))
         }
 
         // Gust spread (turbulence indicator)
