@@ -165,11 +165,11 @@ struct WeatherDetailView: View {
         return .green                                                     // VFR
     }
 
-    // Temp/dewpoint spread: fog risk — amber/orange scale (not flight category)
+    // Temp/dewpoint spread: fog risk — red/yellow/green
     private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
         let spread = temp - dew
-        if spread <= 2 { return .orange }
-        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
+        if spread <= 2 { return .red }
+        if spread <= 4 { return .yellow }
         return .green
     }
 
@@ -328,10 +328,10 @@ struct WeatherDetailView: View {
             }
         }
 
-        // Fog risk: temp/dewpoint spread ≤4°
+        // Fog risk: temp/dewpoint spread ≤4° (red at ≤2°, yellow at 3–4°)
         let tempDewSpread = metar.temperature - metar.dewpoint
         if tempDewSpread <= 2 {
-            notes.append(.init(icon: "cloud.fog.fill", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog or low stratus likely", severity: .warning))
+            notes.append(.init(icon: "cloud.fog.fill", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog or low stratus imminent", severity: .warning))
         } else if tempDewSpread <= 4 {
             notes.append(.init(icon: "cloud.fog", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog risk; watch for rapid deterioration", severity: .caution))
         }
