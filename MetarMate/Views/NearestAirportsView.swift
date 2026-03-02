@@ -4,6 +4,27 @@ import CoreLocation
 struct NearestAirportsView: View {
     @EnvironmentObject private var airportVM: AirportViewModel
     @EnvironmentObject private var locationService: LocationService
+    @State private var lastUpdated: Date? = nil
+
+    private var nearestSubtitle: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            HStack(spacing: 4) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 10))
+                Text("Sorted by distance")
+                    .font(.caption)
+                if let updated = lastUpdated {
+                    Text("· Updated \(updated, style: .relative) ago")
+                        .font(.caption)
+                }
+            }
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
+            .textCase(nil)
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -21,19 +42,25 @@ struct NearestAirportsView: View {
                         description: Text("No airports within 100 nm")
                     )
                 } else {
-                    List(airportVM.nearestAirports) { airport in
-                        NavigationLink(destination: WeatherDetailView(airport: airport)) {
-                            AirportRowView(
-                                airport: airport,
-                                metar: airportVM.nearestMetars[airport.icao],
-                                distance: airportVM.distance(to: airport)
-                            )
+                    List {
+                        Section(header: nearestSubtitle) {}
+                            .listRowInsets(EdgeInsets())
+                            .listSectionSeparator(.hidden)
+                        ForEach(airportVM.nearestAirports) { airport in
+                            NavigationLink(destination: WeatherDetailView(airport: airport)) {
+                                AirportRowView(
+                                    airport: airport,
+                                    metar: airportVM.nearestMetars[airport.icao],
+                                    distance: airportVM.distance(to: airport)
+                                )
+                            }
+                            .listRowBackground(Color(.systemGray6).opacity(0.2))
                         }
-                        .listRowBackground(Color(.systemGray6).opacity(0.2))
                     }
                     .listStyle(.plain)
                     .refreshable {
                         await airportVM.loadNearestAirports()
+                        lastUpdated = Date()
                     }
                 }
             }
@@ -48,9 +75,13 @@ struct NearestAirportsView: View {
         }
         .task {
             await airportVM.loadNearestAirports()
+            lastUpdated = Date()
         }
         .onChange(of: locationService.currentLocation) {
-            Task { await airportVM.loadNearestAirports() }
+            Task {
+                await airportVM.loadNearestAirports()
+                lastUpdated = Date()
+            }
         }
     }
 
