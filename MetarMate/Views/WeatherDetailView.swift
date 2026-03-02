@@ -16,9 +16,11 @@ struct WeatherDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if vm.isLoading && vm.metar == nil {
+                if vm.isLoading && vm.metar == nil && vm.advisoryWeather == nil {
                     ProgressView("Loading weather…")
                         .frame(maxWidth: .infinity, minHeight: 200)
+                } else if let advisory = vm.advisoryWeather {
+                    advisoryWeatherView(advisory)
                 } else if vm.noWeatherReporting {
                     noReportingView
                 } else if let error = vm.error, vm.metar == nil {
@@ -58,10 +60,10 @@ struct WeatherDetailView: View {
             }
         }
         .task {
-            await vm.load(icao: airport.icao)
+            await vm.load(airport: airport)
         }
         .refreshable {
-            await vm.refresh(icao: airport.icao)
+            await vm.load(airport: airport)
         }
     }
 
@@ -1171,6 +1173,97 @@ struct WeatherDetailView: View {
         return fmt.string(from: date)
     }
 
+    // MARK: - Advisory Weather (Open-Meteo, non-METAR airports)
+    private func advisoryWeatherView(_ wx: AdvisoryWeather) -> some View {
+        VStack(spacing: 16) {
+
+            VStack(spacing: 6) {
+                Text(airport.name)
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption)
+                    Text("Advisory Weather Only — No Official METAR")
+                        .font(.caption.bold())
+                        .foregroundColor(.yellow)
+                }
+                if airport.elevation != 0 {
+                    Text("Elev \(airport.elevation.formatted()) ft MSL")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            VStack(spacing: 0) {
+                advisoryRow(label: "Temperature",
+                            value: String(format: "%.0f°C (%.0f°F)", wx.temperatureC, wx.temperatureF))
+                Divider()
+                if let dp = wx.dewpointC {
+                    advisoryRow(label: "Dewpoint",
+                                value: String(format: "%.0f°C (%.0f°F)", dp, dp * 9/5 + 32))
+                    Divider()
+                }
+                if let rh = wx.relativeHumidityPercent {
+                    advisoryRow(label: "Humidity", value: "\(rh)%")
+                    Divider()
+                }
+                let windDir = wx.windDirectionDeg.map { "\($0)°" } ?? "VRB"
+                let gustStr = wx.windGustKtRounded.map { " G\($0)kt" } ?? ""
+                advisoryRow(label: "Wind", value: "\(windDir) \(wx.windSpeedKtRounded)kt\(gustStr)")
+                Divider()
+                advisoryRow(label: "Clouds", value: "\(wx.cloudCoverDescription) (\(wx.cloudCoverPercent)% cover)")
+                Divider()
+                if let vis = wx.visibilityMiles {
+                    advisoryRow(label: "Visibility", value: String(format: "%.1f SM", vis))
+                    Divider()
+                }
+                advisoryRow(label: "Precipitation", value: wx.precipDescription)
+                if let pct = wx.precipitationProbability {
+                    Divider()
+                    advisoryRow(label: "Precip Probability", value: "\(pct)%")
+                }
+                if let inHg = wx.pressureInHg {
+                    Divider()
+                    advisoryRow(label: "Altimeter", value: String(format: "%.2f inHg", inHg))
+                }
+            }
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if let updated = vm.lastUpdated {
+                Text("Updated \(updated, style: .relative) ago · Source: Open-Meteo")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Not certified aviation weather. Use for situational awareness only. Consult official sources (ForeFlight, 1800wxbrief) before flight.", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(10)
+            .background(Color.yellow.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .padding()
+    }
+
+    private func advisoryRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.subheadline.monospacedDigit())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
     // MARK: - No Reporting
     private var noReportingView: some View {
         VStack(spacing: 16) {
@@ -1237,7 +1330,7 @@ struct WeatherDetailView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Button("Retry") {
-                Task { await vm.load(icao: airport.icao) }
+                Task { await vm.load(airport: airport) }
             }
             .buttonStyle(.borderedProminent)
         }

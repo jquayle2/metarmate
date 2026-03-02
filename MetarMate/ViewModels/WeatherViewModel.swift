@@ -23,11 +23,37 @@ class WeatherViewModel: ObservableObject {
     @Published var lastUpdated: Date?
     @Published var noWeatherReporting = false
     @Published var nearbyReportingAirports: [NearbyReportingAirport] = []
+    @Published var advisoryWeather: AdvisoryWeather?  // Open-Meteo data for non-METAR airports
 
     private let weatherService = WeatherService.shared
 
-    func load(icao: String) async {
+    // MARK: - Load with full Airport (preferred — enables hasMetar routing)
+    func load(airport: Airport) async {
         isLoading = true
+        error = nil
+        noWeatherReporting = false
+        nearbyReportingAirports = []
+        advisoryWeather = nil
+
+        if !airport.hasMetar {
+            await loadAdvisory(airport: airport)
+        } else {
+            await loadMETAR(icao: airport.icao)
+        }
+        isLoading = false
+    }
+
+    // MARK: - Load by ICAO string (legacy path — still works for live-resolved stations)
+    func load(icao: String) async {
+        if let airport = AirportService.shared.airport(icao: icao) {
+            await load(airport: airport)
+        } else {
+            await loadMETAR(icao: icao)
+        }
+    }
+
+    // MARK: - METAR path (aviationweather.gov)
+    private func loadMETAR(icao: String) async {
         error = nil
         noWeatherReporting = false
         nearbyReportingAirports = []
@@ -59,7 +85,16 @@ class WeatherViewModel: ObservableObject {
         } catch {
             self.error = error
         }
-        isLoading = false
+    }
+
+    // MARK: - Advisory weather path (Open-Meteo, for non-METAR airports)
+    private func loadAdvisory(airport: Airport) async {
+        do {
+            advisoryWeather = try await OpenMeteoService.shared.fetchAdvisory(for: airport)
+            lastUpdated = Date()
+        } catch {
+            self.error = error
+        }
     }
 
     private func loadNearbyReporting(icao: String) async {
@@ -68,7 +103,7 @@ class WeatherViewModel: ObservableObject {
         let location = CLLocation(latitude: airport.latitude, longitude: airport.longitude)
         let nearby = AirportService.shared.nearest(
             to: location, count: 10
-        ).filter { $0.icao != icao }
+        ).filter { $0.icao != icao && $0.hasMetar }
 
         let icaos = nearby.map { $0.icao }
         guard let metars = try? await weatherService.fetchMetars(for: icaos) else { return }
