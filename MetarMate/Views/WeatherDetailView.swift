@@ -611,9 +611,13 @@ struct WeatherDetailView: View {
 
     // MARK: - Alert Card (Point 2)
     private func alertCard(_ trend: WeatherTrend) -> some View {
-        let color = trend.overall.color
+        // Use observed trend for the card color/icon — it reflects what's happening NOW.
+        // Forecast divergence is called out separately in the summary text.
+        let observedOverall = trend.observed.overall
+        let color = observedOverall == .unknown ? trend.overall.color : observedOverall.color
+        let iconDirection = observedOverall == .unknown ? trend.overall : observedOverall
         let roc = trend.observed.rateOfChange
-        let isDeteriorating = trend.overall == .deteriorating
+        let isDeteriorating = observedOverall == .deteriorating
 
         return HStack(spacing: 0) {
             // Left-edge status strip
@@ -624,7 +628,7 @@ struct WeatherDetailView: View {
 
             HStack(spacing: 10) {
                 // Animated icon — pulses when deteriorating
-                Image(systemName: trend.overall.systemImage)
+                Image(systemName: iconDirection.systemImage)
                     .foregroundColor(color)
                     .font(.title2)
                     .scaleEffect(trendPulse ? 1.15 : 1.0)
@@ -636,7 +640,7 @@ struct WeatherDetailView: View {
                         value: trendPulse
                     )
                     .onAppear { if isDeteriorating { trendPulse = true } }
-                    .onChange(of: trend.overall) { trendPulse = (trend.overall == .deteriorating) }
+                    .onChange(of: trend.overall) { trendPulse = (observedOverall == .deteriorating) }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(trend.headline)
@@ -668,7 +672,7 @@ struct WeatherDetailView: View {
             insertion: .move(edge: .top).combined(with: .opacity),
             removal: .opacity
         ))
-        .id(trend.overall)
+        .id(observedOverall)
     }
 
     // Surface the single most actionable delta — wind sustained+gust, ceiling, or vis
@@ -966,7 +970,10 @@ struct WeatherDetailView: View {
             let color: Color = abs(cd) >= 800 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
             items.append(("cloud.fill", "Ceiling \(abs(cd).formatted()) ft \(higher) than forecast", color))
         } else if point.actualCeilingFt != nil && point.forecastCeilingFt == nil {
-            items.append(("cloud.fill", "Ceiling formed — not forecast", .red))
+            // Ceiling formed when TAF said clear — severity depends on how low
+            let ceilFt = point.actualCeilingFt ?? 0
+            let color: Color = ceilFt < 1000 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            items.append(("cloud.fill", "Ceiling formed — not forecast", color))
         } else if point.actualCeilingFt == nil && point.forecastCeilingFt != nil {
             items.append(("cloud.fill", "Ceiling cleared — not forecast", .green))
         }
@@ -978,7 +985,8 @@ struct WeatherDetailView: View {
             let bothVFR = actual > 5.0 && fcst > 5.0
             if !bothVFR && abs(vd) > 0.5 {
                 let better = vd > 0 ? "better" : "worse"
-                let color: Color = abs(vd) >= 1.5 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+                // Better than forecast = green; worse = amber/red
+                let color: Color = vd > 0 ? .green : (abs(vd) >= 1.5 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0))
                 items.append(("eye.fill", "Visibility \(String(format: "%g", abs(vd))) SM \(better) than forecast", color))
             }
         }
