@@ -21,6 +21,14 @@ struct SearchView: View {
                             .padding(.horizontal)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if airportVM.isResolvingStation {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Looking up station \(searchText.uppercased())…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if airportVM.searchResults.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                 } else {

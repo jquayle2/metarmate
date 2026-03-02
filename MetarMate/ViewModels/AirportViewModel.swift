@@ -9,6 +9,7 @@ import CoreLocation
 class AirportViewModel: ObservableObject {
     @Published var nearestAirports: [Airport] = []
     @Published var searchResults: [Airport] = []
+    @Published var isResolvingStation = false
     @Published var searchText: String = "" {
         didSet { performSearch() }
     }
@@ -25,7 +26,24 @@ class AirportViewModel: ObservableObject {
             searchResults = []
             return
         }
-        searchResults = airportService.search(query: searchText)
+        let local = airportService.search(query: searchText)
+        searchResults = local
+
+        // For short queries that look like station IDs with no local match,
+        // attempt a live NOAA lookup (handles T78, 5T6, and other FAA identifiers)
+        let q = searchText.uppercased()
+        let looksLikeStationId = (2...5).contains(q.count) && q.allSatisfy { $0.isLetter || $0.isNumber }
+        if local.isEmpty && looksLikeStationId {
+            isResolvingStation = true
+            Task {
+                if let resolved = await airportService.resolveUnknownStation(q) {
+                    searchResults = [resolved]
+                }
+                isResolvingStation = false
+            }
+        } else {
+            isResolvingStation = false
+        }
     }
 
     // MARK: - Nearest Airports
