@@ -30,14 +30,22 @@ extension TrendDirection {
 struct FlightCategoryBadge: View {
     let category: FlightCategory
 
+    private var fontSize: CGFloat {
+        switch category {
+        case .mvfr, .lifr, .unknown: return 9
+        default: return 11
+        }
+    }
+
     var body: some View {
         Text(category.displayName)
-            .font(.caption.bold())
+            .font(.system(size: fontSize, weight: .bold))
             .foregroundColor(.white)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 7)
             .padding(.vertical, 3)
             .background(category.swiftUIColor)
             .clipShape(Capsule())
+            .fixedSize()
     }
 }
 
