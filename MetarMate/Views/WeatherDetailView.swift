@@ -697,9 +697,20 @@ struct WeatherDetailView: View {
 
     // MARK: - METAR History
     private func metarHistorySection(_ metars: [Metar]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Observation History")
-            ForEach(Array(metars.enumerated()), id: \.element.id) { index, metar in
+        let maxShown = 6
+        let displayed = Array(metars.prefix(maxShown))
+        let totalCount = metars.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                sectionHeader("Observation History")
+                Spacer()
+                if totalCount > maxShown {
+                    Text("Last \(maxShown) of \(totalCount)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            ForEach(Array(displayed.enumerated()), id: \.element.id) { index, metar in
                 HStack(alignment: .top, spacing: 10) {
                     FlightCategoryBadge(category: metar.flightCategory)
                         .frame(width: 50)
@@ -724,7 +735,7 @@ struct WeatherDetailView: View {
                     }
                 }
                 .padding(.vertical, 2)
-                if index < metars.count - 1 {
+                if index < displayed.count - 1 {
                     HStack {
                         Rectangle()
                             .fill(Color.secondary.opacity(0.2))
