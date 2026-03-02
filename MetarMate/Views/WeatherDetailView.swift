@@ -165,11 +165,11 @@ struct WeatherDetailView: View {
         return .green                                                     // VFR
     }
 
-    // Temp/dewpoint spread: fog risk — red/yellow/green
+    // Temp/dewpoint spread: fog risk — red/amber/green
     private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
         let spread = temp - dew
         if spread <= 2 { return .red }
-        if spread <= 4 { return .yellow }
+        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
         return .green
     }
 
