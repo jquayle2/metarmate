@@ -169,15 +169,15 @@ struct WeatherDetailView: View {
     private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
         let spread = temp - dew
         if spread <= 2 { return .orange }
-        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
-        return .primary
+        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
+        return .green
     }
 
     // Altimeter: pressure hazard — amber/orange scale
     private func altimeterConditionColor(_ alt: Double) -> Color {
         if alt < 29.70 { return .orange }
-        if alt < 29.80 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
-        return .primary
+        if alt < 29.80 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
+        return .green
     }
 
     // Weather phenomena: orange for significant, red for TS/FZ (life-safety)
@@ -191,7 +191,7 @@ struct WeatherDetailView: View {
     private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = .primary) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .foregroundColor(color == .primary ? .secondary : color.opacity(0.8))
+                .foregroundColor(color == .primary || color == .green ? .secondary : color.opacity(0.8))
                 .frame(width: 20)
             Text(label)
                 .font(.subheadline)
@@ -200,7 +200,7 @@ struct WeatherDetailView: View {
             Text(value)
                 .font(.subheadline)
                 .foregroundColor(color)
-                .fontWeight(color == .primary ? .regular : .semibold)
+                .fontWeight(color == .primary || color == .green ? .regular : .semibold)
             Spacer()
         }
     }
