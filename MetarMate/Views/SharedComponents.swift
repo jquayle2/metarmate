@@ -115,52 +115,61 @@ struct AirportRowView: View {
     let metar: Metar?
     let distance: String?
 
-    var body: some View {
-        HStack(spacing: 12) {
-            if airport.hasMetar {
-                Circle()
-                    .fill(metar?.flightCategory.swiftUIColor ?? Color.gray)
-                    .frame(width: 10, height: 10)
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                    .font(.system(size: 10))
-                    .frame(width: 10, height: 10)
-            }
+    private var categoryColor: Color {
+        guard airport.hasMetar else { return .orange }
+        return metar?.flightCategory.swiftUIColor ?? .gray
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(airport.icao)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    if let iata = airport.iata, !iata.isEmpty {
-                        Text(iata)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left-edge flight category strip
+            Rectangle()
+                .fill(categoryColor)
+                .frame(width: 3)
+                .clipShape(RoundedRectangle(cornerRadius: 1.5))
+                .padding(.vertical, 6)
+
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    // ICAO prominent, IATA small and secondary
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(airport.icao)
+                            .font(.system(.headline, design: .default).weight(.bold))
+                            .foregroundColor(.primary)
+                        if let iata = airport.iata, !iata.isEmpty {
+                            Text(iata)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.secondary.opacity(0.7))
+                        }
+                    }
+
+                    Text(airport.name)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+
+                    if !airport.hasMetar {
+                        Text("Advisory weather only")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                    } else if let metar = metar {
+                        airportWeatherSummaryRow(metar: metar)
                     }
                 }
-                Text(airport.name)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                if !airport.hasMetar {
-                    Text("Advisory weather only")
-                        .font(.caption2)
-                        .foregroundColor(.orange)
-                } else if let metar = metar {
-                    airportWeatherSummaryRow(metar: metar)
+
+                Spacer()
+
+                // Distance — visually secondary
+                if let distance = distance {
+                    Text(distance)
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .fontWeight(.regular)
                 }
             }
-
-            Spacer()
-
-            if let distance = distance {
-                Text(distance)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            .padding(.leading, 10)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 4)
     }
 
     // Wind color for airport list — orange/red only, matching detail view thresholds
