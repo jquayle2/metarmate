@@ -136,46 +136,56 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Condition row color helpers
+
+    // Wind: green / amber / orange — never red (red is reserved for IFR flight category)
     private func windConditionColor(_ wind: Wind) -> Color {
         let gust = wind.gust ?? 0
         let speed = wind.speed
         let spread = gust - speed
         if gust >= 20 || speed >= 25 || spread >= 15 { return .orange }
-        if gust >= 15 || speed >= 20 || spread >= 10 { return .yellow }
+        if gust >= 15 || speed >= 20 || spread >= 10 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
+        if speed > 0 { return .green }
         return .primary
     }
 
+    // Visibility: flight category colors — VFR green, MVFR blue, IFR red, LIFR magenta
     private func visibilityConditionColor(_ vis: Double) -> Color {
-        if vis < 3 { return .orange }
-        if vis < 5 { return .yellow }
-        return .primary
+        if vis < 1 { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
+        if vis < 3 { return .red }                                       // IFR
+        if vis < 5 { return Color(red: 0.2, green: 0.5, blue: 1.0) }   // MVFR blue
+        return .green                                                     // VFR
     }
 
+    // Ceiling: flight category colors — same scale
     private func ceilingConditionColor(_ ceilingFt: Int?) -> Color {
-        guard let c = ceilingFt else { return .primary }
-        if c < 1000 { return .orange }
-        if c < 3000 { return .yellow }
-        return .primary
+        guard let c = ceilingFt else { return .green }                   // clear = VFR
+        if c < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
+        if c < 1000 { return .red }                                      // IFR
+        if c < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }  // MVFR blue
+        return .green                                                     // VFR
     }
 
+    // Temp/dewpoint spread: fog risk — amber/orange scale (not flight category)
     private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
         let spread = temp - dew
         if spread <= 2 { return .orange }
-        if spread <= 4 { return .yellow }
+        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
         return .primary
     }
 
+    // Altimeter: pressure hazard — amber/orange scale
     private func altimeterConditionColor(_ alt: Double) -> Color {
         if alt < 29.70 { return .orange }
-        if alt < 29.80 { return .yellow }
+        if alt < 29.80 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
         return .primary
     }
 
+    // Weather phenomena: orange for significant, red for TS/FZ (life-safety)
     private func wxPhenomenaConditionColor(_ phenomena: [String]) -> Color {
         let hasTS = phenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
         let hasFZ = phenomena.contains(where: { $0.contains("FZ") })
-        if hasTS || hasFZ { return .orange }
-        return .yellow  // any weather phenomenon is worth a yellow tint
+        if hasTS || hasFZ { return .red }
+        return .orange
     }
 
     private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = .primary) -> some View {
@@ -222,7 +232,7 @@ struct WeatherDetailView: View {
         let text: String
         let severity: Severity   // .caution (yellow) or .warning (orange)
         enum Severity { case caution, warning }
-        var color: Color { severity == .warning ? .orange : .yellow }
+        var color: Color { severity == .warning ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0) }
     }
 
     private func pilotNotes(for metar: Metar, history: [Metar]) -> [PilotNote] {
@@ -346,7 +356,7 @@ struct WeatherDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundColor(notes.contains(where: { $0.severity == .warning }) ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0))
                         .font(.caption)
                     Text("PILOT NOTES")
                         .font(.caption.bold())
