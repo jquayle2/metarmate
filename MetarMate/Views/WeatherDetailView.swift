@@ -32,7 +32,7 @@ struct WeatherDetailView: View {
                         densityAltitudeSection(metar)
                     }
                     if let trend = vm.trend {
-                        trendSection(trend)
+                        trendSection(trend, verification: vm.tafVerification)
                     }
                     if vm.metarHistory.count > 1 {
                         metarHistorySection(vm.metarHistory)
@@ -530,7 +530,7 @@ struct WeatherDetailView: View {
     // MARK: - Trend
     @State private var trendPulse = false
 
-    private func trendSection(_ trend: WeatherTrend) -> some View {
+    private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Trend")
 
@@ -579,6 +579,12 @@ struct WeatherDetailView: View {
             }
 
             Divider()
+
+            // Forecast Deviation Strip (Point 3) — TAF vs actual
+            if let verification = verification, let strip = forecastDeviationStrip(verification) {
+                strip
+                Divider()
+            }
 
             // FORECAST
             Text("FORECAST")
@@ -930,6 +936,88 @@ struct WeatherDetailView: View {
         .padding(.vertical, 4)
         .background(isCurrent ? Color.yellow.opacity(0.05) : Color.clear)
         .cornerRadius(6)
+    }
+
+    // MARK: - Forecast Deviation Strip (Point 3)
+    // Shows where the TAF diverged from reality, using the most recent verification point.
+    // Only displayed when divergence exceeds operationally meaningful thresholds.
+    private func forecastDeviationStrip(_ verification: TafVerification) -> AnyView? {
+        guard let point = verification.points.first else { return nil }
+
+        let windDiv = point.windDivergenceKt
+        let ceilDiv = point.ceilingDivergenceFt
+        let visDiv = point.visibilityDivergenceSM
+
+        // Build deviation items — only include when threshold exceeded
+        var items: [(icon: String, text: String, color: Color)] = []
+
+        // Wind: threshold >5kt
+        if let wd = windDiv, abs(wd) > 5 {
+            let sign = wd > 0 ? "+" : ""
+            let stronger = wd > 0 ? "stronger" : "lighter"
+            let color: Color = abs(wd) >= 10 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            items.append(("wind", "Gusts \(sign)\(abs(wd)) kt \(stronger) than forecast", color))
+        }
+
+        // Ceiling: threshold >300ft
+        if let cd = ceilDiv, abs(cd) > 300 {
+            let sign = cd > 0 ? "+" : ""
+            let higher = cd > 0 ? "higher" : "lower"
+            let color: Color = abs(cd) >= 800 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            items.append(("cloud.fill", "Ceiling \(abs(cd).formatted()) ft \(higher) than forecast", color))
+        } else if point.actualCeilingFt != nil && point.forecastCeilingFt == nil {
+            items.append(("cloud.fill", "Ceiling formed — not forecast", .red))
+        } else if point.actualCeilingFt == nil && point.forecastCeilingFt != nil {
+            items.append(("cloud.fill", "Ceiling cleared — not forecast", .green))
+        }
+
+        // Visibility: threshold >0.5SM, ignore when both solidly VFR
+        if let vd = visDiv {
+            let fcst = point.forecastVisibilitySM ?? 0
+            let actual = point.actualVisibilitySM
+            let bothVFR = actual > 5.0 && fcst > 5.0
+            if !bothVFR && abs(vd) > 0.5 {
+                let better = vd > 0 ? "better" : "worse"
+                let color: Color = abs(vd) >= 1.5 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+                items.append(("eye.fill", "Visibility \(String(format: "%g", abs(vd))) SM \(better) than forecast", color))
+            }
+        }
+
+        // On-target items for parameters that were forecast and verified correctly
+        let windOnTarget = windDiv.map { abs($0) <= 5 } ?? false
+        let ceilOnTarget: Bool = {
+            if let cd = ceilDiv { return abs(cd) <= 300 }
+            return point.actualCeilingFt == nil && point.forecastCeilingFt == nil
+        }()
+
+        if windOnTarget && point.forecastWindKt != nil {
+            items.append(("checkmark.circle.fill", "Wind on target", .green))
+        }
+        if ceilOnTarget && (point.actualCeilingFt != nil || point.forecastCeilingFt != nil) {
+            items.append(("checkmark.circle.fill", "Ceiling on target", .green))
+        }
+
+        guard !items.isEmpty else { return nil }
+
+        return AnyView(VStack(alignment: .leading, spacing: 6) {
+            Text("TAF vs ACTUAL  ·  most recent period")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
+
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 8) {
+                    Image(systemName: item.icon)
+                        .foregroundColor(item.color)
+                        .font(.caption)
+                        .frame(width: 16)
+                    Text(item.text)
+                        .font(.caption)
+                        .foregroundColor(item.color == .green ? .secondary : .primary)
+                        .fontWeight(item.color == .green ? .regular : .medium)
+                }
+            }
+        })
     }
 
     // MARK: - TAF Verification (Forecast Reliability)
