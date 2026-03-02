@@ -24,6 +24,21 @@ struct DensityAltitudeResult {
         String(format: "~%.0f%% power loss", hpLossPercent)
     }
 
+    /// Estimated takeoff roll increase as a percentage vs sea level standard day.
+    /// Uses rule of thumb: every 10% power loss ≈ 20% longer ground roll.
+    /// Formula: (1.2 ^ (hpLoss/10) - 1) * 100, rounded to nearest 5%.
+    /// Only meaningful at orange/red (20%+ loss) — below that, POH numbers cover it.
+    var takeoffRollIncreasePercent: Int? {
+        guard hpLossPercent >= 20 else { return nil }
+        let raw = (pow(1.2, hpLossPercent / 10.0) - 1.0) * 100.0
+        return Int((raw / 5.0).rounded() * 5)
+    }
+
+    var takeoffRollText: String? {
+        guard let pct = takeoffRollIncreasePercent else { return nil }
+        return "Est. takeoff roll ~+\(pct)% vs std day"
+    }
+
     var penaltyText: String {
         let sign = performancePenaltyFt >= 0 ? "+" : ""
         return "\(sign)\(performancePenaltyFt.formatted()) ft above field"

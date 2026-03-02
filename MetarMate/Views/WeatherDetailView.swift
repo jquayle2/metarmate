@@ -204,6 +204,21 @@ struct WeatherDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    if let rollText = da.takeoffRollText {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.right.to.line")
+                                .foregroundColor(hpLossColor(da.hpLossPercent))
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(rollText)
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(hpLossColor(da.hpLossPercent))
+                                Text("Rule of thumb — verify with POH")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                     Text(da.summary)
                         .font(.caption)
                         .foregroundColor(.secondary)
