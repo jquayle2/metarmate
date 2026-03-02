@@ -114,28 +114,74 @@ struct WeatherDetailView: View {
     private func decodedConditionsSection(_ metar: Metar) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Conditions")
-            conditionRow("wind", "Wind", windText(metar.wind))
-            conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility))
-            conditionRow("cloud.fill", "Ceiling", ceilingText(metar))
+            conditionRow("wind", "Wind", windText(metar.wind), color: windConditionColor(metar.wind))
+            conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility), color: visibilityConditionColor(metar.visibility))
+            conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
             }
             conditionRow("thermometer", "Temp / Dewpoint",
-                         "\(metar.temperature)°C / \(metar.dewpoint)°C  (spread \(metar.temperature - metar.dewpoint)°)")
-            conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", metar.altimeter))
+                         "\(metar.temperature)°C / \(metar.dewpoint)°C  (spread \(metar.temperature - metar.dewpoint)°)",
+                         color: tempDewConditionColor(temp: metar.temperature, dew: metar.dewpoint))
+            conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", metar.altimeter),
+                         color: altimeterConditionColor(metar.altimeter))
             if !metar.weatherPhenomena.isEmpty {
                 conditionRow("cloud.bolt.rain.fill", "Weather",
-                             WeatherDecoder.decodeAll(metar.weatherPhenomena))
+                             WeatherDecoder.decodeAll(metar.weatherPhenomena),
+                             color: wxPhenomenaConditionColor(metar.weatherPhenomena))
             }
         }
         .padding()
         .background(cardBackground)
     }
 
-    private func conditionRow(_ icon: String, _ label: String, _ value: String) -> some View {
+    // MARK: - Condition row color helpers
+    private func windConditionColor(_ wind: Wind) -> Color {
+        let gust = wind.gust ?? 0
+        let speed = wind.speed
+        let spread = gust - speed
+        if gust >= 20 || speed >= 25 || spread >= 15 { return .orange }
+        if gust >= 15 || speed >= 20 || spread >= 10 { return .yellow }
+        return .primary
+    }
+
+    private func visibilityConditionColor(_ vis: Double) -> Color {
+        if vis < 3 { return .orange }
+        if vis < 5 { return .yellow }
+        return .primary
+    }
+
+    private func ceilingConditionColor(_ ceilingFt: Int?) -> Color {
+        guard let c = ceilingFt else { return .primary }
+        if c < 1000 { return .orange }
+        if c < 3000 { return .yellow }
+        return .primary
+    }
+
+    private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
+        let spread = temp - dew
+        if spread <= 2 { return .orange }
+        if spread <= 4 { return .yellow }
+        return .primary
+    }
+
+    private func altimeterConditionColor(_ alt: Double) -> Color {
+        if alt < 29.70 { return .orange }
+        if alt < 29.80 { return .yellow }
+        return .primary
+    }
+
+    private func wxPhenomenaConditionColor(_ phenomena: [String]) -> Color {
+        let hasTS = phenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
+        let hasFZ = phenomena.contains(where: { $0.contains("FZ") })
+        if hasTS || hasFZ { return .orange }
+        return .yellow  // any weather phenomenon is worth a yellow tint
+    }
+
+    private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = .primary) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .foregroundColor(.secondary)
+                .foregroundColor(color == .primary ? .secondary : color.opacity(0.8))
                 .frame(width: 20)
             Text(label)
                 .font(.subheadline)
@@ -143,7 +189,8 @@ struct WeatherDetailView: View {
                 .frame(width: 100, alignment: .leading)
             Text(value)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundColor(color)
+                .fontWeight(color == .primary ? .regular : .semibold)
             Spacer()
         }
     }
