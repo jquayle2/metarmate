@@ -320,19 +320,24 @@ struct WeatherDetailView: View {
 
             Divider()
 
-            // FORECAST (Point 3 marker — deviation strip placeholder)
+            // FORECAST
             Text("FORECAST")
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
                 .tracking(0.5)
 
-            TrendIndicator(direction: trend.forecast.wind, label: "Wind")
-            TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
-            TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
-
-            Text(trend.forecast.summaryText)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            if trend.forecast.overall == .unknown {
+                Text("No TAF available for this station.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                TrendIndicator(direction: trend.forecast.wind, label: "Wind")
+                TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
+                TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
+                Text(trend.forecast.summaryText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding()
         .background(cardBackground)
@@ -359,7 +364,7 @@ struct WeatherDetailView: View {
                     .foregroundColor(.secondary)
                     .padding(.leading, 26)
                     .fixedSize(horizontal: false, vertical: true)
-            } else if let span = roc?.spanText {
+            } else if let span = roc?.spanText, (roc?.oldWindKt ?? 0) > 0 || (roc?.newWindKt ?? 0) > 0 {
                 Text("No change · \(span)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -421,25 +426,27 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader("Observation History")
             ForEach(Array(metars.enumerated()), id: \.element.id) { index, metar in
-                HStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
                     FlightCategoryBadge(category: metar.flightCategory)
                         .frame(width: 50)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(historyTimeLabel(metar))
-                            .font(.caption.bold())
-                            .foregroundColor(index == 0 ? .yellow : .primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(historyTimeLabel(metar))
+                                .font(.caption.bold())
+                                .foregroundColor(index == 0 ? .yellow : .primary)
+                            if index == 0 {
+                                Text("LATEST")
+                                    .font(.caption2.bold())
+                                    .foregroundColor(.yellow)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .overlay(Capsule().stroke(Color.yellow, lineWidth: 1))
+                            }
+                        }
                         Text(historyConditionLine(metar))
                             .font(.caption)
                             .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                    if index == 0 {
-                        Text("LATEST")
-                            .font(.caption2.bold())
-                            .foregroundColor(.yellow)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .overlay(Capsule().stroke(Color.yellow, lineWidth: 1))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(.vertical, 2)
