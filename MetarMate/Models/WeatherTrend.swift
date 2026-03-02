@@ -362,6 +362,8 @@ struct WeatherTrend: Codable {
         let headline = deriveHeadline(observed: observed, forecast: forecast)
 
         let summary: String
+        // If wind is the dominant story, reflect it in the summary
+        let windIsSignificant = observed.wind != .steady && observed.overall == .steady
         switch (observed.overall, forecast.overall) {
         case (.improving, .improving):
             summary = "Conditions are improving and forecast agrees."
@@ -372,7 +374,7 @@ struct WeatherTrend: Codable {
         case (.improving, .deteriorating):
             summary = "Conditions have been improving but forecast shows deterioration ahead."
         case (.steady, .steady):
-            summary = "No significant changes observed or forecast."
+            summary = windIsSignificant ? "Ceiling and visibility steady. Wind is the main story." : "No significant changes observed or forecast."
         case (.steady, .improving):
             summary = "Conditions steady. Improvement expected ahead."
         case (.steady, .deteriorating):
