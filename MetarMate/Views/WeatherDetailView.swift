@@ -205,10 +205,40 @@ struct WeatherDetailView: View {
         }
     }
 
+    // Cloud layer: per-layer color based on coverage + altitude + CB
+    private func cloudLayerColor(_ layer: CloudLayer) -> Color {
+        let altFt = layer.altitude * 100
+        if layer.isCumulonimbus { return .orange }
+        switch layer.coverage {
+        case .few, .scattered:
+            if altFt < 3000 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber — low FEW/SCT
+            return .green                                                        // high FEW/SCT benign
+        case .broken, .overcast, .verticalVisibility:
+            if altFt < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
+            if altFt < 1000 { return .red }                                      // IFR
+            if altFt < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }  // MVFR blue
+            return .green
+        case .clear, .skyClear:
+            return .green
+        }
+    }
+
+    private func cloudSeverityRank(_ color: Color) -> Int {
+        switch color {
+        case .orange: return 5
+        case .red: return 4
+        case _ where color == Color(red: 0.75, green: 0.0, blue: 0.75): return 3 // magenta
+        case _ where color == Color(red: 0.2, green: 0.5, blue: 1.0): return 2   // MVFR blue
+        case .green: return 1
+        default: return 0
+        }
+    }
+
     private func cloudsView(_ layers: [CloudLayer]) -> some View {
         HStack(alignment: .top, spacing: 10) {
+            let worstColor = layers.map { cloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
             Image(systemName: "cloud.fill")
-                .foregroundColor(.secondary)
+                .foregroundColor(worstColor == .primary ? .secondary : worstColor.opacity(0.8))
                 .frame(width: 20)
             Text("Clouds")
                 .font(.subheadline)
@@ -218,8 +248,11 @@ struct WeatherDetailView: View {
                 ForEach(layers.indices, id: \.self) { i in
                     let layer = layers[i]
                     let alt = (layer.altitude * 100).formatted()
+                    let layerColor = cloudLayerColor(layer)
                     Text("\(layer.coverage.rawValue) \(alt) ft\(layer.isCumulonimbus ? " CB" : "")")
                         .font(.subheadline)
+                        .foregroundColor(layerColor)
+                        .fontWeight(layerColor == .green || layerColor == .primary ? .regular : .semibold)
                 }
             }
             Spacer()
