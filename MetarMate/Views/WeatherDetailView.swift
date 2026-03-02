@@ -28,6 +28,7 @@ struct WeatherDetailView: View {
                     if let metar = vm.metar {
                         rawMetarSection(metar)
                         decodedConditionsSection(metar)
+                        pilotNotesSection(metar, history: vm.metarHistory)
                         densityAltitudeSection(metar)
                     }
                     if let trend = vm.trend {
@@ -166,6 +167,171 @@ struct WeatherDetailView: View {
             }
             Spacer()
         }
+    }
+
+    // MARK: - Pilot Notes
+    private struct PilotNote {
+        let icon: String
+        let text: String
+        let severity: Severity   // .caution (yellow) or .warning (orange)
+        enum Severity { case caution, warning }
+        var color: Color { severity == .warning ? .orange : .yellow }
+    }
+
+    private func pilotNotes(for metar: Metar, history: [Metar]) -> [PilotNote] {
+        var notes: [PilotNote] = []
+        let wind = metar.wind
+        let gust = wind.gust ?? 0
+        let speed = wind.speed
+        let spread = gust - speed
+
+        // Windshear in remarks
+        if let remarks = metar.remarks?.uppercased(), remarks.contains("WS ") || remarks.contains("LLWS") {
+            notes.append(.init(icon: "wind", text: "Windshear reported in remarks — check NOTAM and PIREP", severity: .warning))
+        }
+        // WS in phenomena codes
+        if metar.weatherPhenomena.contains(where: { $0.contains("WS") }) {
+            notes.append(.init(icon: "wind", text: "Windshear in weather phenomena", severity: .warning))
+        }
+
+        // High sustained wind
+        if speed >= 25 {
+            notes.append(.init(icon: "wind", text: "High winds \(speed) kt — check crosswind component for your runway", severity: .warning))
+        } else if speed >= 20 {
+            notes.append(.init(icon: "wind", text: "Wind \(speed) kt — consider crosswind component", severity: .caution))
+        }
+
+        // Gusts
+        if gust >= 15 {
+            let sev: PilotNote.Severity = gust >= 20 ? .warning : .caution
+            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — add \(gust / 2) kt to approach speed per rule of thumb", severity: sev))
+        }
+
+        // Gust spread (turbulence indicator)
+        if spread >= 15 {
+            notes.append(.init(icon: "tornado", text: "Gust spread \(spread) kt — significant mechanical turbulence likely", severity: .warning))
+        } else if spread >= 10 {
+            notes.append(.init(icon: "tornado", text: "Gust spread \(spread) kt — moderate turbulence possible", severity: .caution))
+        }
+
+        // Variable wind — crosswind unpredictable
+        if wind.isVariable && speed >= 8 {
+            notes.append(.init(icon: "wind", text: "Variable wind direction at \(speed) kt — crosswind component unpredictable", severity: .caution))
+        }
+
+        // Low visibility
+        if metar.visibility < 3 {
+            notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(String(format: "%g", metar.visibility)) SM — IFR conditions", severity: .warning))
+        } else if metar.visibility < 5 {
+            notes.append(.init(icon: "eye.slash", text: "Visibility \(String(format: "%g", metar.visibility)) SM — reduced; VFR marginal", severity: .caution))
+        }
+
+        // Low ceiling
+        if let ceiling = metar.ceilingFeet {
+            if ceiling < 500 {
+                notes.append(.init(icon: "cloud.fill", text: "Ceiling \(ceiling.formatted()) ft — LIFR", severity: .warning))
+            } else if ceiling < 1000 {
+                notes.append(.init(icon: "cloud.fill", text: "Ceiling \(ceiling.formatted()) ft — IFR ceiling", severity: .warning))
+            } else if ceiling < 3000 {
+                notes.append(.init(icon: "cloud", text: "Ceiling \(ceiling.formatted()) ft — below VFR minimums in many areas", severity: .caution))
+            }
+        }
+
+        // Fog risk: temp/dewpoint spread ≤4°
+        let tempDewSpread = metar.temperature - metar.dewpoint
+        if tempDewSpread <= 2 {
+            notes.append(.init(icon: "cloud.fog.fill", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog or low stratus likely", severity: .warning))
+        } else if tempDewSpread <= 4 {
+            notes.append(.init(icon: "cloud.fog", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog risk; watch for rapid deterioration", severity: .caution))
+        }
+
+        // Thunderstorm / CB
+        let hasTS = metar.weatherPhenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
+        let hasCB = metar.clouds.contains(where: { $0.isCumulonimbus })
+        if hasTS {
+            notes.append(.init(icon: "bolt.fill", text: "Thunderstorm reported — do not depart until clear", severity: .warning))
+        } else if hasCB {
+            notes.append(.init(icon: "bolt", text: "Cumulonimbus cloud reported — convective activity nearby", severity: .warning))
+        }
+
+        // Low altimeter (below standard = possible storm)
+        if metar.altimeter < 29.70 {
+            notes.append(.init(icon: "gauge.low", text: "Low altimeter \(String(format: "%.2f", metar.altimeter)) inHg — significant pressure system; check area weather", severity: .warning))
+        } else if metar.altimeter < 29.90 {
+            notes.append(.init(icon: "gauge", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — below standard; verify altimeter setting", severity: .caution))
+        }
+
+        // Falling altimeter trend from history
+        if history.count >= 3 {
+            let recent = Array(history.prefix(3))
+            let oldest = recent.last!.altimeter
+            let newest = recent.first!.altimeter
+            let drop = oldest - newest
+            if drop >= 0.06 {
+                notes.append(.init(icon: "arrow.down.circle.fill", text: String(format: "Altimeter falling %.2f inHg over recent observations — deepening low pressure", drop), severity: .warning))
+            } else if drop >= 0.03 {
+                notes.append(.init(icon: "arrow.down.circle", text: String(format: "Altimeter dropping %.2f inHg over recent observations — watch for continued deterioration", drop), severity: .caution))
+            }
+        }
+
+        // Stale data
+        if metar.isOld {
+            let minutes = Int(Date().timeIntervalSince(metar.observationTime) / 60)
+            notes.append(.init(icon: "clock.badge.exclamationmark", text: "Observation is \(minutes) min old — conditions may have changed", severity: .caution))
+        }
+
+        // Freezing conditions
+        if metar.temperature <= 0 && metar.weatherPhenomena.contains(where: { $0.contains("FZ") || $0.contains("FZRA") }) {
+            notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing conditions on aircraft and runway surfaces", severity: .warning))
+        } else if metar.temperature <= 2 && metar.temperature - metar.dewpoint <= 3 {
+            notes.append(.init(icon: "thermometer.snowflake", text: "Near-freezing with high moisture — frost or freezing precip risk", severity: .caution))
+        }
+
+        return notes
+    }
+
+    private func pilotNotesSection(_ metar: Metar, history: [Metar]) -> some View {
+        let notes = pilotNotes(for: metar, history: history)
+        guard !notes.isEmpty else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text("PILOT NOTES")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+                }
+                ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: note.icon)
+                            .foregroundColor(note.color)
+                            .font(.subheadline)
+                            .frame(width: 20)
+                        Text(note.text)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Text("Operational thresholds shown. Verify against your aircraft POH and personal minimums.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 2)
+            }
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.orange.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+                    )
+            )
+        )
     }
 
     // MARK: - Density Altitude
