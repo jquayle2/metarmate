@@ -42,20 +42,19 @@ struct FlyingWeatherIntent: AppIntent {
 
         } else {
             // Siri didn't slot-fill the parameter — prompt the user interactively
-            let promptedAirport: Airport?
             do {
                 let requestedEntity = try await $airport.requestValue("Which airport? Say the ICAO code like K-L-A-S, or say nearest.")
                 let code = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
                 NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' normalized='\(code)'")
-                promptedAirport = await MainActor.run { AirportService.shared.airport(identifier: code) }
-            } catch {
-                promptedAirport = nil
-            }
-
-            if let found = promptedAirport {
+                guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
+                    return .result(
+                        dialog: IntentDialog("I don't recognize the airport code \(code). MetarMate requires an ICAO identifier like K-L-A-S. Local FAA identifiers like zero-L-7 aren't supported yet."),
+                        view: snippetView(label: code, category: .unknown, detail: "Airport not in database")
+                    )
+                }
                 resolvedAirport = found
-            } else {
-                // Fall back to nearest airport
+            } catch {
+                // User cancelled or said nearest — fall back to nearest airport
                 guard let location = try? await IntentLocationHelper.currentLocation() else {
                     return .result(
                         dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
