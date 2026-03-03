@@ -608,6 +608,8 @@ struct WeatherDetailView: View {
     // MARK: - Trend
     @State private var trendPulse = false
     @State private var showForecastDetail = false
+    @State private var historyExpanded = false
+    @State private var tafExpanded = false
 
     private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -853,17 +855,25 @@ struct WeatherDetailView: View {
 
     // MARK: - METAR History
     private func metarHistorySection(_ metars: [Metar]) -> some View {
-        let maxShown = 6
-        let displayed = Array(metars.prefix(maxShown))
+        let defaultShown = 3
         let totalCount = metars.count
+        let displayed = Array(metars.prefix(historyExpanded ? totalCount : defaultShown))
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 sectionHeader("Observation History")
                 Spacer()
-                if totalCount > maxShown {
-                    Text("Last \(maxShown) of \(totalCount)")
-                        .font(.caption2)
+                if totalCount > defaultShown {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { historyExpanded.toggle() }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(historyExpanded ? "Show less" : "Show all \(totalCount)")
+                                .font(.caption)
+                            Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                        }
                         .foregroundColor(.secondary)
+                    }
                 }
             }
             ForEach(Array(displayed.enumerated()), id: \.element.id) { index, metar in
@@ -965,8 +975,28 @@ struct WeatherDetailView: View {
             }
 
             let tafIsUpcoming = taf.validFrom > Date()
-            ForEach(taf.forecasts) { period in
+            let defaultPeriods = 3
+            let totalPeriods = taf.forecasts.count
+            let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(defaultPeriods))
+
+            ForEach(displayedPeriods) { period in
                 tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
+            }
+
+            if totalPeriods > defaultPeriods {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { tafExpanded.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(tafExpanded ? "Show less" : "Show all \(totalPeriods) periods")
+                            .font(.caption)
+                        Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
+                }
             }
         }
         .padding()
