@@ -20,6 +20,7 @@ enum SectionID: String, Codable, CaseIterable {
     case trend            = "trend"
     case history          = "history"
     case taf              = "taf"
+    case rawTaf           = "rawTaf"
     case tafVerification  = "tafVerification"
 
     // Advisory sections
@@ -37,7 +38,8 @@ enum SectionID: String, Codable, CaseIterable {
         case .performance:        return "Performance"
         case .trend:              return "Trend"
         case .history:            return "Observation History"
-        case .taf:                return "TAF"
+        case .taf:                return "TAF Forecast"
+        case .rawTaf:             return "Raw TAF"
         case .tafVerification:    return "Forecast Reliability"
         case .advConditions:      return "Conditions"
         case .advPerformance:     return "Performance"
@@ -69,8 +71,8 @@ struct SectionConfig: Codable, Identifiable {
 class LayoutPreferences: ObservableObject {
     static let shared = LayoutPreferences()
 
-    private let metarKey    = "metarSectionLayout_v2"
-    private let advisoryKey = "advisorySectionLayout_v2"
+    private let metarKey    = "metarSectionLayout_v3"
+    private let advisoryKey = "advisorySectionLayout_v3"
 
     // METAR section order + visibility
     @Published var metarSections: [SectionConfig] {
@@ -91,6 +93,7 @@ class LayoutPreferences: ObservableObject {
         .init(id: .trend,           visibility: .always),
         .init(id: .history,         visibility: .always),
         .init(id: .taf,             visibility: .always),
+        .init(id: .rawTaf,          visibility: .always),
         .init(id: .tafVerification, visibility: .always),
     ]
 
@@ -103,8 +106,8 @@ class LayoutPreferences: ObservableObject {
     ]
 
     private init() {
-        metarSections    = Self.load(key: "metarSectionLayout_v2")    ?? Self.defaultMetarSections
-        advisorySections = Self.load(key: "advisorySectionLayout_v2") ?? Self.defaultAdvisorySections
+        metarSections    = Self.load(key: "metarSectionLayout_v3")    ?? Self.defaultMetarSections
+        advisorySections = Self.load(key: "advisorySectionLayout_v3") ?? Self.defaultAdvisorySections
     }
 
     // MARK: - Persistence

@@ -126,8 +126,11 @@ struct WeatherDetailView: View {
                 }
             case .taf:
                 if let taf = vm.taf, prefs.shouldShow(.taf) {
-                    tafSection(taf)
+                    let showRaw = prefs.shouldShow(.rawTaf)
+                    tafSection(taf, showRaw: showRaw)
                 }
+            case .rawTaf:
+                EmptyView() // controlled via showRaw parameter inside tafSection
             case .tafVerification:
                 if let verification = vm.tafVerification,
                    prefs.shouldShow(.tafVerification, amberCondition: verAmber, redCondition: verRed) {
@@ -933,7 +936,7 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - TAF
-    private func tafSection(_ taf: Taf) -> some View {
+    private func tafSection(_ taf: Taf, showRaw: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 sectionHeader("TAF")
@@ -946,17 +949,19 @@ struct WeatherDetailView: View {
                         .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
                 }
             }
-            DisclosureGroup("Raw TAF") {
-                Text(taf.rawText)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(.primary)
-                    .textSelection(.enabled)
-                    .padding(.top, 4)
-            }
-            .font(.subheadline)
-            .foregroundColor(.secondary)
+            if showRaw {
+                DisclosureGroup("Raw TAF") {
+                    Text(taf.rawText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .textSelection(.enabled)
+                        .padding(.top, 4)
+                }
+                .font(.subheadline)
+                .foregroundColor(.secondary)
 
-            Divider()
+                Divider()
+            }
 
             let tafIsUpcoming = taf.validFrom > Date()
             ForEach(taf.forecasts) { period in
