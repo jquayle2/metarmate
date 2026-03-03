@@ -34,7 +34,9 @@ struct SearchView: View {
                 } else {
                     List(airportVM.searchResults) { airport in
                         NavigationLink(destination: WeatherDetailView(airport: airport)) {
-                            AirportRowView(airport: airport, metar: nil, distance: nil)
+                            AirportRowView(airport: airport,
+                                          metar: airportVM.searchMetars[airport.icao],
+                                          distance: nil)
                         }
                         .listRowBackground(Color(.systemGray6).opacity(0.2))
                     }

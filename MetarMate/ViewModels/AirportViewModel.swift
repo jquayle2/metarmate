@@ -15,6 +15,9 @@ class AirportViewModel: ObservableObject {
     }
     @Published var isLoadingNearest = false
     @Published var nearestMetars: [String: Metar] = [:]
+    @Published var searchMetars: [String: Metar] = [:]
+
+    private var searchMetarTask: Task<Void, Never>? = nil
 
     private let airportService = AirportService.shared
     private let weatherService = WeatherService.shared
@@ -24,6 +27,7 @@ class AirportViewModel: ObservableObject {
     func performSearch() {
         guard !searchText.isEmpty else {
             searchResults = []
+            searchMetars = [:]
             return
         }
         let local = airportService.search(query: searchText)
@@ -40,9 +44,25 @@ class AirportViewModel: ObservableObject {
                     searchResults = [resolved]
                 }
                 isResolvingStation = false
+                await fetchSearchMetars()
             }
         } else {
             isResolvingStation = false
+            // Debounce METAR fetch — wait 0.5s for typing to settle
+            searchMetarTask?.cancel()
+            searchMetarTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                await fetchSearchMetars()
+            }
+        }
+    }
+
+    private func fetchSearchMetars() async {
+        let icaos = searchResults.filter { $0.hasMetar }.map { $0.icao }
+        guard !icaos.isEmpty else { return }
+        if let metars = try? await weatherService.fetchMetars(for: icaos) {
+            searchMetars = metars
         }
     }
 
