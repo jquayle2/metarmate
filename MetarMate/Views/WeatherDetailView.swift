@@ -1516,6 +1516,21 @@ struct WeatherDetailView: View {
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
 
+            if vm.isMetarFallback {
+                HStack(spacing: 6) {
+                    Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                    Text("METAR unavailable — showing advisory estimate")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(.systemGray5))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
             // Dashed advisory banner — visually distinct from the official METAR header
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -1594,7 +1609,8 @@ struct WeatherDetailView: View {
         var parts: [String] = []
         let visMi = wx.visibilityMiles
         if let vis = visMi {
-            parts.append("Vis ~\(String(format: "%g", (vis * 2).rounded() / 2)) SM")
+            let rounded = vis >= 10 ? "10+" : "\(Int(vis.rounded()))"
+            parts.append("Vis ~\(rounded) SM")
         }
         // Only estimate ceiling from cloud cover when visibility is marginal or unknown.
         // When vis >=5 SM, cloud cover % from NWP is unreliable for ceiling inference.
@@ -1628,10 +1644,11 @@ struct WeatherDetailView: View {
                          "\(windDir)  \(wx.windSpeedKtRounded) kt\(gustStr)",
                          color: advisoryWindColor(wx))
 
-            // Visibility
+            // Visibility — round to whole number for advisory estimates
             if let vis = wx.visibilityMiles {
+                let visText = vis >= 10 ? "~10+ SM" : "~\(Int(vis.rounded())) SM"
                 conditionRow("eye.fill", "Visibility",
-                             String(format: "~%.1f SM", vis),
+                             visText,
                              color: visibilityConditionColor(vis))
             }
 
@@ -1800,9 +1817,9 @@ struct WeatherDetailView: View {
         // Low visibility
         if let vis = wx.visibilityMiles {
             if vis < 3 {
-                notes.append(.init(icon: "eye.slash.fill", text: String(format: "Estimated visibility ~%.1f SM — IFR conditions possible", vis), isWarning: true))
+                notes.append(.init(icon: "eye.slash.fill", text: "Estimated visibility ~\(Int(vis.rounded())) SM — IFR conditions possible", isWarning: true))
             } else if vis < 5 {
-                notes.append(.init(icon: "eye.slash", text: String(format: "Estimated visibility ~%.1f SM — marginal VFR", vis), isWarning: false))
+                notes.append(.init(icon: "eye.slash", text: "Estimated visibility ~\(Int(vis.rounded())) SM — marginal VFR", isWarning: false))
             }
         }
 
@@ -2036,7 +2053,7 @@ struct WeatherDetailView: View {
         let _ = { timeFmt.dateFormat = "h:mm a"; timeFmt.timeZone = .current }()
         let gStr = hour.windGustKtRounded.map { " G\($0) kt" } ?? ""
         let windDir = hour.windDirectionDeg.map { "\($0)°" } ?? "Variable"
-        let visStr = hour.visibilityMiles.map { String(format: "~%.0f SM", $0) } ?? "—"
+        let visStr = hour.visibilityMiles.map { $0 >= 10 ? "~10+ SM" : "~\(Int($0.rounded())) SM" } ?? "—"
 
         return HStack(spacing: 14) {
             // Time + category dot

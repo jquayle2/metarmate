@@ -24,6 +24,7 @@ class WeatherViewModel: ObservableObject {
     @Published var noWeatherReporting = false
     @Published var nearbyReportingAirports: [NearbyReportingAirport] = []
     @Published var advisoryWeather: AdvisoryWeather?  // Open-Meteo data for non-METAR airports
+    @Published var isMetarFallback = false  // True when hasMetar station fell back to advisory
 
     private let weatherService = WeatherService.shared
 
@@ -34,11 +35,17 @@ class WeatherViewModel: ObservableObject {
         noWeatherReporting = false
         nearbyReportingAirports = []
         advisoryWeather = nil
+        isMetarFallback = false
 
         if !airport.hasMetar {
             await loadAdvisory(airport: airport)
         } else {
             await loadMETAR(icao: airport.icao)
+            if noWeatherReporting || (metar == nil && error != nil) {
+                isMetarFallback = true
+                error = nil
+                await loadAdvisory(airport: airport)
+            }
         }
         isLoading = false
     }

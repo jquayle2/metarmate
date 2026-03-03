@@ -154,6 +154,10 @@ struct AirportRowView: View {
                             .foregroundColor(.orange)
                     } else if let metar = metar {
                         airportWeatherSummaryRow(metar: metar)
+                    } else {
+                        Text("METAR unavailable")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
                     }
                 }
 

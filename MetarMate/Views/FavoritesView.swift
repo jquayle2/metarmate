@@ -5,9 +5,13 @@ struct FavoritesView: View {
     @Query(sort: \AirportFavorite.addedDate, order: .forward) private var favorites: [AirportFavorite]
 
     private var sortedFavorites: [AirportFavorite] {
-        favorites.sorted {
-            let a = $0.sortOrder ?? Int.max
-            let b = $1.sortOrder ?? Int.max
+        let byDate = favorites.sorted { $0.addedDate < $1.addedDate }
+        let dateIndex: [String: Int] = Dictionary(
+            uniqueKeysWithValues: byDate.enumerated().map { ($1.icao, $0) }
+        )
+        return byDate.sorted {
+            let a = $0.sortOrder ?? dateIndex[$0.icao] ?? 0
+            let b = $1.sortOrder ?? dateIndex[$1.icao] ?? 0
             if a == b { return $0.addedDate < $1.addedDate }
             return a < b
         }
