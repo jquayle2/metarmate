@@ -133,7 +133,7 @@ class AirportViewModel: ObservableObject {
     }
 
     func addFavorite(_ airport: Airport, context: ModelContext, existingFavorites: [AirportFavorite] = []) {
-        let nextOrder = (existingFavorites.map(\.sortOrder).max() ?? -1) + 1
+        let nextOrder = (existingFavorites.compactMap(\.sortOrder).max() ?? -1) + 1
         let fav = AirportFavorite(from: airport, sortOrder: nextOrder)
         context.insert(fav)
     }

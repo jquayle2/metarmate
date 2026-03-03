@@ -2,7 +2,16 @@ import SwiftUI
 import SwiftData
 
 struct FavoritesView: View {
-    @Query(sort: \AirportFavorite.sortOrder, order: .forward) private var favorites: [AirportFavorite]
+    @Query(sort: \AirportFavorite.addedDate, order: .forward) private var favorites: [AirportFavorite]
+
+    private var sortedFavorites: [AirportFavorite] {
+        favorites.sorted {
+            let a = $0.sortOrder ?? Int.max
+            let b = $1.sortOrder ?? Int.max
+            if a == b { return $0.addedDate < $1.addedDate }
+            return a < b
+        }
+    }
     @Environment(\.modelContext) private var modelContext
     @State private var favMetars: [String: Metar] = [:]
     @State private var isLoading = false
@@ -25,7 +34,7 @@ struct FavoritesView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        ForEach(favorites) { fav in
+                        ForEach(sortedFavorites) { fav in
                             let airport = fav.asAirport
                             NavigationLink(destination: WeatherDetailView(airport: airport)) {
                                 AirportRowView(
@@ -86,12 +95,12 @@ struct FavoritesView: View {
 
     private func deleteFavorites(at offsets: IndexSet) {
         for index in offsets {
-            modelContext.delete(favorites[index])
+            modelContext.delete(sortedFavorites[index])
         }
     }
 
     private func moveFavorites(from source: IndexSet, to destination: Int) {
-        var reordered = favorites
+        var reordered = sortedFavorites
         reordered.move(fromOffsets: source, toOffset: destination)
         for (index, fav) in reordered.enumerated() {
             fav.sortOrder = index
