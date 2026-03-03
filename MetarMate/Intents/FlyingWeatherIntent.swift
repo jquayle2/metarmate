@@ -24,19 +24,20 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
+        NSLog("FlyingWeatherIntent: perform() called, airport entity='\(airport?.id ?? "nil")'")
         // 1. Resolve airport — from parameter or nearest
         let resolvedAirport: Airport
 
         if let entity = airport {
             // Normalize what Siri transcribed — strip spaces, uppercase
-            // "K S M O" → "KSMO", "k l a s" → "KLAS"
             let code = entity.id
                 .components(separatedBy: .whitespaces)
                 .joined()
                 .uppercased()
+            NSLog("FlyingWeatherIntent: airport entity.id='\(entity.id)' normalized='\(code)'")
             guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
                 return .result(
-                    dialog: IntentDialog("I couldn't find an airport with the code \(code). Try spelling it out as separate letters, like K-S-M-O."),
+                    dialog: IntentDialog("I heard \(code). I couldn't find that airport. Try again."),
                     view: snippetView(label: code, category: .unknown, detail: "Airport not found")
                 )
             }
