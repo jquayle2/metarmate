@@ -44,12 +44,15 @@ struct FlyingWeatherIntent: AppIntent {
             // Siri didn't slot-fill the parameter — prompt the user interactively
             do {
                 let requestedEntity = try await $airport.requestValue("Which airport? Say the ICAO code like K-L-A-S, or say nearest.")
-                let code = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
-                NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' normalized='\(code)'")
+                let rawCode = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
+                // Siri often transcribes the digit zero as the letter O — fix that
+                // but only as a leading character since e.g. "KORD" has a valid O
+                let code = rawCode.hasPrefix("O") ? "0" + rawCode.dropFirst() : rawCode
+                NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' raw='\(rawCode)' normalized='\(code)'")
                 guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
                     return .result(
-                        dialog: IntentDialog("I don't recognize the airport code \(code). MetarMate requires an ICAO identifier like K-L-A-S. Local FAA identifiers like zero-L-7 aren't supported yet."),
-                        view: snippetView(label: code, category: .unknown, detail: "Airport not in database")
+                        dialog: IntentDialog("I heard \(code) but couldn't find that airport. If you said zero-L-7, try saying the letters slowly and separately."),
+                        view: snippetView(label: code, category: .unknown, detail: "Airport not found")
                     )
                 }
                 resolvedAirport = found
