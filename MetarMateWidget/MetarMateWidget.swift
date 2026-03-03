@@ -307,3 +307,188 @@ struct MetarMateHomeSmall: Widget {
         .supportedFamilies([.systemSmall])
     }
 }
+
+// MARK: - Home Screen Medium Widget
+// Full summary: wind, category, trend headline, forecast deviation, TAF accuracy.
+
+struct HomeScreenMediumView: View {
+    let snapshot: WidgetWeatherSnapshot?
+
+    var body: some View {
+        if let snap = snapshot {
+            HStack(spacing: 12) {
+                // Left column: identity + conditions
+                VStack(alignment: .leading, spacing: 6) {
+                    // Airport + category badge
+                    HStack(spacing: 6) {
+                        Text(snap.icao)
+                            .font(.system(.title2, design: .monospaced, weight: .bold))
+                        Text(snap.flightCategory.rawValue)
+                            .font(.system(.caption, design: .rounded, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
+                    }
+
+                    // Wind
+                    HStack(spacing: 4) {
+                        Image(systemName: "wind")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(snap.windDisplayString)
+                            .font(.system(.callout, design: .monospaced, weight: .medium))
+                    }
+
+                    // Gust spread
+                    if let gust = snap.windGust {
+                        let spread = gust - snap.windSpeed
+                        Text("Gust spread: \(spread) kt")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Conditions row
+                    HStack(spacing: 10) {
+                        if let ceil = snap.ceilingFeet {
+                            Label("\(ceil.formatted()) ft", systemImage: "cloud")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Label("\(snap.visibility.visibilityString) SM", systemImage: "eye")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if snap.isAdvisory {
+                        Text("~Advisory")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                Spacer()
+
+                // Right column: trend + forecast deviation + TAF
+                VStack(alignment: .trailing, spacing: 6) {
+                    // Trend headline
+                    HStack(spacing: 3) {
+                        Image(systemName: snap.trendDirection.systemImage)
+                            .font(.caption)
+                            .foregroundStyle(trendColor(snap.trendDirection))
+                        Text(snap.trendHeadline)
+                            .font(.system(.caption, weight: .medium))
+                            .foregroundStyle(trendColor(snap.trendDirection))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    // Forecast deviation lines
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
+                            deviationRow(
+                                label: "Wind",
+                                value: "\(windDiv > 0 ? "+" : "")\(windDiv) kt vs fcst",
+                                severity: abs(windDiv) > 10 ? .significant : .minor
+                            )
+                        }
+                        if let ceilDiv = snap.forecastCeilingDivergenceFt, abs(ceilDiv) > 300 {
+                            deviationRow(
+                                label: "Ceil",
+                                value: "\(ceilDiv > 0 ? "+" : "")\(ceilDiv) ft vs fcst",
+                                severity: abs(ceilDiv) > 800 ? .significant : .minor
+                            )
+                        }
+                        if let visDiv = snap.forecastVisibilityDivergenceSM, abs(visDiv) > 0.5 {
+                            deviationRow(
+                                label: "Vis",
+                                value: "\(visDiv > 0 ? "+" : "")\(String(format: "%g", visDiv)) SM vs fcst",
+                                severity: abs(visDiv) > 2.0 ? .significant : .minor
+                            )
+                        }
+                    }
+
+                    Spacer()
+
+                    // TAF accuracy
+                    if let pct = snap.tafAccuracyPct {
+                        HStack(spacing: 3) {
+                            Text("TAF")
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            Text("\(pct)%")
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(tafColor(pct))
+                        }
+                    }
+
+                    // Staleness
+                    if snap.isStale {
+                        Text("Stale data")
+                            .font(.caption2)
+                            .foregroundStyle(.red.opacity(0.8))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        } else {
+            VStack(spacing: 8) {
+                Image(systemName: "airplane.circle")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text("Open MetarMate to load weather")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private enum DeviationSeverity { case minor, significant }
+
+    private func deviationRow(label: String, value: String, severity: DeviationSeverity) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: severity == .significant ? "exclamationmark.triangle.fill" : "exclamationmark.triangle")
+                .font(.system(size: 8))
+                .foregroundStyle(severity == .significant ? .red : .yellow)
+            Text("\(label): \(value)")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(severity == .significant ? .red : .yellow)
+        }
+    }
+
+    private func trendColor(_ trend: TrendDirection) -> Color {
+        switch trend {
+        case .improving: return .green
+        case .steady: return .gray
+        case .deteriorating: return .red
+        case .unknown: return .gray
+        }
+    }
+
+    private func tafColor(_ pct: Int) -> Color {
+        if pct >= 80 { return .green }
+        if pct >= 60 { return .yellow }
+        return .red
+    }
+}
+
+struct MetarMateHomeMedium: Widget {
+    let kind = "MetarMateHomeMedium"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
+            if #available(iOS 17.0, *) {
+                HomeScreenMediumView(snapshot: entry.snapshot)
+                    .containerBackground(.fill.tertiary, for: .widget)
+            } else {
+                HomeScreenMediumView(snapshot: entry.snapshot)
+                    .padding()
+                    .background()
+            }
+        }
+        .configurationDisplayName("Airport Weather Detail")
+        .description("Wind, trend, forecast deviation, and TAF accuracy.")
+        .supportedFamilies([.systemMedium])
+    }
+}

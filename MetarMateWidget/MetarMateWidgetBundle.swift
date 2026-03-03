@@ -15,5 +15,6 @@ struct MetarMateWidgetBundle: WidgetBundle {
         MetarMateLockScreenRectangular()
         MetarMateLockScreenInline()
         MetarMateHomeSmall()
+        MetarMateHomeMedium()
     }
 }
