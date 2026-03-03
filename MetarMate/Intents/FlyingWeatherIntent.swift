@@ -206,13 +206,7 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     private func categoryColor(_ category: FlightCategory) -> Color {
-        switch category {
-        case .vfr:     return .green
-        case .mvfr:    return .blue
-        case .ifr:     return .red
-        case .lifr:    return .purple
-        case .unknown: return .gray
-        }
+        category.swiftUIColor
     }
 }
 

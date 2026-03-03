@@ -74,17 +74,22 @@ class WeatherViewModel: ObservableObject {
 
             if fetchedHistory.isEmpty {
                 noWeatherReporting = true
+                metar = nil
+                metarHistory = []
+                taf = nil
+                trend = nil
+                tafVerification = nil
                 await loadNearbyReporting(icao: icao)
             } else {
                 metarHistory = fetchedHistory
                 metar = fetchedHistory.first
                 taf = fetchedTaf
 
-                if !fetchedHistory.isEmpty {
-                    trend = WeatherTrend.derive(metars: fetchedHistory, taf: fetchedTaf)
-                    if let taf = fetchedTaf {
-                        tafVerification = TafVerification.derive(metars: fetchedHistory, taf: taf)
-                    }
+                trend = WeatherTrend.derive(metars: fetchedHistory, taf: fetchedTaf)
+                if let fetchedTaf {
+                    tafVerification = TafVerification.derive(metars: fetchedHistory, taf: fetchedTaf)
+                } else {
+                    tafVerification = nil
                 }
             }
 

@@ -69,9 +69,6 @@ struct WeatherDetailView: View {
         }
         .task {
             await vm.load(airport: airport)
-        }
-        .task {
-            // Auto-refresh every 5 minutes while the view is open
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
                 guard !Task.isCancelled else { break }
