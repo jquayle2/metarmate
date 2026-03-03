@@ -229,48 +229,6 @@ struct MetarMateShortcuts: AppShortcutsProvider {
     }
 }
 
-// MARK: - Airport AppEntity
-// Lightweight AppEntity wrapping an ICAO/IATA code so App Intents can accept it as a parameter.
-struct AirportEntity: AppEntity {
-    var id: String   // ICAO code (uppercased)
-    var name: String
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Airport"
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(id)", subtitle: "\(name)")
-    }
-
-    static var defaultQuery = AirportEntityQuery()
-}
-
-struct AirportEntityQuery: EntityStringQuery {
-    func entities(for identifiers: [String]) async throws -> [AirportEntity] {
-        await MainActor.run {
-            identifiers.compactMap { id in
-                AirportService.shared.airport(identifier: id)
-                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
-            }
-        }
-    }
-
-    func entities(matching string: String) async throws -> [AirportEntity] {
-        await MainActor.run {
-            AirportService.shared.search(query: string, limit: 10)
-                .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
-        }
-    }
-
-    func suggestedEntities() async throws -> [AirportEntity] {
-        await MainActor.run {
-            ["KLAS", "KVGT", "KLAX", "KSFO", "KORD"].compactMap { icao in
-                AirportService.shared.airport(icao: icao)
-                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
-            }
-        }
-    }
-}
-
 // MARK: - Location Helper for Intents
 // App Intents run outside the normal app lifecycle so we use a one-shot
 // CLLocationManager wrapped in a CheckedContinuation with a timeout.

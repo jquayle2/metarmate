@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Shared helpers
 
@@ -60,6 +61,17 @@ private func ageString(_ date: Date) -> String {
     return "\(Int(secs / 3600))h ago"
 }
 
+// MARK: - Widget Configuration Intent
+// Lets users pick which airport each widget instance displays.
+
+struct SelectAirportIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Select Airport"
+    static var description = IntentDescription("Choose which airport to display.")
+
+    @Parameter(title: "Airport")
+    var airport: AirportEntity?
+}
+
 // MARK: - Timeline Entry
 
 struct MetarMateEntry: TimelineEntry {
@@ -71,28 +83,30 @@ struct MetarMateEntry: TimelineEntry {
     }
 }
 
-// MARK: - Timeline Provider
+// MARK: - Configurable Timeline Provider
 
-struct MetarMateProvider: TimelineProvider {
+struct ConfigurableProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> MetarMateEntry {
         .placeholder
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (MetarMateEntry) -> Void) {
-        let snapshot = WidgetDataManager.mostRecent()
-        completion(MetarMateEntry(date: .now, snapshot: snapshot))
+    func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
+        let snapshot = resolveSnapshot(for: configuration)
+        return MetarMateEntry(date: .now, snapshot: snapshot)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<MetarMateEntry>) -> Void) {
-        let snapshot = WidgetDataManager.mostRecent()
+    func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
+        let snapshot = resolveSnapshot(for: configuration)
         let entry = MetarMateEntry(date: .now, snapshot: snapshot)
-
-        // Refresh in 30 minutes — aligns roughly with METAR update cadence
-        // The main app writes fresh snapshots on every fetch, so the widget
-        // just needs to wake up and re-read periodically.
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        return Timeline(entries: [entry], policy: .after(nextUpdate))
+    }
+
+    private func resolveSnapshot(for configuration: SelectAirportIntent) -> WidgetWeatherSnapshot? {
+        if let icao = configuration.airport?.id {
+            return WidgetDataManager.load(icao: icao.uppercased()) ?? WidgetDataManager.mostRecent()
+        }
+        return WidgetDataManager.mostRecent()
     }
 }
 
@@ -301,12 +315,12 @@ struct MetarMateLockScreenCircular: Widget {
     let kind = "MetarMateLockScreenCircular"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
             LockScreenCircularView(snapshot: entry.snapshot)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Flight Category")
-        .description("Category badge for your last viewed airport.")
+        .description("Category badge for a selected airport.")
         .supportedFamilies([.accessoryCircular])
     }
 }
@@ -315,7 +329,7 @@ struct MetarMateLockScreenRectangular: Widget {
     let kind = "MetarMateLockScreenRectangular"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
             LockScreenRectangularView(snapshot: entry.snapshot)
                 .containerBackground(.clear, for: .widget)
         }
@@ -329,7 +343,7 @@ struct MetarMateLockScreenInline: Widget {
     let kind = "MetarMateLockScreenInline"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
+        AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
             LockScreenInlineView(snapshot: entry.snapshot)
                 .containerBackground(.clear, for: .widget)
         }
@@ -343,18 +357,12 @@ struct MetarMateHomeSmall: Widget {
     let kind = "MetarMateHomeSmall"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
-            if #available(iOS 17.0, *) {
-                HomeScreenSmallView(snapshot: entry.snapshot)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                HomeScreenSmallView(snapshot: entry.snapshot)
-                    .padding()
-                    .background()
-            }
+        AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
+            HomeScreenSmallView(snapshot: entry.snapshot)
+                .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
-        .description("Wind, category, and trend for your last viewed airport.")
+        .description("Wind, category, and trend for a selected airport.")
         .supportedFamilies([.systemSmall])
     }
 }
@@ -546,15 +554,9 @@ struct MetarMateHomeMedium: Widget {
     let kind = "MetarMateHomeMedium"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
-            if #available(iOS 17.0, *) {
-                HomeScreenMediumView(snapshot: entry.snapshot)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                HomeScreenMediumView(snapshot: entry.snapshot)
-                    .padding()
-                    .background()
-            }
+        AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
+            HomeScreenMediumView(snapshot: entry.snapshot)
+                .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Airport Weather Detail")
         .description("Wind, trend, forecast deviation, and TAF accuracy.")
