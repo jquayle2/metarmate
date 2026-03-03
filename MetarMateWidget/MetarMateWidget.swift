@@ -118,6 +118,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
 
 struct LockScreenCircularView: View {
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?
 
     var body: some View {
         if let snap = snapshot {
@@ -148,6 +149,7 @@ struct LockScreenCircularView: View {
 
 struct LockScreenRectangularView: View {
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?
 
     var body: some View {
         if let snap = snapshot {
@@ -201,6 +203,7 @@ struct LockScreenRectangularView: View {
 
 struct LockScreenInlineView: View {
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?
 
     var body: some View {
         if let snap = snapshot {
@@ -217,6 +220,7 @@ struct LockScreenInlineView: View {
 
 struct HomeScreenSmallView: View {
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?
 
     var body: some View {
         if let snap = snapshot {
@@ -302,10 +306,17 @@ struct HomeScreenSmallView: View {
                 Image(systemName: "airplane.circle")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
-                Text("Open MetarMate\nto load weather")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                if let icao = requestedICAO {
+                    Text("Open \(icao)\nin MetarMate")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Open MetarMate\nto load weather")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -319,7 +330,7 @@ struct MetarMateLockScreenCircular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenCircularView(snapshot: entry.snapshot)
+            LockScreenCircularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Flight Category")
@@ -333,7 +344,7 @@ struct MetarMateLockScreenRectangular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenRectangularView(snapshot: entry.snapshot)
+            LockScreenRectangularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
@@ -347,7 +358,7 @@ struct MetarMateLockScreenInline: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenInlineView(snapshot: entry.snapshot)
+            LockScreenInlineView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Weather Inline")
@@ -361,7 +372,7 @@ struct MetarMateHomeSmall: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenSmallView(snapshot: entry.snapshot)
+            HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
@@ -375,6 +386,7 @@ struct MetarMateHomeSmall: Widget {
 
 struct HomeScreenMediumView: View {
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?
 
     var body: some View {
         if let snap = snapshot {
@@ -524,9 +536,15 @@ struct HomeScreenMediumView: View {
                 Image(systemName: "airplane.circle")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
-                Text("Open MetarMate to load weather")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if let icao = requestedICAO {
+                    Text("Open \(icao) in MetarMate to load weather")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Open MetarMate to load weather")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -558,7 +576,7 @@ struct MetarMateHomeMedium: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenMediumView(snapshot: entry.snapshot)
+            HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Airport Weather Detail")
