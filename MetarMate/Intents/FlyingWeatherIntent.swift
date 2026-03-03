@@ -41,38 +41,22 @@ struct FlyingWeatherIntent: AppIntent {
             resolvedAirport = found
 
         } else {
-            // Siri didn't slot-fill the parameter — prompt the user interactively
-            do {
-                let requestedEntity = try await $airport.requestValue("Which airport? Say the ICAO code like K-L-A-S, or say nearest.")
-                let rawCode = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
-                // Siri often transcribes the digit zero as the letter O — fix that
-                // but only as a leading character since e.g. "KORD" has a valid O
-                let code = rawCode.hasPrefix("O") ? "0" + rawCode.dropFirst() : rawCode
-                NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' raw='\(rawCode)' normalized='\(code)'")
-                guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
-                    return .result(
-                        dialog: IntentDialog("I heard \(code) but couldn't find that airport. If you said zero-L-7, try saying the letters slowly and separately."),
-                        view: snippetView(label: code, category: .unknown, detail: "Airport not found")
-                    )
-                }
-                resolvedAirport = found
-            } catch {
-                // User cancelled or said nearest — fall back to nearest airport
-                guard let location = try? await IntentLocationHelper.currentLocation() else {
-                    return .result(
-                        dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
-                        view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
-                    )
-                }
-                let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
-                guard let nearest = nearby.first else {
-                    return .result(
-                        dialog: IntentDialog("I couldn't find a nearby airport."),
-                        view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
-                    )
-                }
-                resolvedAirport = nearest
+            // Siri didn't slot-fill the parameter — use nearest airport.
+            // Airport-by-code is only reliable via the Shortcuts app picker.
+            guard let location = try? await IntentLocationHelper.currentLocation() else {
+                return .result(
+                    dialog: IntentDialog("Location access is needed to find your nearest airport. Please enable it in Settings."),
+                    view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
+                )
             }
+            let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
+            guard let nearest = nearby.first else {
+                return .result(
+                    dialog: IntentDialog("No nearby airport found."),
+                    view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
+                )
+            }
+            resolvedAirport = nearest
         }
 
         // 2. Fetch METAR history
