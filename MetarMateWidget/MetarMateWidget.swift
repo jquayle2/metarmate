@@ -252,6 +252,7 @@ struct MetarMateLockScreenCircular: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
             LockScreenCircularView(snapshot: entry.snapshot)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Flight Category")
         .description("Category badge for your last viewed airport.")
@@ -265,6 +266,7 @@ struct MetarMateLockScreenRectangular: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
             LockScreenRectangularView(snapshot: entry.snapshot)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
         .description("Airport ID, category, wind, and trend at a glance.")
@@ -278,6 +280,7 @@ struct MetarMateLockScreenInline: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MetarMateProvider()) { entry in
             LockScreenInlineView(snapshot: entry.snapshot)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Weather Inline")
         .description("One-line airport weather summary.")
