@@ -41,22 +41,37 @@ struct FlyingWeatherIntent: AppIntent {
             resolvedAirport = found
 
         } else {
-            // Siri didn't slot-fill the parameter — use nearest airport.
-            // Airport-by-code is only reliable via the Shortcuts app picker.
-            guard let location = try? await IntentLocationHelper.currentLocation() else {
-                return .result(
-                    dialog: IntentDialog("Location access is needed to find your nearest airport. Please enable it in Settings."),
-                    view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
-                )
+            // Siri didn't slot-fill the parameter — prompt once, then give up gracefully
+            do {
+                let requestedEntity = try await $airport.requestValue("Which airport?")
+                let rawCode = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
+                let code = rawCode.hasPrefix("O") ? "0" + rawCode.dropFirst() : rawCode
+                NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' normalized='\(code)'")
+                if let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }), found.hasMetar {
+                    resolvedAirport = found
+                } else {
+                    return .result(
+                        dialog: IntentDialog("I couldn't find a METAR station for \(code). Try an ICAO code like K-L-A-S."),
+                        view: snippetView(label: code, category: .unknown, detail: "No METAR station found")
+                    )
+                }
+            } catch {
+                // Cancelled or timed out — fall back to nearest
+                guard let location = try? await IntentLocationHelper.currentLocation() else {
+                    return .result(
+                        dialog: IntentDialog("Location access needed. Please enable it in Settings."),
+                        view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
+                    )
+                }
+                let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
+                guard let nearest = nearby.first else {
+                    return .result(
+                        dialog: IntentDialog("No nearby airport found."),
+                        view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
+                    )
+                }
+                resolvedAirport = nearest
             }
-            let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
-            guard let nearest = nearby.first else {
-                return .result(
-                    dialog: IntentDialog("No nearby airport found."),
-                    view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
-                )
-            }
-            resolvedAirport = nearest
         }
 
         // 2. Fetch METAR history
