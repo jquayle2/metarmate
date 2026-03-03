@@ -19,9 +19,9 @@ extension TrendDirection {
     var color: Color {
         switch self {
         case .improving:     return .green
-        case .steady:        return .yellow
+        case .steady:        return Color(.systemGray)
         case .deteriorating: return .red
-        case .unknown:       return .gray
+        case .unknown:       return Color(.systemGray3)
         }
     }
 }
