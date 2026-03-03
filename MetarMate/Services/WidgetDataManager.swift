@@ -1,4 +1,5 @@
 import Foundation
+import WidgetKit
 
 // MARK: - Widget Data Manager
 // Reads and writes WidgetWeatherSnapshots via the App Group shared container.
@@ -19,6 +20,7 @@ enum WidgetDataManager {
         guard let defaults = sharedDefaults else { return }
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         defaults.set(data, forKey: snapshotPrefix + snapshot.icao)
+        reloadWidgets()
     }
 
     nonisolated static func save(snapshots: [WidgetWeatherSnapshot]) {
@@ -82,5 +84,12 @@ enum WidgetDataManager {
         guard let defaults = sharedDefaults,
               let data = defaults.data(forKey: configKey) else { return [:] }
         return (try? JSONDecoder().decode([String: WidgetAirportConfig].self, from: data)) ?? [:]
+    }
+
+    // MARK: - Reload all MetarMate widgets
+    // Called after every snapshot write so the widget picks up fresh data immediately.
+
+    nonisolated static func reloadWidgets() {
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }
