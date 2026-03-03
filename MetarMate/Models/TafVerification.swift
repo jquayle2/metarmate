@@ -19,17 +19,17 @@ struct TafVerificationPoint: Identifiable, Codable {
 
     var categoryMatch: Bool { actualCategory == forecastCategory }
 
-    var ceilingDivergenceFt: Int? {
+    nonisolated var ceilingDivergenceFt: Int? {
         guard let actual = actualCeilingFt, let forecast = forecastCeilingFt else { return nil }
         return actual - forecast
     }
 
-    var visibilityDivergenceSM: Double? {
+    nonisolated var visibilityDivergenceSM: Double? {
         guard let forecast = forecastVisibilitySM else { return nil }
         return actualVisibilitySM - forecast
     }
 
-    var windDivergenceKt: Int? {
+    nonisolated var windDivergenceKt: Int? {
         guard let forecast = forecastWindKt else { return nil }
         return actualWindKt - forecast
     }
@@ -109,10 +109,10 @@ struct TafVerification: Codable {
     var significantMisses: Int
     var summary: String
 
-    var categoryAccuracyPct: Int { Int((categoryAccuracy * 100).rounded()) }
-    var windAccuracyPct: Int? { windAccuracy.map { Int(($0 * 100).rounded()) } }
-    var ceilingAccuracyPct: Int? { ceilingAccuracy.map { Int(($0 * 100).rounded()) } }
-    var visibilityAccuracyPct: Int? { visibilityAccuracy.map { Int(($0 * 100).rounded()) } }
+    nonisolated var categoryAccuracyPct: Int { Int((categoryAccuracy * 100).rounded()) }
+    nonisolated var windAccuracyPct: Int? { windAccuracy.map { Int(($0 * 100).rounded()) } }
+    nonisolated var ceilingAccuracyPct: Int? { ceilingAccuracy.map { Int(($0 * 100).rounded()) } }
+    nonisolated var visibilityAccuracyPct: Int? { visibilityAccuracy.map { Int(($0 * 100).rounded()) } }
 
     static func derive(metars: [Metar], taf: Taf) -> TafVerification? {
         let historical = metars.count > 1 ? Array(metars.dropFirst()) : []

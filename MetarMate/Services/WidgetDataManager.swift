@@ -4,11 +4,12 @@ import WidgetKit
 // MARK: - Widget Data Manager
 // Reads and writes WidgetWeatherSnapshots via the App Group shared container.
 // Used by the main app (write) and the widget extension (read).
-// Thread-safe: all methods are nonisolated and use Codable serialization.
+// Fully nonisolated — safe to call from any context including widget TimelineProvider.
 
-enum WidgetDataManager {
+nonisolated enum WidgetDataManager {
     static let appGroupID = "group.com.jeffquayle.MetarMate"
     private static let snapshotPrefix = "widget.snapshot."
+    private static let configKey = "widget.configs"
 
     private static var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
@@ -70,11 +71,8 @@ enum WidgetDataManager {
     }
 
     // MARK: - Widget configuration storage
-    // Tracks which airport each widget instance displays.
 
-    private static let configKey = "widget.configs"
-
-    nonisolated static func saveConfigs(_ configs: [String: WidgetAirportConfig]) {
+    static func saveConfigs(_ configs: [String: WidgetAirportConfig]) {
         guard let defaults = sharedDefaults else { return }
         guard let data = try? JSONEncoder().encode(configs) else { return }
         defaults.set(data, forKey: configKey)

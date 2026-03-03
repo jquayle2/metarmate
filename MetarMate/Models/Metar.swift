@@ -62,7 +62,7 @@ struct Metar: Identifiable, Codable {
     var weatherPhenomena: [String]
     var remarks: String?
 
-    var ceilingFeet: Int? {
+    nonisolated var ceilingFeet: Int? {
         clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
                .map { $0.altitude * 100 }
     }

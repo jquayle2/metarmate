@@ -152,7 +152,7 @@ struct AdvisoryWeather: Codable {
     /// Rule: if visibility is solidly VFR (>=5 SM), visibility wins — cloud cover alone
     /// cannot push the category below VFR. Only use cloud cover when visibility is
     /// marginal or unknown, as a secondary signal.
-    static func estimateFlightCategory(visibilityKm: Double?, cloudCoverPercent: Int) -> FlightCategory {
+    nonisolated static func estimateFlightCategory(visibilityKm: Double?, cloudCoverPercent: Int) -> FlightCategory {
         let visMi = visibilityKm.map { $0 * 0.621371 }
 
         // Visibility check first — most reliable NWP parameter

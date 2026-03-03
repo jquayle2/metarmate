@@ -5,7 +5,7 @@ import Foundation
 // Stored as JSON in the App Group's UserDefaults, keyed by airport ICAO.
 // Designed to carry exactly what widget views need — nothing more.
 
-struct WidgetWeatherSnapshot: Codable {
+nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // Airport identity
     let icao: String
     let iata: String?
@@ -133,7 +133,7 @@ struct WidgetWeatherSnapshot: Codable {
 // Tracks which airport a widget instance should display.
 // Stored in App Group UserDefaults, keyed by widget instance ID.
 
-struct WidgetAirportConfig: Codable {
+nonisolated struct WidgetAirportConfig: Codable, Sendable {
     let icao: String
     let iata: String?
     let name: String

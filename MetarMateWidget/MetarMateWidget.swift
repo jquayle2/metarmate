@@ -1,6 +1,52 @@
 import WidgetKit
 import SwiftUI
 
+// MARK: - Shared helpers
+
+private func trendColor(_ trend: TrendDirection) -> Color {
+    switch trend {
+    case .improving: return .green
+    case .steady: return .gray
+    case .deteriorating: return .red
+    case .unknown: return .gray
+    }
+}
+
+private func trendArrow(_ trend: TrendDirection) -> String {
+    switch trend {
+    case .improving: return "\u{2191}"
+    case .steady: return "\u{2192}"
+    case .deteriorating: return "\u{2193}"
+    case .unknown: return ""
+    }
+}
+
+private func tafColor(_ pct: Int) -> Color {
+    if pct >= 80 { return .green }
+    if pct >= 60 { return .yellow }
+    return .red
+}
+
+/// Short trend label for small widget — avoids truncation
+private func shortTrendLabel(_ headline: String) -> String {
+    let map: [String: String] = [
+        "Stable Conditions": "Stable",
+        "No Trend Data": "No Data",
+        "Deterioration Forecast": "Fcst: Down",
+        "Improvement Forecast": "Fcst: Up",
+    ]
+    if let short = map[headline] { return short }
+    return headline
+}
+
+/// Relative age string: "2m ago", "1h ago"
+private func ageString(_ date: Date) -> String {
+    let secs = Date().timeIntervalSince(date)
+    if secs < 120 { return "Just now" }
+    if secs < 3600 { return "\(Int(secs / 60))m ago" }
+    return "\(Int(secs / 3600))h ago"
+}
+
 // MARK: - Timeline Entry
 
 struct MetarMateEntry: TimelineEntry {
@@ -118,15 +164,6 @@ struct LockScreenRectangularView: View {
             }
         }
     }
-
-    private func trendColor(_ trend: TrendDirection) -> Color {
-        switch trend {
-        case .improving: return .green
-        case .steady: return .gray
-        case .deteriorating: return .red
-        case .unknown: return .gray
-        }
-    }
 }
 
 // MARK: - Lock Screen Inline Widget
@@ -143,15 +180,6 @@ struct LockScreenInlineView: View {
             Text("MetarMate")
         }
     }
-
-    private func trendArrow(_ trend: TrendDirection) -> String {
-        switch trend {
-        case .improving: return "\u{2191}"
-        case .steady: return "\u{2192}"
-        case .deteriorating: return "\u{2193}"
-        case .unknown: return ""
-        }
-    }
 }
 
 // MARK: - Home Screen Small Widget
@@ -162,64 +190,73 @@ struct HomeScreenSmallView: View {
 
     var body: some View {
         if let snap = snapshot {
-            VStack(alignment: .leading, spacing: 4) {
-                // Airport ID + category badge
-                HStack(spacing: 4) {
-                    Text(snap.icao)
-                        .font(.system(.title3, design: .monospaced, weight: .bold))
-                    Text(snap.flightCategory.rawValue)
-                        .font(.system(.caption2, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
-                }
+            HStack(spacing: 0) {
+                // Left-edge category strip
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(snap.flightCategory.swiftUIColor)
+                    .frame(width: 4)
+                    .padding(.trailing, 8)
 
-                Spacer()
+                VStack(alignment: .leading, spacing: 5) {
+                    // Airport ID + category badge
+                    HStack(spacing: 5) {
+                        Text(snap.icao)
+                            .font(.system(.title3, design: .monospaced, weight: .bold))
+                        Text(snap.flightCategory.rawValue)
+                            .font(.system(.caption2, design: .rounded, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
+                        Spacer()
+                    }
 
-                // Wind
-                HStack(spacing: 4) {
-                    Image(systemName: "wind")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(snap.windDisplayString)
-                        .font(.system(.callout, design: .monospaced))
-                }
+                    // Wind
+                    HStack(spacing: 4) {
+                        Image(systemName: "wind")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(snap.windDisplayString)
+                            .font(.system(.callout, design: .monospaced))
+                    }
 
-                // Gust spread (if gusty)
-                if let gust = snap.windGust {
-                    let spread = gust - snap.windSpeed
-                    Text("Gust spread: \(spread) kt")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                    // Visibility + ceiling
+                    HStack(spacing: 8) {
+                        Label("\(snap.visibility.visibilityString) SM", systemImage: "eye")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        if let ceil = snap.ceilingFeet {
+                            Label("\(ceil.formatted()) ft", systemImage: "cloud")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
 
-                // Trend
-                HStack(spacing: 3) {
-                    Image(systemName: snap.trendDirection.systemImage)
-                        .font(.caption2)
-                        .foregroundStyle(trendColor(snap.trendDirection))
-                    Text(snap.trendHeadline)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                    Spacer(minLength: 0)
 
-                // Advisory indicator
-                if snap.isAdvisory {
-                    Text("~Advisory")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundStyle(.orange)
-                }
+                    // Trend + age
+                    HStack(spacing: 3) {
+                        Image(systemName: snap.trendDirection.systemImage)
+                            .font(.caption2)
+                            .foregroundStyle(trendColor(snap.trendDirection))
+                        Text(shortTrendLabel(snap.trendHeadline))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(ageString(snap.observationTime))
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
 
-                // Staleness
-                if snap.isStale {
-                    Text("Data may be stale")
-                        .font(.caption2)
-                        .foregroundStyle(.red.opacity(0.8))
+                    // Advisory indicator
+                    if snap.isAdvisory {
+                        Text("~Advisory")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.orange)
+                    }
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "airplane.circle")
@@ -231,15 +268,6 @@ struct HomeScreenSmallView: View {
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    private func trendColor(_ trend: TrendDirection) -> Color {
-        switch trend {
-        case .improving: return .green
-        case .steady: return .gray
-        case .deteriorating: return .red
-        case .unknown: return .gray
         }
     }
 }
@@ -316,9 +344,15 @@ struct HomeScreenMediumView: View {
 
     var body: some View {
         if let snap = snapshot {
-            HStack(spacing: 12) {
+            HStack(spacing: 0) {
+                // Left-edge category strip
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(snap.flightCategory.swiftUIColor)
+                    .frame(width: 4)
+                    .padding(.trailing, 10)
+
                 // Left column: identity + conditions
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     // Airport + category badge
                     HStack(spacing: 6) {
                         Text(snap.icao)
@@ -360,17 +394,25 @@ struct HomeScreenMediumView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    if snap.isAdvisory {
-                        Text("~Advisory")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.orange)
+                    Spacer(minLength: 0)
+
+                    // Bottom: age + advisory
+                    HStack(spacing: 6) {
+                        Text(ageString(snap.observationTime))
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                        if snap.isAdvisory {
+                            Text("~Advisory")
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.orange)
+                        }
                     }
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 // Right column: trend + forecast deviation + TAF
-                VStack(alignment: .trailing, spacing: 6) {
+                VStack(alignment: .trailing, spacing: 5) {
                     // Trend headline
                     HStack(spacing: 3) {
                         Image(systemName: snap.trendDirection.systemImage)
@@ -384,31 +426,43 @@ struct HomeScreenMediumView: View {
                     }
 
                     // Forecast deviation lines
-                    VStack(alignment: .trailing, spacing: 2) {
-                        if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
-                            deviationRow(
-                                label: "Wind",
-                                value: "\(windDiv > 0 ? "+" : "")\(windDiv) kt vs fcst",
-                                severity: abs(windDiv) > 10 ? .significant : .minor
-                            )
+                    let hasDeviations = hasAnyDeviation(snap)
+                    if hasDeviations {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
+                                deviationRow(
+                                    label: "Wind",
+                                    value: "\(windDiv > 0 ? "+" : "")\(windDiv) kt",
+                                    severity: abs(windDiv) > 10 ? .significant : .minor
+                                )
+                            }
+                            if let ceilDiv = snap.forecastCeilingDivergenceFt, abs(ceilDiv) > 300 {
+                                deviationRow(
+                                    label: "Ceil",
+                                    value: "\(ceilDiv > 0 ? "+" : "")\(ceilDiv) ft",
+                                    severity: abs(ceilDiv) > 800 ? .significant : .minor
+                                )
+                            }
+                            if let visDiv = snap.forecastVisibilityDivergenceSM, abs(visDiv) > 0.5 {
+                                deviationRow(
+                                    label: "Vis",
+                                    value: "\(visDiv > 0 ? "+" : "")\(String(format: "%g", visDiv)) SM",
+                                    severity: abs(visDiv) > 2.0 ? .significant : .minor
+                                )
+                            }
                         }
-                        if let ceilDiv = snap.forecastCeilingDivergenceFt, abs(ceilDiv) > 300 {
-                            deviationRow(
-                                label: "Ceil",
-                                value: "\(ceilDiv > 0 ? "+" : "")\(ceilDiv) ft vs fcst",
-                                severity: abs(ceilDiv) > 800 ? .significant : .minor
-                            )
-                        }
-                        if let visDiv = snap.forecastVisibilityDivergenceSM, abs(visDiv) > 0.5 {
-                            deviationRow(
-                                label: "Vis",
-                                value: "\(visDiv > 0 ? "+" : "")\(String(format: "%g", visDiv)) SM vs fcst",
-                                severity: abs(visDiv) > 2.0 ? .significant : .minor
-                            )
+                    } else if snap.tafAccuracyPct != nil {
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                            Text("Fcst on target")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
                         }
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
                     // TAF accuracy
                     if let pct = snap.tafAccuracyPct {
@@ -429,7 +483,6 @@ struct HomeScreenMediumView: View {
                             .foregroundStyle(.red.opacity(0.8))
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         } else {
             VStack(spacing: 8) {
@@ -444,6 +497,13 @@ struct HomeScreenMediumView: View {
         }
     }
 
+    private func hasAnyDeviation(_ snap: WidgetWeatherSnapshot) -> Bool {
+        if let w = snap.forecastWindDivergenceKt, abs(w) > 5 { return true }
+        if let c = snap.forecastCeilingDivergenceFt, abs(c) > 300 { return true }
+        if let v = snap.forecastVisibilityDivergenceSM, abs(v) > 0.5 { return true }
+        return false
+    }
+
     private enum DeviationSeverity { case minor, significant }
 
     private func deviationRow(label: String, value: String, severity: DeviationSeverity) -> some View {
@@ -455,21 +515,6 @@ struct HomeScreenMediumView: View {
                 .font(.system(.caption2, design: .monospaced))
                 .foregroundStyle(severity == .significant ? .red : .yellow)
         }
-    }
-
-    private func trendColor(_ trend: TrendDirection) -> Color {
-        switch trend {
-        case .improving: return .green
-        case .steady: return .gray
-        case .deteriorating: return .red
-        case .unknown: return .gray
-        }
-    }
-
-    private func tafColor(_ pct: Int) -> Color {
-        if pct >= 80 { return .green }
-        if pct >= 60 { return .yellow }
-        return .red
     }
 }
 
