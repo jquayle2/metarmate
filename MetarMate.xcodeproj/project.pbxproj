@@ -71,7 +71,6 @@
 		CDD069522F575C1600A16FDE /* Exceptions for "MetarMate" folder in "MetarMateWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Intents/AirportEntity.swift,
 				Intents/SelectAirportIntent.swift,
 				Models/AdvisoryWeather.swift,
 				Models/Airport.swift,
@@ -80,10 +79,8 @@
 				Models/TafVerification.swift,
 				Models/WeatherTrend.swift,
 				Models/WidgetWeatherSnapshot.swift,
-				Services/AirportService.swift,
 				Services/WidgetDataManager.swift,
 				Utilities/Extensions.swift,
-				Utilities/SharedTypes.swift,
 			);
 			target = CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */;
 		};
