@@ -2113,6 +2113,8 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Advisory Footer
+    @State private var showAdvisoryInfo = false
+
     private func advisoryFooter(_ wx: AdvisoryWeather) -> some View {
         VStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
@@ -2139,12 +2141,89 @@ struct WeatherDetailView: View {
                     .foregroundColor(.secondary)
             }
 
+            // Info button
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showAdvisoryInfo.toggle()
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                    Text("About Advisory Weather")
+                        .font(.caption)
+                }
+                .foregroundColor(.accentColor)
+            }
+
+            if showAdvisoryInfo {
+                advisoryInfoPanel
+            }
+
             if let updated = vm.lastUpdated {
                 Text("Updated \(updated, style: .relative) ago")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
         }
+    }
+
+    private var advisoryInfoPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("What is Advisory Weather?")
+                .font(.subheadline.bold())
+                .foregroundColor(.primary)
+
+            Text("Thousands of airports — especially small general aviation fields — have no ASOS, AWOS, or other automated weather station. Pilots flying to these airports traditionally have no on-field weather and must rely on stations many miles away.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text("MetarMate fills this gap with Advisory Weather: estimated conditions derived from numerical weather prediction (NWP) models, provided by Open-Meteo.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("About Open-Meteo")
+                    .font(.caption.bold())
+                    .foregroundColor(.primary)
+                Text("Open-Meteo is a free, open-source weather API that aggregates data from national weather services worldwide, including NOAA's GFS and HRRR models and ECMWF's IFS model. It provides hourly gridded forecasts and current conditions interpolated to any location on Earth.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("How MetarMate Uses It")
+                    .font(.caption.bold())
+                    .foregroundColor(.primary)
+                Text("For airports without official METAR reporting, MetarMate queries Open-Meteo for the airport's exact coordinates and translates model data into a familiar aviation format — estimated flight category, visibility, wind, cloud cover, temperature, dewpoint, pressure, and density altitude. Six hours of model history provide trend data, and hourly forecasts give a look-ahead.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Important Limitations")
+                    .font(.caption.bold())
+                    .foregroundColor(.primary)
+                Text("Advisory weather is model-derived, not observed. It cannot detect local phenomena like fog forming in a valley, a sudden wind shift from terrain effects, or precipitation type changes. Visibility estimates are coarse — NWP models resolve visibility at grid scales of several kilometers. Pressure values are modeled and may differ from actual altimeter settings by ±0.2–0.3 inHg. Cloud cover is reported as a percentage, not as discrete layers with bases — ceiling estimates are inferred heuristics, not measurements.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Text("Advisory weather is always visually distinguished from official METAR data with dashed borders, tilde (~) prefixes, and orange accents. It is intended for situational awareness and preflight planning — never as a substitute for official weather briefings or ATIS.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 4) {
+                Image(systemName: "link")
+                    .font(.system(size: 9))
+                Link("open-meteo.com", destination: URL(string: "https://open-meteo.com")!)
+                    .font(.caption)
+            }
+        }
+        .padding(12)
+        .background(Color(.systemGray6).opacity(0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - No Reporting
