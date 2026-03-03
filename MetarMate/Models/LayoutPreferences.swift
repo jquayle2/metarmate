@@ -32,10 +32,10 @@ enum SectionID: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .conditions:         return "Conditions"
+        case .conditions:         return "Conditions (METAR)"
         case .rawMetar:           return "Raw METAR"
         case .pilotNotes:         return "Pilot Notes"
-        case .performance:        return "Performance"
+        case .performance:        return "Performance (METAR)"
         case .trend:              return "Trend"
         case .history:            return "Observation History"
         case .taf:                return "TAF Forecast"
