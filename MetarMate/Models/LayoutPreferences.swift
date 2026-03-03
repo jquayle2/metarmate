@@ -24,11 +24,11 @@ enum SectionID: String, Codable, CaseIterable {
     case tafVerification  = "tafVerification"
 
     // Advisory sections
-    case advConditions    = "advConditions"
-    case advPerformance   = "advPerformance"
+    case advConditions      = "advConditions"
+    case advPerformance     = "advPerformance"
     case advPilotAdvisories = "advPilotAdvisories"
-    case advTrends        = "advTrends"
-    case advForecast      = "advForecast"
+    case advTrends          = "advTrends"
+    case advForecast        = "advForecast"
 
     var displayName: String {
         switch self {
@@ -49,7 +49,6 @@ enum SectionID: String, Codable, CaseIterable {
         }
     }
 
-    // Which visibility modes are available for this section
     var availableModes: [SectionVisibility] {
         switch self {
         case .pilotNotes, .performance, .trend, .tafVerification,
@@ -71,15 +70,14 @@ struct SectionConfig: Codable, Identifiable {
 class LayoutPreferences: ObservableObject {
     static let shared = LayoutPreferences()
 
-    private let metarKey    = "metarSectionLayout_v3"
-    private let advisoryKey = "advisorySectionLayout_v3"
+    // Stable keys — never bump these again. Migration handles new sections automatically.
+    private let metarKey    = "metarSectionLayout"
+    private let advisoryKey = "advisorySectionLayout"
 
-    // METAR section order + visibility
     @Published var metarSections: [SectionConfig] {
         didSet { save(metarSections, key: metarKey) }
     }
 
-    // Advisory section order + visibility
     @Published var advisorySections: [SectionConfig] {
         didSet { save(advisorySections, key: advisoryKey) }
     }
@@ -106,18 +104,47 @@ class LayoutPreferences: ObservableObject {
     ]
 
     private init() {
-        metarSections    = Self.load(key: "metarSectionLayout_v3")    ?? Self.defaultMetarSections
-        advisorySections = Self.load(key: "advisorySectionLayout_v3") ?? Self.defaultAdvisorySections
+        // Try stable key first, then fall back to any legacy versioned keys
+        metarSections    = Self.loadAndMigrate(
+            keys: ["metarSectionLayout", "metarSectionLayout_v3", "metarSectionLayout_v2", "metarSectionLayout_v1"],
+            defaults: Self.defaultMetarSections
+        )
+        advisorySections = Self.loadAndMigrate(
+            keys: ["advisorySectionLayout", "advisorySectionLayout_v3", "advisorySectionLayout_v2", "advisorySectionLayout_v1"],
+            defaults: Self.defaultAdvisorySections
+        )
+    }
+
+    // MARK: - Migration-aware loader
+    // Tries each key in order (newest first). Takes the first valid saved data found,
+    // then merges in any new sections from defaults so nothing is lost on update.
+    private static func loadAndMigrate(keys: [String], defaults: [SectionConfig]) -> [SectionConfig] {
+        let ud = UserDefaults.standard
+
+        var saved: [SectionConfig]? = nil
+        for key in keys {
+            if let data = ud.data(forKey: key),
+               let decoded = try? JSONDecoder().decode([SectionConfig].self, from: data) {
+                saved = decoded
+                break
+            }
+        }
+
+        guard let existing = saved else { return defaults }
+
+        // Keep saved entries whose IDs still exist in defaults (preserves order + visibility)
+        let validIDs = Set(defaults.map { $0.id })
+        var merged = existing.filter { validIDs.contains($0.id) }
+
+        // Append any brand-new sections not yet in saved prefs (app update additions)
+        let savedIDs = Set(merged.map { $0.id })
+        let newSections = defaults.filter { !savedIDs.contains($0.id) }
+        merged.append(contentsOf: newSections)
+
+        return merged
     }
 
     // MARK: - Persistence
-    private static func load(key: String) -> [SectionConfig]? {
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let decoded = try? JSONDecoder().decode([SectionConfig].self, from: data)
-        else { return nil }
-        return decoded
-    }
-
     private func save(_ sections: [SectionConfig], key: String) {
         if let data = try? JSONEncoder().encode(sections) {
             UserDefaults.standard.set(data, forKey: key)
@@ -134,8 +161,6 @@ class LayoutPreferences: ObservableObject {
     }
 
     // MARK: - Visibility check helpers
-    // Call these from WeatherDetailView to decide whether to render a section.
-
     func shouldShow(_ id: SectionID, amberCondition: Bool = false, redCondition: Bool = false) -> Bool {
         let config: SectionConfig?
         if id.rawValue.hasPrefix("adv") {
