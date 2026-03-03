@@ -5,6 +5,7 @@ import CoreLocation
 // MARK: - Airport Service
 // Loads and searches the bundled airports.json database, with live NOAA fallback
 // for FAA local identifiers (T78, 5T6, etc.) not in the bundled DB.
+@MainActor
 class AirportService {
     static let shared = AirportService()
 

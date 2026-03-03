@@ -8,16 +8,6 @@ enum FlightCategory: String, Codable, CaseIterable {
     case lifr = "LIFR"
     case unknown = "UNKN"
 
-    var color: String {
-        switch self {
-        case .vfr: return "green"
-        case .mvfr: return "blue"
-        case .ifr: return "red"
-        case .lifr: return "purple"
-        case .unknown: return "gray"
-        }
-    }
-
     var description: String {
         switch self {
         case .vfr: return "Visual Flight Rules"
