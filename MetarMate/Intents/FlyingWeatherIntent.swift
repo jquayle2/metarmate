@@ -28,11 +28,16 @@ struct FlyingWeatherIntent: AppIntent {
         let resolvedAirport: Airport
 
         if let entity = airport {
-            // User specified an airport code
-            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: entity.id) }) else {
+            // Normalize what Siri transcribed — strip spaces, uppercase
+            // "K S M O" → "KSMO", "k l a s" → "KLAS"
+            let code = entity.id
+                .components(separatedBy: .whitespaces)
+                .joined()
+                .uppercased()
+            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
                 return .result(
-                    dialog: IntentDialog("I couldn't find an airport with the code \(entity.id). Try spelling out the ICAO identifier."),
-                    view: snippetView(label: entity.id, category: .unknown, detail: "Airport not found")
+                    dialog: IntentDialog("I couldn't find an airport with the code \(code). Try spelling it out as separate letters, like K-S-M-O."),
+                    view: snippetView(label: code, category: .unknown, detail: "Airport not found")
                 )
             }
             resolvedAirport = found
