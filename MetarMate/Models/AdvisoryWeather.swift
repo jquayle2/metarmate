@@ -88,7 +88,7 @@ struct AdvisoryWeather: Codable {
     // MARK: - Computed aviation values
 
     /// Altimeter setting (inHg) estimated from station pressure, corrected to sea level.
-    var altimeterInHg: Double? {
+    nonisolated var altimeterInHg: Double? {
         guard let hpa = pressureHpa else { return nil }
         let elevM = Double(airport.elevation) * 0.3048
         // P₀ = P_station × (1 + 2.25577×10⁻⁵ × h)^5.25588
@@ -115,7 +115,7 @@ struct AdvisoryWeather: Codable {
     }
 
     /// Heuristic flight category — NOT authoritative. Ceiling approximated from cloud %.
-    var estimatedFlightCategory: FlightCategory {
+    nonisolated var estimatedFlightCategory: FlightCategory {
         AdvisoryWeather.estimateFlightCategory(
             visibilityKm: visibilityKm,
             cloudCoverPercent: cloudCoverPercent
@@ -133,8 +133,8 @@ struct AdvisoryWeather: Codable {
 
     var tdSpreadC: Double? { dewpointC.map { temperatureC - $0 } }
 
-    var windSpeedKtRounded: Int  { Int(windSpeedKt.rounded()) }
-    var windGustKtRounded:  Int? { windGustKt.map { Int($0.rounded()) } }
+    nonisolated var windSpeedKtRounded: Int  { Int(windSpeedKt.rounded()) }
+    nonisolated var windGustKtRounded:  Int? { windGustKt.map { Int($0.rounded()) } }
 
     var cloudCoverDescription: String { AdvisoryWeather.cloudCoverDesc(cloudCoverPercent) }
     var precipDescription:     String { AdvisoryWeather.precipDesc(precipitationMm) }
@@ -142,7 +142,7 @@ struct AdvisoryWeather: Codable {
     var temperatureF:     Double  { temperatureC * 9/5 + 32 }
     var dewpointF:        Double? { dewpointC.map { $0 * 9/5 + 32 } }
     var pressureInHg:     Double? { pressureHpa.map { $0 * 0.02953 } }
-    var visibilityMiles:  Double? { visibilityKm.map { $0 * 0.621371 } }
+    nonisolated var visibilityMiles:  Double? { visibilityKm.map { $0 * 0.621371 } }
 
     // MARK: - Static helpers (shared with AdvisoryForecastHour)
 

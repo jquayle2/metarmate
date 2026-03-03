@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CDD069352F57583C00A16FDE /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CDD069342F57583C00A16FDE /* WidgetKit.framework */; };
+		CDD069372F57583C00A16FDE /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CDD069362F57583C00A16FDE /* SwiftUI.framework */; };
+		CDD069422F57583D00A16FDE /* MetarMateWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CDD069322F57583C00A16FDE /* MetarMateWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CD5153F92F523C8200ADDD8B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +27,70 @@
 			remoteGlobalIDString = CD5153EA2F523C8000ADDD8B;
 			remoteInfo = MetarMate;
 		};
+		CDD069402F57583D00A16FDE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CD5153E32F523C8000ADDD8B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CDD069312F57583C00A16FDE;
+			remoteInfo = MetarMateWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CDD069472F57583D00A16FDE /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CDD069422F57583D00A16FDE /* MetarMateWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		CD5153EB2F523C8000ADDD8B /* MetarMate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetarMate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD5153F82F523C8200ADDD8B /* MetarMateTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetarMateTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD5154022F523C8200ADDD8B /* MetarMateUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetarMateUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDD069322F57583C00A16FDE /* MetarMateWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MetarMateWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDD069342F57583C00A16FDE /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		CDD069362F57583C00A16FDE /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		CDD069482F5758ED00A16FDE /* MetarMateWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MetarMateWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CDD069432F57583D00A16FDE /* Exceptions for "MetarMateWidget" folder in "MetarMateWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */;
+		};
+		CDD069522F575C1600A16FDE /* Exceptions for "MetarMate" folder in "MetarMateWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/AdvisoryWeather.swift,
+				Models/Airport.swift,
+				Models/Metar.swift,
+				Models/Taf.swift,
+				Models/TafVerification.swift,
+				Models/WeatherTrend.swift,
+				Models/WidgetWeatherSnapshot.swift,
+				Services/WidgetDataManager.swift,
+				Utilities/Extensions.swift,
+			);
+			target = CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CD5153ED2F523C8000ADDD8B /* MetarMate */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CDD069522F575C1600A16FDE /* Exceptions for "MetarMate" folder in "MetarMateWidgetExtension" target */,
+			);
 			path = MetarMate;
 			sourceTree = "<group>";
 		};
@@ -43,6 +102,14 @@
 		CD5154052F523C8200ADDD8B /* MetarMateUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = MetarMateUITests;
+			sourceTree = "<group>";
+		};
+		CDD069382F57583C00A16FDE /* MetarMateWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CDD069432F57583D00A16FDE /* Exceptions for "MetarMateWidget" folder in "MetarMateWidgetExtension" target */,
+			);
+			path = MetarMateWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,15 +136,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CDD0692F2F57583C00A16FDE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDD069372F57583C00A16FDE /* SwiftUI.framework in Frameworks */,
+				CDD069352F57583C00A16FDE /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		CD5153E22F523C8000ADDD8B = {
 			isa = PBXGroup;
 			children = (
+				CDD069482F5758ED00A16FDE /* MetarMateWidgetExtension.entitlements */,
 				CD5153ED2F523C8000ADDD8B /* MetarMate */,
 				CD5153FB2F523C8200ADDD8B /* MetarMateTests */,
 				CD5154052F523C8200ADDD8B /* MetarMateUITests */,
+				CDD069382F57583C00A16FDE /* MetarMateWidget */,
+				CDD069332F57583C00A16FDE /* Frameworks */,
 				CD5153EC2F523C8000ADDD8B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,8 +167,18 @@
 				CD5153EB2F523C8000ADDD8B /* MetarMate.app */,
 				CD5153F82F523C8200ADDD8B /* MetarMateTests.xctest */,
 				CD5154022F523C8200ADDD8B /* MetarMateUITests.xctest */,
+				CDD069322F57583C00A16FDE /* MetarMateWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CDD069332F57583C00A16FDE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CDD069342F57583C00A16FDE /* WidgetKit.framework */,
+				CDD069362F57583C00A16FDE /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +191,12 @@
 				CD5153E72F523C8000ADDD8B /* Sources */,
 				CD5153E82F523C8000ADDD8B /* Frameworks */,
 				CD5153E92F523C8000ADDD8B /* Resources */,
+				CDD069472F57583D00A16FDE /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CDD069412F57583D00A16FDE /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CD5153ED2F523C8000ADDD8B /* MetarMate */,
@@ -163,6 +254,28 @@
 			productReference = CD5154022F523C8200ADDD8B /* MetarMateUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CDD069442F57583D00A16FDE /* Build configuration list for PBXNativeTarget "MetarMateWidgetExtension" */;
+			buildPhases = (
+				CDD0692E2F57583C00A16FDE /* Sources */,
+				CDD0692F2F57583C00A16FDE /* Frameworks */,
+				CDD069302F57583C00A16FDE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CDD069382F57583C00A16FDE /* MetarMateWidget */,
+			);
+			name = MetarMateWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = MetarMateWidgetExtension;
+			productReference = CDD069322F57583C00A16FDE /* MetarMateWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +297,9 @@
 						CreatedOnToolsVersion = 26.1.1;
 						TestTargetID = CD5153EA2F523C8000ADDD8B;
 					};
+					CDD069312F57583C00A16FDE = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
 				};
 			};
 			buildConfigurationList = CD5153E62F523C8000ADDD8B /* Build configuration list for PBXProject "MetarMate" */;
@@ -203,6 +319,7 @@
 				CD5153EA2F523C8000ADDD8B /* MetarMate */,
 				CD5153F72F523C8200ADDD8B /* MetarMateTests */,
 				CD5154012F523C8200ADDD8B /* MetarMateUITests */,
+				CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +340,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CD5154002F523C8200ADDD8B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CDD069302F57583C00A16FDE /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +377,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CDD0692E2F57583C00A16FDE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +396,11 @@
 			isa = PBXTargetDependency;
 			target = CD5153EA2F523C8000ADDD8B /* MetarMate */;
 			targetProxy = CD5154032F523C8200ADDD8B /* PBXContainerItemProxy */;
+		};
+		CDD069412F57583D00A16FDE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */;
+			targetProxy = CDD069402F57583D00A16FDE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -585,6 +721,73 @@
 			};
 			name = Release;
 		};
+		CDD069452F57583D00A16FDE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MetarMateWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JWW5W9WV7J;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MetarMateWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MetarMateWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jeffquayle.MetarMate.MetarMateWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CDD069462F57583D00A16FDE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MetarMateWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JWW5W9WV7J;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MetarMateWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MetarMateWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jeffquayle.MetarMate.MetarMateWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -620,6 +823,15 @@
 			buildConfigurations = (
 				CD5154132F523C8200ADDD8B /* Debug */,
 				CD5154142F523C8200ADDD8B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CDD069442F57583D00A16FDE /* Build configuration list for PBXNativeTarget "MetarMateWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CDD069452F57583D00A16FDE /* Debug */,
+				CDD069462F57583D00A16FDE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
