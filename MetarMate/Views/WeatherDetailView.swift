@@ -860,19 +860,15 @@ struct WeatherDetailView: View {
         let displayed = Array(metars.prefix(historyExpanded ? totalCount : defaultShown))
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                sectionHeader("Observation History")
+                sectionHeader("METAR History")
                 Spacer()
                 if totalCount > defaultShown {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { historyExpanded.toggle() }
                     } label: {
-                        HStack(spacing: 4) {
-                            Text(historyExpanded ? "Show less" : "Show all \(totalCount)")
-                                .font(.caption)
-                            Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
-                                .font(.caption2)
-                        }
-                        .foregroundColor(.secondary)
+                        Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -959,6 +955,17 @@ struct WeatherDetailView: View {
                         .padding(.vertical, 1)
                         .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
                 }
+                Spacer()
+                let totalPeriods = taf.forecasts.count
+                if totalPeriods > 3 {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { tafExpanded.toggle() }
+                    } label: {
+                        Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             if showRaw {
                 DisclosureGroup("Raw TAF") {
@@ -975,28 +982,9 @@ struct WeatherDetailView: View {
             }
 
             let tafIsUpcoming = taf.validFrom > Date()
-            let defaultPeriods = 3
-            let totalPeriods = taf.forecasts.count
-            let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(defaultPeriods))
-
+            let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(3))
             ForEach(displayedPeriods) { period in
                 tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
-            }
-
-            if totalPeriods > defaultPeriods {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { tafExpanded.toggle() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(tafExpanded ? "Show less" : "Show all \(totalPeriods) periods")
-                            .font(.caption)
-                        Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
-                    }
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 4)
-                }
             }
         }
         .padding()

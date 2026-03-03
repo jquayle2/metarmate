@@ -38,7 +38,7 @@ enum SectionID: String, Codable, CaseIterable {
         case .pilotNotes:         return "Pilot Notes"
         case .performance:        return "Performance (METAR)"
         case .trend:              return "Trend"
-        case .history:            return "Observation History"
+        case .history:            return "METAR History"
         case .taf:                return "TAF Forecast"
         case .rawTaf:             return "Raw TAF"
         case .tafVerification:    return "Forecast Reliability"
