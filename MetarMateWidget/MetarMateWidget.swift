@@ -99,12 +99,8 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     private func resolveSnapshot(for configuration: SelectAirportIntent) -> WidgetWeatherSnapshot? {
         if let code = configuration.airportCode, !code.isEmpty {
             let icao = code.uppercased().trimmingCharacters(in: .whitespaces)
-            NSLog("Widget resolveSnapshot: airportCode='\(icao)'")
-            let result = WidgetDataManager.load(icao: icao)
-            NSLog("Widget resolveSnapshot: load result = \(result?.icao ?? "nil")")
-            return result
+            return WidgetDataManager.load(icao: icao)
         }
-        NSLog("Widget resolveSnapshot: no airport code, using mostRecent")
         return WidgetDataManager.mostRecent()
     }
 }
