@@ -83,13 +83,13 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
-        let icao = configuration.airport?.id.uppercased()
+        let icao = configuration.airportCode?.uppercased()
         let snapshot = resolveSnapshot(for: configuration)
         return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
     }
 
     func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
-        let icao = configuration.airport?.id.uppercased()
+        let icao = configuration.airportCode?.uppercased()
         let snapshot = resolveSnapshot(for: configuration)
         let entry = MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
@@ -97,18 +97,14 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     private func resolveSnapshot(for configuration: SelectAirportIntent) -> WidgetWeatherSnapshot? {
-        if let entity = configuration.airport {
-            let icao = entity.id.uppercased()
-            NSLog("Widget resolveSnapshot: entity.id='\(entity.id)' icao='\(icao)'")
+        if let code = configuration.airportCode, !code.isEmpty {
+            let icao = code.uppercased().trimmingCharacters(in: .whitespaces)
+            NSLog("Widget resolveSnapshot: airportCode='\(icao)'")
             let result = WidgetDataManager.load(icao: icao)
             NSLog("Widget resolveSnapshot: load result = \(result?.icao ?? "nil")")
-            if result == nil {
-                let all = WidgetDataManager.loadAll()
-                NSLog("Widget resolveSnapshot: available snapshots = \(all.map { $0.icao })")
-            }
             return result
         }
-        NSLog("Widget resolveSnapshot: no airport selected, using mostRecent")
+        NSLog("Widget resolveSnapshot: no airport code, using mostRecent")
         return WidgetDataManager.mostRecent()
     }
 }
