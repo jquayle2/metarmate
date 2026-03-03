@@ -61,25 +61,17 @@ private func ageString(_ date: Date) -> String {
     return "\(Int(secs / 3600))h ago"
 }
 
-// MARK: - Widget Configuration Intent
-// Lets users pick which airport each widget instance displays.
-
-struct SelectAirportIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "Select Airport"
-    static var description = IntentDescription("Choose which airport to display.")
-
-    @Parameter(title: "Airport")
-    var airport: AirportEntity?
-}
+// SelectAirportIntent is defined in MetarMate/Intents/SelectAirportIntent.swift
 
 // MARK: - Timeline Entry
 
 struct MetarMateEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetWeatherSnapshot?
+    let requestedICAO: String?  // non-nil when user selected an airport but no data exists yet
 
     static var placeholder: MetarMateEntry {
-        MetarMateEntry(date: .now, snapshot: nil)
+        MetarMateEntry(date: .now, snapshot: nil, requestedICAO: nil)
     }
 }
 
@@ -91,21 +83,32 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
+        let icao = configuration.airport?.id.uppercased()
         let snapshot = resolveSnapshot(for: configuration)
-        return MetarMateEntry(date: .now, snapshot: snapshot)
+        return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
     }
 
     func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
+        let icao = configuration.airport?.id.uppercased()
         let snapshot = resolveSnapshot(for: configuration)
-        let entry = MetarMateEntry(date: .now, snapshot: snapshot)
+        let entry = MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
 
     private func resolveSnapshot(for configuration: SelectAirportIntent) -> WidgetWeatherSnapshot? {
-        if let icao = configuration.airport?.id {
-            return WidgetDataManager.load(icao: icao.uppercased()) ?? WidgetDataManager.mostRecent()
+        if let entity = configuration.airport {
+            let icao = entity.id.uppercased()
+            NSLog("Widget resolveSnapshot: entity.id='\(entity.id)' icao='\(icao)'")
+            let result = WidgetDataManager.load(icao: icao)
+            NSLog("Widget resolveSnapshot: load result = \(result?.icao ?? "nil")")
+            if result == nil {
+                let all = WidgetDataManager.loadAll()
+                NSLog("Widget resolveSnapshot: available snapshots = \(all.map { $0.icao })")
+            }
+            return result
         }
+        NSLog("Widget resolveSnapshot: no airport selected, using mostRecent")
         return WidgetDataManager.mostRecent()
     }
 }

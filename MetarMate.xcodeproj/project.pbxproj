@@ -72,6 +72,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Intents/AirportEntity.swift,
+				Intents/SelectAirportIntent.swift,
 				Models/AdvisoryWeather.swift,
 				Models/Airport.swift,
 				Models/Metar.swift,

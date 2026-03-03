@@ -19,12 +19,19 @@ struct AirportEntity: AppEntity {
 
 struct AirportEntityQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [AirportEntity] {
-        await MainActor.run {
-            identifiers.compactMap { id in
-                AirportService.shared.airport(identifier: id)
-                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
+        let snapshots = WidgetDataManager.loadAll()
+        var results: [AirportEntity] = []
+        for id in identifiers {
+            let upper = id.uppercased()
+            if let snap = snapshots.first(where: { $0.icao == upper }) {
+                results.append(AirportEntity(id: snap.icao, name: snap.airportName))
+            } else if let found = await MainActor.run(body: {
+                AirportService.shared.airport(identifier: upper)
+            }) {
+                results.append(AirportEntity(id: found.icao.uppercased(), name: found.name))
             }
         }
+        return results
     }
 
     func entities(matching string: String) async throws -> [AirportEntity] {
