@@ -8,6 +8,8 @@ struct WeatherDetailView: View {
     @StateObject private var vm = WeatherViewModel()
     @Query private var favorites: [AirportFavorite]
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject private var prefs = LayoutPreferences.shared
+    @State private var showLayoutSettings = false
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -28,22 +30,7 @@ struct WeatherDetailView: View {
                 } else {
                     headerSection
                     if let metar = vm.metar {
-                        rawMetarSection(metar)
-                        decodedConditionsSection(metar)
-                        pilotNotesSection(metar, history: vm.metarHistory)
-                        densityAltitudeSection(metar)
-                    }
-                    if let trend = vm.trend {
-                        trendSection(trend, verification: vm.tafVerification)
-                    }
-                    if vm.metarHistory.count > 1 {
-                        metarHistorySection(vm.metarHistory)
-                    }
-                    if let taf = vm.taf {
-                        tafSection(taf)
-                    }
-                    if let verification = vm.tafVerification {
-                        tafVerificationSection(verification)
+                        metarSectionsInOrder(metar)
                     }
                 }
             }
@@ -53,11 +40,22 @@ struct WeatherDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: toggleFavorite) {
-                    Image(systemName: isFavorite ? "star.fill" : "star")
-                        .foregroundColor(isFavorite ? .yellow : .secondary)
+                HStack(spacing: 4) {
+                    Button {
+                        showLayoutSettings = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .foregroundColor(.secondary)
+                    }
+                    Button(action: toggleFavorite) {
+                        Image(systemName: isFavorite ? "star.fill" : "star")
+                            .foregroundColor(isFavorite ? .yellow : .secondary)
+                    }
                 }
             }
+        }
+        .sheet(isPresented: $showLayoutSettings) {
+            LayoutSettingsView()
         }
         .task {
             await vm.load(airport: airport)
@@ -72,6 +70,72 @@ struct WeatherDetailView: View {
         }
         .refreshable {
             await vm.load(airport: airport)
+        }
+    }
+
+    // MARK: - Preference-ordered METAR sections
+    @ViewBuilder
+    private func metarSectionsInOrder(_ metar: Metar) -> some View {
+        let notes = pilotNotes(for: metar, history: vm.metarHistory)
+        let hasAmberNote = !notes.isEmpty
+        let hasRedNote   = notes.contains(where: { $0.severity == .warning })
+
+        let da = DensityAltitude.calculate(
+            temperatureC: Double(metar.temperature),
+            dewpointC: Double(metar.dewpoint),
+            altimeterInHg: metar.altimeter,
+            fieldElevationFt: airport.elevation
+        )
+        let daAmber = da.hpLossPercent >= 10
+        let daRed   = da.hpLossPercent >= 20
+
+        let trendAmber = vm.trend.map { $0.overall != .unknown && $0.overall != .steady } ?? false
+        let trendRed   = vm.trend.map { $0.overall == .deteriorating } ?? false
+
+        let verAmber = vm.tafVerification.map { Double($0.categoryAccuracyPct) / 100.0 < 0.80 } ?? false
+        let verRed   = vm.tafVerification.map {
+            Double($0.categoryAccuracyPct) / 100.0 < 0.60 || $0.significantMisses > 0
+        } ?? false
+
+        ForEach(prefs.metarSections) { config in
+            switch config.id {
+            case .conditions:
+                if prefs.shouldShow(.conditions) {
+                    decodedConditionsSection(metar)
+                }
+            case .rawMetar:
+                if prefs.shouldShow(.rawMetar) {
+                    rawMetarSection(metar)
+                }
+            case .pilotNotes:
+                if prefs.shouldShow(.pilotNotes, amberCondition: hasAmberNote, redCondition: hasRedNote) {
+                    pilotNotesSection(metar, history: vm.metarHistory)
+                }
+            case .performance:
+                if prefs.shouldShow(.performance, amberCondition: daAmber, redCondition: daRed) {
+                    densityAltitudeSection(metar)
+                }
+            case .trend:
+                if let trend = vm.trend,
+                   prefs.shouldShow(.trend, amberCondition: trendAmber, redCondition: trendRed) {
+                    trendSection(trend, verification: vm.tafVerification)
+                }
+            case .history:
+                if vm.metarHistory.count > 1, prefs.shouldShow(.history) {
+                    metarHistorySection(vm.metarHistory)
+                }
+            case .taf:
+                if let taf = vm.taf, prefs.shouldShow(.taf) {
+                    tafSection(taf)
+                }
+            case .tafVerification:
+                if let verification = vm.tafVerification,
+                   prefs.shouldShow(.tafVerification, amberCondition: verAmber, redCondition: verRed) {
+                    tafVerificationSection(verification)
+                }
+            default:
+                EmptyView()
+            }
         }
     }
 
@@ -1184,39 +1248,52 @@ struct WeatherDetailView: View {
     // MARK: - Advisory Weather (Open-Meteo, non-METAR airports)
     private func advisoryWeatherView(_ wx: AdvisoryWeather) -> some View {
         VStack(spacing: 16) {
-
-            // ── Header ────────────────────────────────────────────────────────────
             advisoryHeader(wx)
-
-            // ── Estimated Flight Category ─────────────────────────────────────────
             advisoryFlightCategoryCard(wx)
-
-            // ── Current Conditions ────────────────────────────────────────────────
-            advisoryConditionsCard(wx)
-
-            // ── Density Altitude ──────────────────────────────────────────────────
-            if wx.densityAltitudeFt != nil {
-                advisoryDensityAltitudeCard(wx)
-            }
-
-            // ── Pilot Advisories ──────────────────────────────────────────────────
-            let advisories = advisoryPilotAdvisories(wx)
-            if !advisories.isEmpty {
-                advisoryPilotAdvisoriesCard(advisories)
-            }
-
-            // ── 6-Hour Trends ─────────────────────────────────────────────────────
-            if let trends = wx.trends {
-                advisoryTrendsCard(trends)
-            }
-
-            // ── 6-Hour Forecast Strip ─────────────────────────────────────────────
-            if !wx.forecast.isEmpty {
-                advisoryForecastStrip(wx.forecast)
-            }
-
-            // ── Footer ────────────────────────────────────────────────────────────
+            advisorySectionsInOrder(wx)
             advisoryFooter(wx)
+        }
+    }
+
+    // MARK: - Preference-ordered Advisory sections
+    @ViewBuilder
+    private func advisorySectionsInOrder(_ wx: AdvisoryWeather) -> some View {
+        let advisories = advisoryPilotAdvisories(wx)
+        let hasAmber = !advisories.isEmpty
+        let hasRed   = advisories.contains(where: { $0.isWarning })
+
+        let daFt    = wx.densityAltitudeFt ?? 0
+        let daPenalty = daFt - Double(airport.elevation)
+        let daAmber = daPenalty >= 1500
+        let daRed   = daPenalty >= 3000
+
+        ForEach(prefs.advisorySections) { config in
+            switch config.id {
+            case .advConditions:
+                if prefs.shouldShow(.advConditions) {
+                    advisoryConditionsCard(wx)
+                }
+            case .advPerformance:
+                if wx.densityAltitudeFt != nil,
+                   prefs.shouldShow(.advPerformance, amberCondition: daAmber, redCondition: daRed) {
+                    advisoryDensityAltitudeCard(wx)
+                }
+            case .advPilotAdvisories:
+                if !advisories.isEmpty,
+                   prefs.shouldShow(.advPilotAdvisories, amberCondition: hasAmber, redCondition: hasRed) {
+                    advisoryPilotAdvisoriesCard(advisories)
+                }
+            case .advTrends:
+                if let trends = wx.trends, prefs.shouldShow(.advTrends) {
+                    advisoryTrendsCard(trends)
+                }
+            case .advForecast:
+                if !wx.forecast.isEmpty, prefs.shouldShow(.advForecast) {
+                    advisoryForecastStrip(wx.forecast)
+                }
+            default:
+                EmptyView()
+            }
         }
     }
 
