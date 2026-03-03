@@ -3,41 +3,61 @@ import CoreLocation
 import SwiftUI
 
 // MARK: - Flying Weather Intent
-// Invoked by Siri ("Hey Siri, check flying weather with MetarMate")
-// Uses current location to find the nearest airport — no parameter needed.
+// "Hey Siri, check flying weather with MetarMate"
+// "Hey Siri, check flying weather at KLAS with MetarMate"
+// If an airport code is provided it is used directly; otherwise falls back to nearest airport.
 struct FlyingWeatherIntent: AppIntent {
     static var title: LocalizedStringResource = "Check Flying Weather"
     static var description = IntentDescription(
-        "Get current METAR and weather trend for your nearest airport."
+        "Get current METAR and weather trend. Specify an airport code or use your nearest airport."
     )
 
-    // No parameters — location is resolved automatically
+    @Parameter(title: "Airport Code", description: "ICAO or IATA identifier, e.g. KLAS or LAS. Leave empty to use nearest airport.", requestValueDialog: "Which airport? Say an ICAO code like K-L-A-S, or say nearest.")
+    var airportCode: String?
+
     static var parameterSummary: some ParameterSummary {
-        Summary("Check flying weather near me")
+        When(\.$airportCode, .hasAnyValue) {
+            Summary("Check flying weather at \(\.$airportCode)")
+        } otherwise: {
+            Summary("Check flying weather near me")
+        }
     }
 
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
-        // 1. Get current location
-        let location: CLLocation
-        do {
-            location = try await IntentLocationHelper.currentLocation()
-        } catch {
-            return .result(
-                dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
-                view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
-            )
+        // 1. Resolve airport — from parameter or nearest
+        let airport: Airport
+
+        if let code = airportCode?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(), !code.isEmpty {
+            // User specified an airport code
+            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
+                return .result(
+                    dialog: IntentDialog("I couldn't find an airport with the code \(code). Try spelling out the ICAO identifier."),
+                    view: snippetView(label: code, category: .unknown, detail: "Airport not found")
+                )
+            }
+            airport = found
+        } else {
+            // Fall back to nearest airport via location
+            let location: CLLocation
+            do {
+                location = try await IntentLocationHelper.currentLocation()
+            } catch {
+                return .result(
+                    dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
+                    view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
+                )
+            }
+            let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
+            guard let nearest = airports.first else {
+                return .result(
+                    dialog: IntentDialog("I couldn't find a nearby airport."),
+                    view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
+                )
+            }
+            airport = nearest
         }
 
-        // 2. Find nearest airport
-        let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
-        guard let airport = airports.first else {
-            return .result(
-                dialog: IntentDialog("I couldn't find a nearby airport."),
-                view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
-            )
-        }
-
-        // 3. Fetch METAR history (for observed trend)
+        // 2. Fetch METAR history
         let metarHistory: [Metar]
         do {
             metarHistory = try await WeatherService.shared.fetchMetarHistory(for: airport.icao, hours: 6)
@@ -55,16 +75,16 @@ struct FlyingWeatherIntent: AppIntent {
             )
         }
 
-        // 4. Fetch TAF (optional — not all stations have one)
+        // 3. Fetch TAF (optional)
         let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
 
-        // 5. Derive trend from history + TAF
+        // 4. Derive trend
         let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
 
-        // 6. Build spoken dialog
+        // 5. Build spoken dialog
         let spokenText = buildDialog(airportName: airport.name, metar: metar, trend: trend)
 
-        // 7. Build one-line summary for snippet
+        // 6. Build snippet summary
         let detail = buildSummaryLine(metar: metar)
 
         return .result(
@@ -190,9 +210,10 @@ struct MetarMateShortcuts: AppShortcutsProvider {
             phrases: [
                 "Check flying weather with \(.applicationName)",
                 "What's the flying weather in \(.applicationName)",
-                "Airport weather with \(.applicationName)",
                 "Flying conditions with \(.applicationName)",
-                "\(.applicationName) weather check"
+                "\(.applicationName) weather check",
+                "Check flying weather at \(\.$airportCode) with \(.applicationName)",
+                "What's the weather at \(\.$airportCode) in \(.applicationName)"
             ],
             shortTitle: "Flying Weather",
             systemImageName: "cloud.sun.fill"
