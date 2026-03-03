@@ -221,13 +221,13 @@ struct HomeScreenSmallView: View {
                     }
 
                     // Visibility + ceiling
-                    HStack(spacing: 8) {
-                        Label("\(snap.visibility.visibilityString) SM", systemImage: "eye")
-                            .font(.caption2)
+                    HStack(spacing: 6) {
+                        Text("\(snap.visibility.visibilityString) SM")
+                            .font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.secondary)
                         if let ceil = snap.ceilingFeet {
-                            Label("\(ceil.formatted()) ft", systemImage: "cloud")
-                                .font(.caption2)
+                            Text("\(ceil.formatted()) ft")
+                                .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -423,6 +423,7 @@ struct HomeScreenMediumView: View {
                             .foregroundStyle(trendColor(snap.trendDirection))
                             .lineLimit(2)
                             .multilineTextAlignment(.trailing)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     // Forecast deviation lines
