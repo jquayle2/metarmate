@@ -10,6 +10,7 @@ struct WeatherDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var prefs = LayoutPreferences.shared
     @State private var showLayoutSettings = false
+    @State private var showNearbyAirports = false
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -42,6 +43,12 @@ struct WeatherDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 4) {
                     Button {
+                        showNearbyAirports = true
+                    } label: {
+                        Image(systemName: "airplane.circle")
+                            .foregroundColor(.secondary)
+                    }
+                    Button {
                         showLayoutSettings = true
                     } label: {
                         Image(systemName: "slider.horizontal.3")
@@ -56,6 +63,9 @@ struct WeatherDetailView: View {
         }
         .sheet(isPresented: $showLayoutSettings) {
             LayoutSettingsView()
+        }
+        .sheet(isPresented: $showNearbyAirports) {
+            NearbyAirportsView(referenceAirport: airport)
         }
         .task {
             await vm.load(airport: airport)
