@@ -12,12 +12,12 @@ struct FlyingWeatherIntent: AppIntent {
         "Get current METAR and weather trend. Specify an airport code or use your nearest airport."
     )
 
-    @Parameter(title: "Airport Code", description: "ICAO or IATA identifier, e.g. KLAS or LAS. Leave empty to use nearest airport.", requestValueDialog: "Which airport? Say an ICAO code like K-L-A-S, or say nearest.")
-    var airportCode: String?
+    @Parameter(title: "Airport", description: "ICAO or IATA identifier, e.g. KLAS or LAS. Leave empty to use nearest airport.", requestValueDialog: "Which airport? Spell out the ICAO code, like K-L-A-S.")
+    var airport: AirportEntity?
 
     static var parameterSummary: some ParameterSummary {
-        When(\.$airportCode, .hasAnyValue) {
-            Summary("Check flying weather at \(\.$airportCode)")
+        When(\.$airport, .hasAnyValue) {
+            Summary("Check flying weather at \(\.$airport)")
         } otherwise: {
             Summary("Check flying weather near me")
         }
@@ -25,17 +25,17 @@ struct FlyingWeatherIntent: AppIntent {
 
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
         // 1. Resolve airport — from parameter or nearest
-        let airport: Airport
+        let resolvedAirport: Airport
 
-        if let code = airportCode?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(), !code.isEmpty {
+        if let entity = airport {
             // User specified an airport code
-            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
+            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: entity.id) }) else {
                 return .result(
-                    dialog: IntentDialog("I couldn't find an airport with the code \(code). Try spelling out the ICAO identifier."),
-                    view: snippetView(label: code, category: .unknown, detail: "Airport not found")
+                    dialog: IntentDialog("I couldn't find an airport with the code \(entity.id). Try spelling out the ICAO identifier."),
+                    view: snippetView(label: entity.id, category: .unknown, detail: "Airport not found")
                 )
             }
-            airport = found
+            resolvedAirport = found
         } else {
             // Fall back to nearest airport via location
             let location: CLLocation
@@ -54,42 +54,42 @@ struct FlyingWeatherIntent: AppIntent {
                     view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
                 )
             }
-            airport = nearest
+            resolvedAirport = nearest
         }
 
         // 2. Fetch METAR history
         let metarHistory: [Metar]
         do {
-            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: airport.icao, hours: 6)
+            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: resolvedAirport.icao, hours: 6)
         } catch {
             return .result(
-                dialog: IntentDialog("No weather data available for \(airport.name)."),
-                view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
+                dialog: IntentDialog("No weather data available for \(resolvedAirport.name)."),
+                view: snippetView(label: resolvedAirport.icao, category: .unknown, detail: "No data available")
             )
         }
 
         guard let metar = metarHistory.first else {
             return .result(
-                dialog: IntentDialog("No weather data available for \(airport.name)."),
-                view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
+                dialog: IntentDialog("No weather data available for \(resolvedAirport.name)."),
+                view: snippetView(label: resolvedAirport.icao, category: .unknown, detail: "No data available")
             )
         }
 
         // 3. Fetch TAF (optional)
-        let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
+        let taf = try? await WeatherService.shared.fetchTaf(for: resolvedAirport.icao)
 
         // 4. Derive trend
         let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
 
         // 5. Build spoken dialog
-        let spokenText = buildDialog(airportName: airport.name, metar: metar, trend: trend)
+        let spokenText = buildDialog(airportName: resolvedAirport.name, metar: metar, trend: trend)
 
         // 6. Build snippet summary
         let detail = buildSummaryLine(metar: metar)
 
         return .result(
             dialog: IntentDialog(stringLiteral: spokenText),
-            view: snippetView(label: "\(airport.icao) · \(airport.name)", category: metar.flightCategory, detail: detail)
+            view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)", category: metar.flightCategory, detail: detail)
         )
     }
 
@@ -212,12 +212,54 @@ struct MetarMateShortcuts: AppShortcutsProvider {
                 "What's the flying weather in \(.applicationName)",
                 "Flying conditions with \(.applicationName)",
                 "\(.applicationName) weather check",
-                "Check flying weather at \(\.$airportCode) with \(.applicationName)",
-                "What's the weather at \(\.$airportCode) in \(.applicationName)"
+                "Check flying weather at \(\.$airport) with \(.applicationName)",
+                "What's the weather at \(\.$airport) in \(.applicationName)"
             ],
             shortTitle: "Flying Weather",
             systemImageName: "cloud.sun.fill"
         )
+    }
+}
+
+// MARK: - Airport AppEntity
+// Lightweight AppEntity wrapping an ICAO/IATA code so App Intents can accept it as a parameter.
+struct AirportEntity: AppEntity {
+    var id: String   // ICAO code (uppercased)
+    var name: String
+
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Airport"
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(id)", subtitle: "\(name)")
+    }
+
+    static var defaultQuery = AirportEntityQuery()
+}
+
+struct AirportEntityQuery: EntityStringQuery {
+    func entities(for identifiers: [String]) async throws -> [AirportEntity] {
+        await MainActor.run {
+            identifiers.compactMap { id in
+                AirportService.shared.airport(identifier: id)
+                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
+            }
+        }
+    }
+
+    func entities(matching string: String) async throws -> [AirportEntity] {
+        await MainActor.run {
+            AirportService.shared.search(query: string, limit: 10)
+                .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
+        }
+    }
+
+    func suggestedEntities() async throws -> [AirportEntity] {
+        await MainActor.run {
+            ["KLAS", "KVGT", "KLAX", "KSFO", "KORD"].compactMap { icao in
+                AirportService.shared.airport(icao: icao)
+                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
+            }
+        }
     }
 }
 
