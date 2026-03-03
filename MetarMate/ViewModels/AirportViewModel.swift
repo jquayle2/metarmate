@@ -132,8 +132,9 @@ class AirportViewModel: ObservableObject {
         favorites.contains(where: { $0.icao == airport.icao })
     }
 
-    func addFavorite(_ airport: Airport, context: ModelContext) {
-        let fav = AirportFavorite(from: airport)
+    func addFavorite(_ airport: Airport, context: ModelContext, existingFavorites: [AirportFavorite] = []) {
+        let nextOrder = (existingFavorites.map(\.sortOrder).max() ?? -1) + 1
+        let fav = AirportFavorite(from: airport, sortOrder: nextOrder)
         context.insert(fav)
     }
 

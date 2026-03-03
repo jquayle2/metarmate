@@ -46,7 +46,7 @@ struct SearchView: View {
                                                 if isFav {
                                                     airportVM.removeFavorite(airport, favorites: favorites, context: modelContext)
                                                 } else {
-                                                    airportVM.addFavorite(airport, context: modelContext)
+                                                    airportVM.addFavorite(airport, context: modelContext, existingFavorites: favorites)
                                                 }
                                             } label: {
                                                 Label(isFav ? "Unfavorite" : "Favorite",

@@ -2147,7 +2147,8 @@ struct WeatherDetailView: View {
                 modelContext.delete(fav)
             }
         } else {
-            let fav = AirportFavorite(from: airport)
+            let nextOrder = (favorites.map(\.sortOrder).max() ?? -1) + 1
+            let fav = AirportFavorite(from: airport, sortOrder: nextOrder)
             modelContext.insert(fav)
         }
     }

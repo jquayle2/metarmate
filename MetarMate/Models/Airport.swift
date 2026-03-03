@@ -61,16 +61,18 @@ final class AirportFavorite {
     var elevation: Int
     var hasMetar: Bool = true
     var addedDate: Date
+    var sortOrder: Int
 
-    init(from airport: Airport) {
-        self.icao     = airport.icao
-        self.iata     = airport.iata
-        self.name     = airport.name
-        self.latitude = airport.latitude
+    init(from airport: Airport, sortOrder: Int = 0) {
+        self.icao      = airport.icao
+        self.iata      = airport.iata
+        self.name      = airport.name
+        self.latitude  = airport.latitude
         self.longitude = airport.longitude
         self.elevation = airport.elevation
         self.hasMetar  = airport.hasMetar
         self.addedDate = Date()
+        self.sortOrder = sortOrder
     }
 
     var asAirport: Airport {

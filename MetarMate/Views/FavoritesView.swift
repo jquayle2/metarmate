@@ -2,10 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct FavoritesView: View {
-    @Query(sort: \AirportFavorite.addedDate, order: .reverse) private var favorites: [AirportFavorite]
+    @Query(sort: \AirportFavorite.sortOrder, order: .forward) private var favorites: [AirportFavorite]
     @Environment(\.modelContext) private var modelContext
     @State private var favMetars: [String: Metar] = [:]
     @State private var isLoading = false
+    @State private var editMode: EditMode = .inactive
 
     var body: some View {
         NavigationStack {
@@ -34,10 +35,13 @@ struct FavoritesView: View {
                                 )
                             }
                             .listRowBackground(Color(.systemGray6).opacity(0.2))
+                            .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
                         }
                         .onDelete(perform: deleteFavorites)
+                        .onMove(perform: moveFavorites)
                     }
                     .listStyle(.plain)
+                    .environment(\.editMode, $editMode)
                     .refreshable {
                         await fetchMetars()
                     }
@@ -49,6 +53,17 @@ struct FavoritesView: View {
                 }
             }
             .navigationTitle("Favorites")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if !favorites.isEmpty {
+                        Button(editMode == .active ? "Done" : "Edit") {
+                            withAnimation {
+                                editMode = editMode == .active ? .inactive : .active
+                            }
+                        }
+                    }
+                }
+            }
         }
         .task {
             await fetchMetars()
@@ -72,6 +87,14 @@ struct FavoritesView: View {
     private func deleteFavorites(at offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(favorites[index])
+        }
+    }
+
+    private func moveFavorites(from source: IndexSet, to destination: Int) {
+        var reordered = favorites
+        reordered.move(fromOffsets: source, toOffset: destination)
+        for (index, fav) in reordered.enumerated() {
+            fav.sortOrder = index
         }
     }
 }
