@@ -23,6 +23,7 @@ enum SectionID: String, Codable, CaseIterable {
     case taf              = "taf"
     case rawTaf           = "rawTaf"
     case tafVerification  = "tafVerification"
+    case worstRecent      = "worstRecent"
 
     // Advisory sections
     case advConditions      = "advConditions"
@@ -42,6 +43,7 @@ enum SectionID: String, Codable, CaseIterable {
         case .taf:                return "TAF Forecast"
         case .rawTaf:             return "Raw TAF"
         case .tafVerification:    return "Forecast Reliability"
+        case .worstRecent:        return "Worst Recent Conditions"
         case .advConditions:      return "Conditions"
         case .advPerformance:     return "Performance"
         case .advPilotAdvisories: return "Pilot Advisories"
@@ -54,7 +56,7 @@ enum SectionID: String, Codable, CaseIterable {
         switch self {
         case .trend:
             return [.always, .changingOnly, .amberAndAbove, .redOnly, .hidden]
-        case .pilotNotes, .performance, .tafVerification,
+        case .pilotNotes, .performance, .tafVerification, .worstRecent,
              .advPerformance, .advPilotAdvisories:
             return [.always, .amberAndAbove, .redOnly, .hidden]
         default:
@@ -93,6 +95,7 @@ class LayoutPreferences: ObservableObject {
         .init(id: .performance,     visibility: .always),
         .init(id: .trend,           visibility: .always),
         .init(id: .history,         visibility: .always),
+        .init(id: .worstRecent,     visibility: .always),
         .init(id: .taf,             visibility: .always),
         .init(id: .rawTaf,          visibility: .always),
         .init(id: .tafVerification, visibility: .always),

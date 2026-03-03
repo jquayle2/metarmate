@@ -108,6 +108,10 @@ struct WeatherDetailView: View {
             Double($0.categoryAccuracyPct) / 100.0 < 0.60 || $0.significantMisses > 0
         } ?? false
 
+        let worstStats = worstRecentStats(vm.metarHistory)
+        let worstAmber = worstStats != nil && (worstStats!.hasAmber || worstStats!.hasRed)
+        let worstRed   = worstStats?.hasRed ?? false
+
         ForEach(prefs.metarSections) { config in
             switch config.id {
             case .conditions:
@@ -173,6 +177,18 @@ struct WeatherDetailView: View {
                         }
                     }()
                     if showVer { tafVerificationSection(verification) }
+                }
+            case .worstRecent:
+                if let stats = worstStats, vm.metarHistory.count >= 2 {
+                    let showWorst: Bool = {
+                        switch config.visibility {
+                        case .always:        return true
+                        case .amberAndAbove: return worstAmber || worstRed
+                        case .redOnly:       return worstRed
+                        default:             return false
+                        }
+                    }()
+                    if showWorst { worstRecentSection(stats) }
                 }
             default:
                 EmptyView()
@@ -977,6 +993,122 @@ struct WeatherDetailView: View {
             parts.append(w)
         }
         return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Worst Recent Conditions
+    // Scans METAR history for the extremes — answers "Has it been worse recently?"
+    // Only surfaces items that are operationally notable, not calm-VFR noise.
+    private struct WorstRecentStats {
+        let maxGust: Int?
+        let maxSustained: Int
+        let minCeilingFt: Int?
+        let minVisSM: Double
+        let worstCategory: FlightCategory
+        let spanHours: Double
+        let obsCount: Int
+
+        var hasRed: Bool {
+            if let ceil = minCeilingFt, ceil < 1000 { return true }
+            if minVisSM < 3.0 { return true }
+            if (maxGust ?? 0) >= 25 || maxSustained >= 25 { return true }
+            if worstCategory == .ifr || worstCategory == .lifr { return true }
+            return false
+        }
+
+        var hasAmber: Bool {
+            if let ceil = minCeilingFt, ceil < 3000 { return true }
+            if minVisSM < 5.0 { return true }
+            if (maxGust ?? 0) >= 15 || maxSustained >= 20 { return true }
+            if worstCategory == .mvfr { return true }
+            return false
+        }
+
+        var hasNotableItems: Bool { hasAmber || hasRed }
+    }
+
+    private func worstRecentStats(_ metars: [Metar]) -> WorstRecentStats? {
+        guard metars.count >= 2 else { return nil }
+        let maxGust = metars.compactMap { $0.wind.gust }.max()
+        let maxSustained = metars.map { $0.wind.speed }.max() ?? 0
+        let minCeiling = metars.compactMap { $0.ceilingFeet }.min()
+        let minVis = metars.map { $0.visibility }.min() ?? 10.0
+        let worstCat = metars.map { $0.flightCategory }.min(by: { categoryRank($0) < categoryRank($1) }) ?? .vfr
+        let spanHours: Double = {
+            guard let newest = metars.first?.observationTime,
+                  let oldest = metars.last?.observationTime else { return 0 }
+            return newest.timeIntervalSince(oldest) / 3600
+        }()
+        let stats = WorstRecentStats(maxGust: maxGust, maxSustained: maxSustained, minCeilingFt: minCeiling, minVisSM: minVis, worstCategory: worstCat, spanHours: spanHours, obsCount: metars.count)
+        return stats.hasNotableItems ? stats : nil
+    }
+
+    private func worstRecentSection(_ stats: WorstRecentStats) -> some View {
+        let spanLabel = stats.spanHours < 1.5 ? "~1 hr" : "~\(Int(stats.spanHours)) hrs"
+        var items: [(icon: String, text: String, color: Color)] = []
+
+        if let gust = stats.maxGust, gust >= 15 {
+            let color: Color = gust >= 25 ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
+            items.append(("wind", "Max Gust: \(gust) kt", color))
+        } else if stats.maxSustained >= 15 {
+            let color: Color = stats.maxSustained >= 25 ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
+            items.append(("wind", "Max Wind: \(stats.maxSustained) kt", color))
+        }
+
+        if let ceil = stats.minCeilingFt, ceil < 3000 {
+            let color: Color
+            if ceil < 500 { color = Color(red: 0.75, green: 0.0, blue: 0.75) }
+            else if ceil < 1000 { color = .red }
+            else { color = Color(red: 0.2, green: 0.5, blue: 1.0) }
+            items.append(("cloud.fill", "Lowest Ceiling: \(ceil.formatted()) ft", color))
+        }
+
+        if stats.minVisSM < 5.0 {
+            let color: Color
+            if stats.minVisSM < 1 { color = Color(red: 0.75, green: 0.0, blue: 0.75) }
+            else if stats.minVisSM < 3 { color = .red }
+            else { color = Color(red: 0.2, green: 0.5, blue: 1.0) }
+            items.append(("eye.fill", "Lowest Vis: \(String(format: "%g", stats.minVisSM)) SM", color))
+        }
+
+        if stats.worstCategory != .vfr {
+            items.append(("exclamationmark.triangle", "Worst Category: \(stats.worstCategory.rawValue)", stats.worstCategory.swiftUIColor))
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+                Text("WORST IN WINDOW  ·  \(spanLabel)  ·  \(stats.obsCount) obs")
+                    .font(.caption2.bold())
+                    .foregroundColor(.secondary)
+                    .tracking(0.5)
+            }
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 8) {
+                    Image(systemName: item.icon)
+                        .foregroundColor(item.color)
+                        .font(.caption)
+                        .frame(width: 16)
+                    Text(item.text)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .fontWeight(.medium)
+                }
+            }
+        }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private func categoryRank(_ cat: FlightCategory) -> Int {
+        switch cat {
+        case .vfr: return 0
+        case .mvfr: return 1
+        case .ifr: return 2
+        case .lifr: return 3
+        default: return 0
+        }
     }
 
     // MARK: - TAF
