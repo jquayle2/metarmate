@@ -94,6 +94,20 @@ class WeatherViewModel: ObservableObject {
             }
 
             lastUpdated = Date()
+
+            // Write widget snapshot for this airport
+            if let currentMetar = metar {
+                let snapshot = WidgetWeatherSnapshot.from(
+                    airport: AirportService.shared.airport(icao: icao) ?? Airport(
+                        icao: icao, iata: nil, name: icao,
+                        latitude: 0, longitude: 0, elevation: 0
+                    ),
+                    metar: currentMetar,
+                    trend: trend,
+                    tafVerification: tafVerification
+                )
+                WidgetDataManager.save(snapshot: snapshot)
+            }
         } catch {
             self.error = error
         }
@@ -104,6 +118,15 @@ class WeatherViewModel: ObservableObject {
         do {
             advisoryWeather = try await OpenMeteoService.shared.fetchAdvisory(for: airport)
             lastUpdated = Date()
+
+            // Write advisory widget snapshot
+            if let advisory = advisoryWeather {
+                let snapshot = WidgetWeatherSnapshot.fromAdvisory(
+                    airport: airport,
+                    advisory: advisory
+                )
+                WidgetDataManager.save(snapshot: snapshot)
+            }
         } catch {
             self.error = error
         }
