@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<title>MetarMate — The Weather App That Thinks Like a Pilot</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+<style>
+
+:root {
+
+--navy: #0a0f1e; --navy-mid: #0f1729; --navy-light: #162040;
+
+--panel: #111827; --border: rgba(255,255,255,0.07);
+
+--vfr: #34c759; --mvfr: #0a84ff; --ifr: #ff3b30; --lifr: #bf5af2;
+
+--amber: #ff9f0a; --text: #e8eaf0; --muted: #7a8299;
+
+--mono: 'Share Tech Mono', monospace;
+
+--sans: 'Barlow', sans-serif;
+
+--cond: 'Barlow Condensed', sans-serif;
+
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body { background: var(--navy); color: var(--text); font-family: var(--sans); overflow-x: hidden; }
+
+nav {
+
+position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+
+display: flex; align-items: center; justify-content: space-between;
+
+padding: 18px 48px;
+
+background: rgba(10,15,30,0.88); backdrop-filter: blur(16px);
+
+border-bottom: 1px solid var(--border);
+
+}
+
+.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+
+.nav-logo-icon {
+
+width: 36px; height: 36px; border-radius: 9px;
+
+background: linear-gradient(135deg, #1a2a4a, #0a1628);
+
+border: 1px solid rgba(10,132,255,0.4);
+
+display: flex; align-items: center; justify-content: center; font-size: 18px;
+
+}
+
+.nav-logo-text { font-family: var(--cond); font-weight: 700; font-size: 20px; letter-spacing: 0.05em; color: var(--text); }
+
+.nav-links { display: flex; gap: 36px; list-style: none; }
+
+.nav-links a { font-family: var(--cond); font-weight: 600; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+
+.nav-links a:hover { color: var(--text); }
+
+.nav-cta { background: var(--mvfr) !important; color: white !important; padding: 8px 20px; border-radius: 6px; }
+
+.hero {
+
+min-height: 100vh; display: flex; flex-direction: column;
+
+align-items: center; justify-content: center;
+
+text-align: center; padding: 120px 24px 80px; position: relative; overflow: hidden;
+
+}
+
+.hero-bg {
+
+position: absolute; inset: 0;
+
+background:
+
+radial-gradient(ellipse 70% 50% at 50% 30%, rgba(10,132,255,0.09) 0%, transparent 70%),
+
+radial-gradient(ellipse 40% 30% at 80% 70%, rgba(52,199,89,0.05) 0%, transparent 60%),
+
+radial-gradient(ellipse 40% 30% at 20% 60%, rgba(255,59,48,0.04) 0%, transparent 60%);
+
+}
+
+.radar-ring {
+
+position: absolute; border-radius: 50%;
+
+border: 1px solid rgba(10,132,255,0.07);
+
+top: 50%; left: 50%; transform: translate(-50%,-50%);
+
+animation: radarPulse 5s ease-out infinite;
+
+}
+
+.radar-ring:nth-child(1) { width: 300px; height: 300px; animation-delay: 0s; }
+
+.radar-ring:nth-child(2) { width: 650px; height: 650px; animation-delay: 1.2s; }
+
+.radar-ring:nth-child(3) { width: 1000px; height: 1000px; animation-delay: 2.4s; }
+
+.radar-ring:nth-child(4) { width: 1400px; height: 1400px; animation-delay: 3.6s; }
+
+@keyframes radarPulse {
+
+0% { opacity: 0; transform: translate(-50%,-50%) scale(0.85); }
+
+15% { opacity: 1; }
+
+100% { opacity: 0; transform: translate(-50%,-50%) scale(1); }
+
+}
+
+.hero-badge {
+
+display: inline-flex; align-items: center; gap: 8px;
+
+background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.28);
+
+border-radius: 100px; padding: 6px 18px;
+
+font-family: var(--mono); font-size: 11px; color: var(--mvfr); letter-spacing: 0.1em;
+
+margin-bottom: 32px; animation: fadeUp 0.6s ease both; position: relative; z-index: 2;
+
+}
+
+.badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--vfr); box-shadow: 0 0 8px var(--vfr); animation: blink 2s ease infinite; }
+
+@keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+
+.hero h1 {
+
+font-family: var(--cond); font-weight: 800;
+
+font-size: clamp(56px, 9vw, 108px); letter-spacing: -0.01em; line-height: 0.95;
+
+margin-bottom: 16px; animation: fadeUp 0.6s 0.1s ease both; position: relative; z-index: 2;
+
+}
+
+.hero h1 span {
+
+background: linear-gradient(135deg, #5ab4ff, #0a84ff, #004fb3);
+
+-webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+
+}
+
+.hero-tagline {
+
+font-family: var(--mono); font-size: clamp(13px, 1.8vw, 17px); color: var(--muted);
+
+letter-spacing: 0.06em; margin-bottom: 52px;
+
+animation: fadeUp 0.6s 0.2s ease both; position: relative; z-index: 2;
+
+}
+
+.hero-tagline em { color: var(--amber); font-style: normal; }
+
+.hero-cta-group {
+
+display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+
+margin-bottom: 80px; animation: fadeUp 0.6s 0.3s ease both; position: relative; z-index: 2;
+
+}
+
+.btn-primary {
+
+display: inline-flex; align-items: center; gap: 10px;
+
+background: var(--mvfr); color: white; text-decoration: none;
+
+font-family: var(--cond); font-weight: 700; font-size: 16px; letter-spacing: 0.05em;
+
+padding: 14px 32px; border-radius: 8px; transition: all 0.2s;
+
+box-shadow: 0 4px 24px rgba(10,132,255,0.35); border: none; cursor: pointer;
+
+}
+
+.btn-primary:hover { background: #0070e0; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(10,132,255,0.5); }
+
+.btn-secondary {
+
+display: inline-flex; align-items: center; gap: 10px;
+
+background: transparent; color: var(--text); text-decoration: none;
+
+font-family: var(--cond); font-weight: 600; font-size: 16px; letter-spacing: 0.05em;
+
+padding: 14px 32px; border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s;
+
+}
+
+.btn-secondary:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.04); }
+
+.hero-phones { display: flex; gap: 20px; align-items: flex-end; justify-content: center; animation: fadeUp 0.9s 0.4s ease both; position: relative; z-index: 2; }
+
+.phone-frame {
+
+width: 210px; border-radius: 38px; border: 1.5px solid rgba(255,255,255,0.1);
+
+background: #0d1526; overflow: hidden;
+
+box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+
+}
+
+.phone-frame.center { width: 235px; transform: translateY(-24px); border-color: rgba(255,255,255,0.14); box-shadow: 0 60px 100px rgba(0,0,0,0.7), 0 0 48px rgba(10,132,255,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
+
+.phone-frame.side { opacity: 0.65; }
+
+.phone-frame img { width: 100%; display: block; }
+
+.phone-placeholder {
+
+aspect-ratio: 9/19.5; display: flex; flex-direction: column;
+
+align-items: center; justify-content: center; gap: 10px;
+
+background: linear-gradient(180deg, #0f1c35, #080e1c);
+
+color: rgba(120,150,200,0.35); font-family: var(--mono); font-size: 11px;
+
+letter-spacing: 0.06em; text-align: center; padding: 20px;
+
+}
+
+.phone-placeholder .ph-icon { font-size: 30px; opacity: 0.3; margin-bottom: 4px; }
+
+.category-bar { display: flex; justify-content: center; }
+
+.cat-item { flex: 1; max-width: 200px; padding: 18px 12px; text-align: center; border-top: 3px solid; }
+
+.cat-item.vfr{ border-color: var(--vfr);background: rgba(52,199,89,0.06); }
+
+.cat-item.mvfr { border-color: var(--mvfr); background: rgba(10,132,255,0.06); }
+
+.cat-item.ifr{ border-color: var(--ifr);background: rgba(255,59,48,0.06); }
+
+.cat-item.lifr { border-color: var(--lifr); background: rgba(191,90,242,0.06); }
+
+.cat-label { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: 0.1em; }
+
+.cat-item.vfr .cat-label{ color: var(--vfr); }
+
+.cat-item.mvfr .cat-label { color: var(--mvfr); }
+
+.cat-item.ifr .cat-label{ color: var(--ifr); }
+
+.cat-item.lifr .cat-label { color: var(--lifr); }
+
+.cat-desc { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: var(--cond); letter-spacing: 0.04em; }
+
+section { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
+
+.section-label {
+
+font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+
+color: var(--mvfr); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+
+}
+
+.section-label::before { content: ''; width: 24px; height: 1px; background: var(--mvfr); }
+
+.section-title { font-family: var(--cond); font-weight: 800; font-size: clamp(34px,5vw,54px); letter-spacing: -0.01em; line-height: 1.05; margin-bottom: 20px; }
+
+.section-sub { font-size: 17px; color: var(--muted); max-width: 580px; line-height: 1.75; }
+
+.features-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-top: 64px; }
+
+.feature-card { background: var(--navy-mid); padding: 40px 34px; transition: background 0.22s; }
+
+.feature-card:hover { background: var(--navy-light); }
+
+.feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+
+.fi-blue { background: rgba(10,132,255,0.12); border: 1px solid rgba(10,132,255,0.2); }
+
+.fi-green{ background: rgba(52,199,89,0.10);border: 1px solid rgba(52,199,89,0.2); }
+
+.fi-amber{ background: rgba(255,159,10,0.10); border: 1px solid rgba(255,159,10,0.2); }
+
+.fi-red{ background: rgba(255,59,48,0.10);border: 1px solid rgba(255,59,48,0.2); }
+
+.fi-purple { background: rgba(191,90,242,0.10); border: 1px solid rgba(191,90,242,0.2); }
+
+.fi-teal { background: rgba(90,200,250,0.10); border: 1px solid rgba(90,200,250,0.2); }
+
+.feature-title { font-family: var(--cond); font-weight: 700; font-size: 20px; margin-bottom: 10px; }
+
+.feature-desc{ font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+.metar-demo { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 36px; font-family: var(--mono); font-size: 13px; margin-top: 64px; position: relative; }
+
+.metar-demo::before { content: 'LIVE DECODE EXAMPLE'; position: absolute; top: 18px; right: 24px; font-size: 10px; letter-spacing: 0.14em; color: var(--muted); }
+
+.metar-raw { color: var(--muted); line-height: 1.6; margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--border); word-break: break-all; }
+
+.metar-raw span { color: var(--amber); }
+
+.metar-decoded { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+
+.metar-field-label { font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+
+.metar-field-value { font-size: 15px; font-family: var(--sans); font-weight: 500; }
+
+.mv-green { color: var(--vfr); } .mv-amber { color: var(--amber); } .mv-red { color: var(--ifr); }
+
+.pilot-notes-demo { margin-top: 64px; display: flex; flex-direction: column; gap: 12px; }
+
+.note-card { display: flex; align-items: stretch; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+.note-strip { width: 5px; flex-shrink: 0; }
+
+.note-strip.red { background: var(--ifr); }
+
+.note-strip.amber { background: var(--amber); }
+
+.note-strip.green { background: var(--vfr); }
+
+.note-body { padding: 18px 22px; flex: 1; }
+
+.note-title { font-family: var(--cond); font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+
+.note-desc{ font-size: 13px; color: var(--muted); }
+
+.steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 2px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-top: 64px; }
+
+.step { background: var(--navy-mid); padding: 40px 30px; }
+
+.step-num{ font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; color: var(--mvfr); margin-bottom: 20px; }
+
+.step-title { font-family: var(--cond); font-weight: 700; font-size: 20px; margin-bottom: 12px; }
+
+.step-desc{ font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+.diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 64px; }
+
+.diff-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 36px; }
+
+.diff-card.highlight { border-color: rgba(10,132,255,0.22); background: linear-gradient(135deg, rgba(10,132,255,0.06), var(--panel) 60%); }
+
+.diff-tag { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; margin-bottom: 20px; }
+
+.diff-tag.new { background: rgba(52,199,89,0.12); color: var(--vfr); border: 1px solid rgba(52,199,89,0.2); }
+
+.diff-tag.smart { background: rgba(10,132,255,0.12); color: var(--mvfr); border: 1px solid rgba(10,132,255,0.2); }
+
+.diff-title { font-family: var(--cond); font-weight: 700; font-size: 22px; margin-bottom: 12px; }
+
+.diff-desc{ font-size: 14px; color: var(--muted); line-height: 1.72; }
+
+.mission-block { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--mvfr); border-radius: 0 16px 16px 0; padding: 52px; font-size: 18px; line-height: 1.85; color: #b0b8d0; margin-top: 48px; }
+
+.contact-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 52px; }
+
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+
+.form-group.full { grid-column: 1 / -1; }
+
+.form-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.form-input, .form-textarea, .form-select { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; color: var(--text); font-family: var(--sans); font-size: 15px; transition: border-color 0.2s; outline: none; width: 100%; }
+
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--mvfr); }
+
+.form-textarea { min-height: 140px; resize: vertical; }
+
+.form-select { appearance: none; cursor: pointer; }
+
+footer { border-top: 1px solid var(--border); padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+
+.footer-left { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.9; }
+
+.footer-links { display: flex; gap: 28px; }
+
+.footer-links a { font-family: var(--cond); font-size: 13px; letter-spacing: 0.06em; color: var(--muted); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+
+.footer-links a:hover { color: var(--text); }
+
+.section-divider { max-width: 1100px; margin: 0 auto; border: none; border-top: 1px solid var(--border); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+
+@media (max-width: 900px) {
+
+.features-grid { grid-template-columns: 1fr 1fr; }
+
+.metar-decoded { grid-template-columns: 1fr 1fr; }
+
+.steps { grid-template-columns: 1fr 1fr; }
+
+}
+
+@media (max-width: 640px) {
+
+nav { padding: 16px 20px; }
+
+.nav-links { display: none; }
+
+.hero { padding: 100px 20px 60px; }
+
+.phone-frame.side { display: none; }
+
+.features-grid, .metar-decoded, .steps, .diff-grid, .contact-form { grid-template-columns: 1fr; }
+
+footer { flex-direction: column; padding: 36px 20px; }
+
+.cat-desc { display: none; }
+
+.mission-block { padding: 32px 24px; font-size: 16px; }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<nav>
+
+<a href="#" class="nav-logo">
+
+<div class="nav-logo-icon">✈️</div>
+
+<span class="nav-logo-text">MetarMate</span>
+
+</a>
+
+<ul class="nav-links">
+
+<li><a href="#features">Features</a></li>
+
+<li><a href="#how">How It Works</a></li>
+
+<li><a href="#mission">Mission</a></li>
+
+<li><a href="#support">Support</a></li>
+
+<li><a href="#" class="nav-cta">App Store</a></li>
+
+</ul>
+
+</nav>
+
+<div class="hero">
+
+<div class="hero-bg">
+
+<div class="radar-ring"></div><div class="radar-ring"></div>
+
+<div class="radar-ring"></div><div class="radar-ring"></div>
+
+</div>
+
+<div class="hero-badge"><div class="badge-dot"></div>NOW ON TESTFLIGHT &nbsp;·&nbsp; iOS 17+</div>
+
+<h1>METAR<span>Mate</span></h1>
+
+<p class="hero-tagline">The Weather App That <em>Thinks Like a Pilot.</em></p>
+
+<div class="hero-cta-group">
+
+<a href="#" class="btn-primary">
+
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+
+Download on the App Store
+
+</a>
+
+<a href="#features" class="btn-secondary">See Features ↓</a>
+
+</div>
+
+<div class="hero-phones">
+
+<div class="phone-frame side">
+
+<!-- Replace with: <img src="screenshots/airport-list.png" alt="Airport list" /> -->
+
+<div class="phone-placeholder"><div class="ph-icon">📋</div><div>Airport List</div><div style="font-size:9px;margin-top:4px;opacity:0.3;">screenshot 1</div></div>
+
+</div>
+
+<div class="phone-frame center">
+
+<!-- Replace with: <img src="screenshots/weather-detail.png" alt="Weather detail" /> -->
+
+<div class="phone-placeholder"><div class="ph-icon">🌤</div><div>Weather Detail</div><div style="font-size:9px;margin-top:4px;opacity:0.3;">screenshot 2</div></div>
+
+</div>
+
+<div class="phone-frame side">
+
+<!-- Replace with: <img src="screenshots/density-alt.png" alt="Density altitude" /> -->
+
+<div class="phone-placeholder"><div class="ph-icon">🏔</div><div>Density Alt</div><div style="font-size:9px;margin-top:4px;opacity:0.3;">screenshot 3</div></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="category-bar">
+
+<div class="cat-item vfr"><div class="cat-label">VFR</div><div class="cat-desc">Ceiling &gt;3000 · Vis &gt;5SM</div></div>
+
+<div class="cat-item mvfr"><div class="cat-label">MVFR</div><div class="cat-desc">Ceiling 1000–3000 · Vis 3–5SM</div></div>
+
+<div class="cat-item ifr"><div class="cat-label">IFR</div><div class="cat-desc">Ceiling 500–999 · Vis 1–3SM</div></div>
+
+<div class="cat-item lifr"><div class="cat-label">LIFR</div><div class="cat-desc">Ceiling &lt;500 · Vis &lt;1SM</div></div>
+
+</div>
+
+<section id="features">
+
+<div class="section-label">Features</div>
+
+<h2 class="section-title">Decision support.<br>Not just data.</h2>
+
+<p class="section-sub">MetarMate interprets aviation weather the way an experienced pilot would — telling you what conditions mean for your flight, not just what the numbers say.</p>
+
+<div class="features-grid">
+
+<div class="feature-card"><div class="feature-icon fi-blue">🌐</div><div class="feature-title">Plain English METAR Decoding</div><div class="feature-desc">Raw METAR strings translated into pilot-readable summaries. No more mentally parsing 10BKN025 at 6 AM before a flight.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-green">🎨</div><div class="feature-title">Flight Category Color Coding</div><div class="feature-desc">VFR green · MVFR blue · IFR red · LIFR magenta. Consistent with FAA sectional chart conventions — the colors you already know mean something.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-amber">💨</div><div class="feature-title">Wind Analysis</div><div class="feature-desc">Sustained and gust components color-coded at operationally meaningful thresholds. Orange caution, red warning — never ambiguous.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-red">📣</div><div class="feature-title">Pilot Notes</div><div class="feature-desc">Automatic flagging of conditions that matter — low temp/dewpoint spread, gusts above threshold, deteriorating trends. What a CFI would circle on a weather printout.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-purple">🔮</div><div class="feature-title">TAF Verification</div><div class="feature-desc">Compares what the forecast promised vs. what actually happened. Per-metric scoring on wind, ceiling, and visibility. Know when a model is running optimistic.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-teal">🏔</div><div class="feature-title">Density Altitude</div><div class="feature-desc">Calculated with performance impact language calibrated for your environment. Critical for hot/high operations — pilots in the desert need real numbers.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-green">📍</div><div class="feature-title">Nearest Airport Search</div><div class="feature-desc">Location-based nearest airports with SwiftData-backed favorites. Fastest-accessed airports always at the top.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-blue">🎤</div><div class="feature-title">Siri Integration</div><div class="feature-desc">"Hey Siri, what's the weather at KVGT?" Hands-free weather briefings via App Intents — for when you're already strapped in.</div></div>
+
+<div class="feature-card"><div class="feature-icon fi-amber">🗺</div><div class="feature-title">Advisory Weather for Uncontrolled Strips</div><div class="feature-desc">Thousands of airports have no official METAR. MetarMate fills the gap with modeled estimates — clearly marked advisory, never confused with official data.</div></div>
+
+</div>
+
+</section>
+
+<section>
+
+<div class="section-label">Live Decode</div>
+
+<h2 class="section-title">This is what we translate.</h2>
+
+<p class="section-sub">Every METAR decoded into language that informs decisions, not just satisfies curiosity.</p>
+
+<div class="metar-demo">
+
+<div class="metar-raw">METAR KLAS <span>301753Z</span> 26015G24KT <span>10SM</span> FEW100 <span>35/10</span> A2990 RMK AO2 SLP126 T03500100</div>
+
+<div class="metar-decoded">
+
+<div><div class="metar-field-label">Flight Category</div><div class="metar-field-value mv-green">VFR ✓</div></div>
+
+<div><div class="metar-field-label">Wind</div><div class="metar-field-value mv-amber">260° at 15G24 kt ⚠</div></div>
+
+<div><div class="metar-field-label">Visibility</div><div class="metar-field-value mv-green">10 SM — Clear</div></div>
+
+<div><div class="metar-field-label">Sky</div><div class="metar-field-value">Few clouds at 10,000 ft</div></div>
+
+<div><div class="metar-field-label">Temp / Dewpoint</div><div class="metar-field-value mv-amber">35°C / 10°C — 25° spread</div></div>
+
+<div><div class="metar-field-label">Density Altitude</div><div class="metar-field-value mv-red">~5,800 ft — Performance critical</div></div>
+
+</div>
+
+</div>
+
+</section>
+
+<hr class="section-divider" />
+
+<section>
+
+<div class="section-label">Pilot Notes</div>
+
+<h2 class="section-title">The alerts a pilot actually needs.</h2>
+
+<p class="section-sub">MetarMate surfaces operationally meaningful conditions automatically — the things an experienced CFI would circle on a weather printout.</p>
+
+<div class="pilot-notes-demo">
+
+<div class="note-card"><div class="note-strip red"></div><div class="note-body"><div class="note-title">⚠ Gusts 9 kt above forecast</div><div class="note-desc">Actual: 15G24 kt · TAF forecast: G15 kt — Conditions stronger than predicted. Verify crosswind limits.</div></div></div>
+
+<div class="note-card"><div class="note-strip amber"></div><div class="note-body"><div class="note-title">⚠ Density altitude significant</div><div class="note-desc">~5,800 ft pressure altitude. Expect reduced climb performance and longer ground roll. Review aircraft POH tables.</div></div></div>
+
+<div class="note-card"><div class="note-strip green"></div><div class="note-body"><div class="note-title">✓ Visibility on target</div><div class="note-desc">10 SM reported — TAF forecast 10 SM. No divergence detected.</div></div></div>
+
+</div>
+
+</section>
+
+<hr class="section-divider" />
+
+<section>
+
+<div class="section-label">What Sets It Apart</div>
+
+<h2 class="section-title">Built for gaps other apps ignore.</h2>
+
+<p class="section-sub">Capabilities that don't exist anywhere else in this combination.</p>
+
+<div class="diff-grid">
+
+<div class="diff-card highlight"><div class="diff-tag new">Unique Feature</div><div class="diff-title">Weather for Airports With No METAR</div><div class="diff-desc">Thousands of grass strips, backcountry airstrips, and small uncontrolled airports have no official weather reporting. MetarMate uses modeled weather to give you an estimated flight category with full conditions — clearly marked advisory so you never mistake it for official data.</div></div>
+
+<div class="diff-card highlight"><div class="diff-tag smart">Smart Analysis</div><div class="diff-title">TAF Verification Scoring</div><div class="diff-desc">Know how well the forecast performed against what actually happened. Per-metric scoring on wind, ceiling, and visibility shows whether conditions were better or worse than predicted — measured as operational surprise, not just raw math.</div></div>
+
+<div class="diff-card"><div class="diff-tag smart">Safety First</div><div class="diff-title">Pilot-Safe Color Conventions</div><div class="diff-desc">Red means danger. Not "highlight." Not "selected." MetarMate uses FAA-consistent color conventions throughout — because in aviation, colors need to mean the same thing every time you look.</div></div>
+
+<div class="diff-card"><div class="diff-tag smart">Siri Ready</div><div class="diff-title">Hands-Free Briefings</div><div class="diff-desc">Ask Siri for a weather briefing at any airport while you're preflight or walking to the aircraft. App Intents integration delivers the most operationally relevant summary without touching your phone.</div></div>
+
+</div>
+
+</section>
+
+<hr class="section-divider" />
+
+<section id="how">
+
+<div class="section-label">How It Works</div>
+
+<h2 class="section-title">Open. Tap. Brief.</h2>
+
+<p class="section-sub">No setup. No account. No weather jargon required.</p>
+
+<div class="steps">
+
+<div class="step"><div class="step-num">01</div><div class="step-title">Find Your Airport</div><div class="step-desc">Nearest airports load automatically based on your location. Search by name, ICAO, or IATA code. Save favorites for instant access.</div></div>
+
+<div class="step"><div class="step-num">02</div><div class="step-title">See the Picture</div><div class="step-desc">Flight category, wind, visibility, ceiling — decoded into plain English the moment you tap. Color-coded at a glance, detailed when you need it.</div></div>
+
+<div class="step"><div class="step-num">03</div><div class="step-title">Read the Trend</div><div class="step-desc">Observed conditions over time, forecast verification score, and TAF deviation summary. Know if conditions are improving or deteriorating before you go.</div></div>
+
+<div class="step"><div class="step-num">04</div><div class="step-title">Make the Call</div><div class="step-desc">Pilot Notes surface the conditions that affect your decision. MetarMate doesn't make the go/no-go call — but it gives you everything you need to make it confidently.</div></div>
+
+</div>
+
+</section>
+
+<hr class="section-divider" />
+
+<section id="mission">
+
+<div class="section-label">Mission</div>
+
+<h2 class="section-title">Built by a pilot.</h2>
+
+<div class="mission-block">
+
+General aviation pilots deserve weather tools that think the way they do. The raw METAR format exists for machines — MetarMate exists to translate it back into language that informs real decisions under real pressure.
+
+<br /><br />
+
+Every feature in MetarMate started from a genuine operational need: the density altitude that catches you by surprise at a hot desert strip, the TAF that was optimistic about the morning fog, the grass runway that has no official weather reporting at all. These are problems pilots actually face. MetarMate is built around solving them.
+
+</div>
+
+</section>
+
+<hr class="section-divider" />
+
+<section id="privacy">
+
+<div class="section-label">Privacy</div>
+
+<h2 class="section-title">Your data stays on your device.</h2>
+
+<p class="section-sub" style="max-width:680px;font-size:16px;line-height:1.8;">MetarMate does not collect, sell, or share personal data. Weather is fetched from public FAA and Open-Meteo APIs. Favorites and preferences are stored locally using SwiftData and never transmitted off your device. No accounts. No analytics. No ads — ever.</p>
+
+</section>
+
+<hr class="section-divider" />
+
+<section id="support">
+
+<div class="section-label">Support</div>
+
+<h2 class="section-title">Get in touch.</h2>
+
+<p class="section-sub">Found a bug? Have a feature request? Want to see a specific airport type covered? We're listening.</p>
+
+<form class="contact-form" onsubmit="return false;">
+
+<div class="form-group"><label class="form-label" for="name">Name</label><input class="form-input" id="name" type="text" placeholder="Your name" /></div>
+
+<div class="form-group"><label class="form-label" for="email">Email</label><input class="form-input" id="email" type="email" placeholder="you@email.com" /></div>
+
+<div class="form-group full"><label class="form-label" for="topic">Topic</label><select class="form-select" id="topic"><option>Bug Report</option><option>Feature Request</option><option>Airport Coverage</option><option>Question</option><option>Other</option></select></div>
+
+<div class="form-group full"><label class="form-label" for="msg">Message</label><textarea class="form-textarea" id="msg" placeholder="Tell us what's on your mind..."></textarea></div>
+
+<div class="form-group full"><button class="btn-primary" onclick="alert('Form submission coming soon!')">Send Message</button></div>
+
+</form>
+
+</section>
+
+<footer>
+
+<div class="footer-left">© 2026 Jeff Quayle &nbsp;·&nbsp; MetarMate<br />Weather data: NOAA Aviation Weather Center · Open-Meteo (CC BY 4.0)</div>
+
+<div class="footer-links"><a href="#privacy">Privacy</a><a href="#support">Support</a><a href="#">App Store</a></div>
+
+</footer>
+
+</body>
+
+</html>
