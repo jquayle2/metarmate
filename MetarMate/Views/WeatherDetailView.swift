@@ -1462,8 +1462,9 @@ struct WeatherDetailView: View {
 
         let daFt    = wx.densityAltitudeFt ?? 0
         let daPenalty = daFt - Double(airport.elevation)
-        let daAmber = daPenalty >= 1500
-        let daRed   = daPenalty >= 3000
+        let daHpLoss = max(0, daPenalty / 1000.0 * 3.0)
+        let daAmber = daHpLoss >= 10
+        let daRed   = daHpLoss >= 20
 
         ForEach(prefs.advisorySections) { config in
             switch config.id {
@@ -1786,10 +1787,11 @@ struct WeatherDetailView: View {
         if let da = wx.densityAltitudeFt {
             let elevFt = Double(airport.elevation)
             let penalty = da - elevFt
-            if penalty >= 3000 {
-                notes.append(.init(icon: "arrow.up.to.line", text: String(format: "High density altitude ~%.0f ft — significant power loss, extended takeoff roll expected", da), isWarning: true))
-            } else if penalty >= 1500 {
-                notes.append(.init(icon: "arrow.up", text: String(format: "Elevated density altitude ~%.0f ft — reduced performance; verify POH", da), isWarning: false))
+            let hpLoss = max(0, penalty / 1000.0 * 3.0)
+            if hpLoss >= 20 {
+                notes.append(.init(icon: "arrow.up.to.line", text: String(format: "High density altitude ~%.0f ft — ~%.0f%% power loss, extended takeoff roll expected", da, hpLoss), isWarning: true))
+            } else if hpLoss >= 10 {
+                notes.append(.init(icon: "arrow.up", text: String(format: "Elevated density altitude ~%.0f ft — ~%.0f%% power loss est.; verify POH", da, hpLoss), isWarning: false))
             }
         }
 
