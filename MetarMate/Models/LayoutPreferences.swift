@@ -69,8 +69,8 @@ struct SectionConfig: Codable, Identifiable {
 class LayoutPreferences: ObservableObject {
     static let shared = LayoutPreferences()
 
-    private let metarKey   = "metarSectionLayout_v1"
-    private let advisoryKey = "advisorySectionLayout_v1"
+    private let metarKey    = "metarSectionLayout_v2"
+    private let advisoryKey = "advisorySectionLayout_v2"
 
     // METAR section order + visibility
     @Published var metarSections: [SectionConfig] {
@@ -103,8 +103,8 @@ class LayoutPreferences: ObservableObject {
     ]
 
     private init() {
-        metarSections   = Self.load(key: "metarSectionLayout_v1")   ?? Self.defaultMetarSections
-        advisorySections = Self.load(key: "advisorySectionLayout_v1") ?? Self.defaultAdvisorySections
+        metarSections    = Self.load(key: "metarSectionLayout_v2")    ?? Self.defaultMetarSections
+        advisorySections = Self.load(key: "advisorySectionLayout_v2") ?? Self.defaultAdvisorySections
     }
 
     // MARK: - Persistence
