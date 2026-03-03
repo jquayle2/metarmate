@@ -4,6 +4,7 @@ import Combine
 // MARK: - Section Visibility Mode
 enum SectionVisibility: String, Codable, CaseIterable {
     case always         = "Always"
+    case changingOnly   = "Changing only"
     case amberAndAbove  = "Amber or above"
     case redOnly        = "Red only"
     case hidden         = "Hidden"
@@ -51,7 +52,9 @@ enum SectionID: String, Codable, CaseIterable {
 
     var availableModes: [SectionVisibility] {
         switch self {
-        case .pilotNotes, .performance, .trend, .tafVerification,
+        case .trend:
+            return [.always, .changingOnly, .amberAndAbove, .redOnly, .hidden]
+        case .pilotNotes, .performance, .tafVerification,
              .advPerformance, .advPilotAdvisories:
             return [.always, .amberAndAbove, .redOnly, .hidden]
         default:
@@ -161,7 +164,7 @@ class LayoutPreferences: ObservableObject {
     }
 
     // MARK: - Visibility check helpers
-    func shouldShow(_ id: SectionID, amberCondition: Bool = false, redCondition: Bool = false) -> Bool {
+    func shouldShow(_ id: SectionID, amberCondition: Bool = false, redCondition: Bool = false, changingCondition: Bool = false) -> Bool {
         let config: SectionConfig?
         if id.rawValue.hasPrefix("adv") {
             config = advisorySections.first(where: { $0.id == id })
@@ -171,6 +174,7 @@ class LayoutPreferences: ObservableObject {
         guard let c = config else { return true }
         switch c.visibility {
         case .always:        return true
+        case .changingOnly:  return changingCondition
         case .amberAndAbove: return amberCondition || redCondition
         case .redOnly:       return redCondition
         case .hidden:        return false

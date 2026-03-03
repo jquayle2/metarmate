@@ -89,6 +89,7 @@ struct WeatherDetailView: View {
         let daAmber = da.hpLossPercent >= 10
         let daRed   = da.hpLossPercent >= 20
 
+        let trendChanging = vm.trend.map { $0.overall != .steady && $0.overall != .unknown } ?? false
         let trendAmber = vm.trend.map { $0.overall != .unknown && $0.overall != .steady } ?? false
         let trendRed   = vm.trend.map { $0.overall == .deteriorating } ?? false
 
@@ -117,7 +118,7 @@ struct WeatherDetailView: View {
                 }
             case .trend:
                 if let trend = vm.trend,
-                   prefs.shouldShow(.trend, amberCondition: trendAmber, redCondition: trendRed) {
+                   prefs.shouldShow(.trend, amberCondition: trendAmber, redCondition: trendRed, changingCondition: trendChanging) {
                     trendSection(trend, verification: vm.tafVerification)
                 }
             case .history:

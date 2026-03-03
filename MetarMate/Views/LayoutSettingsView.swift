@@ -162,6 +162,7 @@ private struct SectionConfigRow: View {
     private func visibilityColor(_ v: SectionVisibility) -> Color {
         switch v {
         case .always:        return .green
+        case .changingOnly:  return Color(red: 0.2, green: 0.5, blue: 1.0)  // blue = informational
         case .amberAndAbove: return Color(red: 1.0, green: 0.6, blue: 0.0)
         case .redOnly:       return .red
         case .hidden:        return Color(.systemGray3)
