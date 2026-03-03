@@ -233,7 +233,7 @@ struct HomeScreenSmallView: View {
                             .font(.system(.callout, design: .monospaced))
                     }
 
-                    // Visibility + ceiling
+                    // Visibility + ceiling + age
                     HStack(spacing: 6) {
                         Text("\(snap.visibility.visibilityString) SM")
                             .font(.system(.caption2, design: .monospaced))
@@ -243,11 +243,15 @@ struct HomeScreenSmallView: View {
                                 .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
+                        Spacer()
+                        Text(ageString(snap.observationTime))
+                            .font(.system(.caption2, design: .monospaced))
+                            .foregroundStyle(.tertiary)
                     }
 
                     Spacer(minLength: 0)
 
-                    // Trend + age
+                    // Trend (full width)
                     HStack(spacing: 3) {
                         Image(systemName: snap.trendDirection.systemImage)
                             .font(.caption2)
@@ -256,10 +260,6 @@ struct HomeScreenSmallView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                        Spacer()
-                        Text(ageString(snap.observationTime))
-                            .font(.system(.caption2, design: .monospaced))
-                            .foregroundStyle(.tertiary)
                     }
 
                     // Advisory indicator
