@@ -25,77 +25,101 @@ struct FlyingWeatherIntent: AppIntent {
 
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
         NSLog("FlyingWeatherIntent: perform() called, airport entity='\(airport?.id ?? "nil")'")
-        // 1. Resolve airport — from parameter or nearest
+        // 1. Resolve airport — from parameter, Siri prompt, or nearest
         let resolvedAirport: Airport
 
         if let entity = airport {
-            // Normalize what Siri transcribed — strip spaces, uppercase
-            let code = entity.id
-                .components(separatedBy: .whitespaces)
-                .joined()
-                .uppercased()
+            // Came from Shortcuts picker — entity.id is already a clean ICAO code
+            let code = entity.id.uppercased()
             NSLog("FlyingWeatherIntent: airport entity.id='\(entity.id)' normalized='\(code)'")
             guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
                 return .result(
-                    dialog: IntentDialog("I heard \(code). I couldn't find that airport. Try again."),
+                    dialog: IntentDialog("I couldn't find an airport with the code \(code)."),
                     view: snippetView(label: code, category: .unknown, detail: "Airport not found")
                 )
             }
             resolvedAirport = found
         } else {
-            // Fall back to nearest airport via location
-            let location: CLLocation
+            // Siri didn't fill the parameter — ask interactively or fall back to nearest.
+            // Request a value from the user; if they say "nearest" or cancel we fall back.
+            let requestedEntity: AirportEntity
             do {
-                location = try await IntentLocationHelper.currentLocation()
+                requestedEntity = try await $airport.requestValue("Which airport? Say the ICAO code, like K-L-A-S, or say nearest airport.")
             } catch {
+                // User said nearest, cancelled, or Siri timed out — use nearest airport
+                let location: CLLocation
+                do {
+                    location = try await IntentLocationHelper.currentLocation()
+                } catch {
+                    return .result(
+                        dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
+                        view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
+                    )
+                }
+                let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
+                guard let nearest = airports.first else {
+                    return .result(
+                        dialog: IntentDialog("I couldn't find a nearby airport."),
+                        view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
+                    )
+                }
+                resolvedAirport = nearest
+                // Skip to weather fetch below
+                return try await fetchAndRespond(airport: resolvedAirport)
+            }
+            let code = requestedEntity.id
+                .components(separatedBy: .whitespaces)
+                .joined()
+                .uppercased()
+            NSLog("FlyingWeatherIntent: requested entity='\(requestedEntity.id)' normalized='\(code)'")
+            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
                 return .result(
-                    dialog: IntentDialog("I need location access to find your nearest airport. Please enable it in Settings."),
-                    view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
+                    dialog: IntentDialog("I couldn't find an airport with the code \(code). Try again."),
+                    view: snippetView(label: code, category: .unknown, detail: "Airport not found")
                 )
             }
-            let airports = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
-            guard let nearest = airports.first else {
-                return .result(
-                    dialog: IntentDialog("I couldn't find a nearby airport."),
-                    view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
-                )
-            }
-            resolvedAirport = nearest
+            resolvedAirport = found
         }
+
+        return try await fetchAndRespond(airport: resolvedAirport)
+    }
+
+    // MARK: - Fetch weather and build response
+    private func fetchAndRespond(airport: Airport) async throws -> some ProvidesDialog & ShowsSnippetView {
 
         // 2. Fetch METAR history
         let metarHistory: [Metar]
         do {
-            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: resolvedAirport.icao, hours: 6)
+            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: airport.icao, hours: 6)
         } catch {
             return .result(
-                dialog: IntentDialog("No weather data available for \(resolvedAirport.name)."),
-                view: snippetView(label: resolvedAirport.icao, category: .unknown, detail: "No data available")
+                dialog: IntentDialog("No weather data available for \(airport.name)."),
+                view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
             )
         }
 
         guard let metar = metarHistory.first else {
             return .result(
-                dialog: IntentDialog("No weather data available for \(resolvedAirport.name)."),
-                view: snippetView(label: resolvedAirport.icao, category: .unknown, detail: "No data available")
+                dialog: IntentDialog("No weather data available for \(airport.name)."),
+                view: snippetView(label: airport.icao, category: .unknown, detail: "No data available")
             )
         }
 
         // 3. Fetch TAF (optional)
-        let taf = try? await WeatherService.shared.fetchTaf(for: resolvedAirport.icao)
+        let taf = try? await WeatherService.shared.fetchTaf(for: airport.icao)
 
         // 4. Derive trend
         let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
 
         // 5. Build spoken dialog
-        let spokenText = buildDialog(airportName: resolvedAirport.name, metar: metar, trend: trend)
+        let spokenText = buildDialog(airportName: airport.name, metar: metar, trend: trend)
 
         // 6. Build snippet summary
         let detail = buildSummaryLine(metar: metar)
 
         return .result(
             dialog: IntentDialog(stringLiteral: spokenText),
-            view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)", category: metar.flightCategory, detail: detail)
+            view: snippetView(label: "\(airport.icao) · \(airport.name)", category: metar.flightCategory, detail: detail)
         )
     }
 
