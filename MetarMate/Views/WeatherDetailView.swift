@@ -1091,12 +1091,17 @@ struct WeatherDetailView: View {
         // Build deviation items — only include when threshold exceeded
         var items: [(icon: String, text: String, color: Color)] = []
 
-        // Wind: threshold >5kt
-        if let wd = windDiv, abs(wd) > 5 {
-            let sign = wd > 0 ? "+" : ""
+        // Wind: compare gust divergence (preferred) then sustained, threshold >5kt
+        let gustDiv: Int? = {
+            guard let actualGust = point.actualGustKt, let forecastGust = point.forecastGustKt else { return nil }
+            return actualGust - forecastGust
+        }()
+        let windReportDiv = gustDiv ?? windDiv  // prefer gust divergence if available
+        if let wd = windReportDiv, abs(wd) > 5 {
             let stronger = wd > 0 ? "stronger" : "lighter"
+            let label = gustDiv != nil ? "Gusts \(abs(wd)) kt \(stronger) than forecast" : "Wind \(abs(wd)) kt \(stronger) than forecast"
             let color: Color = abs(wd) >= 10 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
-            items.append(("wind", "Gusts \(sign)\(abs(wd)) kt \(stronger) than forecast", color))
+            items.append(("wind", label, color))
         }
 
         // Ceiling: threshold >300ft
@@ -1127,7 +1132,7 @@ struct WeatherDetailView: View {
         }
 
         // On-target items for parameters that were forecast and verified correctly
-        let windOnTarget = windDiv.map { abs($0) <= 5 } ?? false
+        let windOnTarget = (windReportDiv ?? windDiv).map { abs($0) <= 5 } ?? false
         let ceilOnTarget: Bool = {
             if let cd = ceilDiv { return abs(cd) <= 300 }
             return point.actualCeilingFt == nil && point.forecastCeilingFt == nil
