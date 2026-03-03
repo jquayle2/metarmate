@@ -27,6 +27,13 @@ private func tafColor(_ pct: Int) -> Color {
     return .red
 }
 
+/// Compact ceiling string for small widget: "1.4K" instead of "1,400"
+private func compactCeiling(_ ft: Int) -> String {
+    if ft >= 10000 { return "\(ft / 1000)K" }
+    if ft >= 1000 { return String(format: "%.1fK", Double(ft) / 1000.0) }
+    return "\(ft)"
+}
+
 /// Short trend label for small widget — avoids truncation
 private func shortTrendLabel(_ headline: String) -> String {
     let map: [String: String] = [
@@ -34,8 +41,14 @@ private func shortTrendLabel(_ headline: String) -> String {
         "No Trend Data": "No Data",
         "Deterioration Forecast": "Fcst: Down",
         "Improvement Forecast": "Fcst: Up",
+        "Wind Decreasing": "Wind Down",
     ]
     if let short = map[headline] { return short }
+    if headline.hasPrefix("Ceiling Rising") { return "Ceil Up" }
+    if headline.hasPrefix("Ceiling Falling") { return "Ceil Down" }
+    if headline.hasPrefix("Visibility Increasing") { return "Vis Up" }
+    if headline.hasPrefix("Visibility Decreasing") { return "Vis Down" }
+    if headline.hasPrefix("Wind Increasing") { return "Wind Up" }
     return headline
 }
 
@@ -226,7 +239,7 @@ struct HomeScreenSmallView: View {
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.secondary)
                         if let ceil = snap.ceilingFeet {
-                            Text("\(ceil.formatted()) ft")
+                            Text("\(compactCeiling(ceil)) ft")
                                 .font(.system(.caption2, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
