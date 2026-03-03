@@ -101,41 +101,68 @@ struct WeatherDetailView: View {
         ForEach(prefs.metarSections) { config in
             switch config.id {
             case .conditions:
-                if prefs.shouldShow(.conditions) {
+                if config.visibility != .hidden {
                     decodedConditionsSection(metar)
                 }
             case .rawMetar:
-                if prefs.shouldShow(.rawMetar) {
+                if config.visibility != .hidden {
                     rawMetarSection(metar)
                 }
             case .pilotNotes:
-                if prefs.shouldShow(.pilotNotes, amberCondition: hasAmberNote, redCondition: hasRedNote) {
-                    pilotNotesSection(metar, history: vm.metarHistory)
-                }
+                let showNotes: Bool = {
+                    switch config.visibility {
+                    case .always:        return true
+                    case .amberAndAbove: return hasAmberNote || hasRedNote
+                    case .redOnly:       return hasRedNote
+                    default:             return false
+                    }
+                }()
+                if showNotes { pilotNotesSection(metar, history: vm.metarHistory) }
             case .performance:
-                if prefs.shouldShow(.performance, amberCondition: daAmber, redCondition: daRed) {
-                    densityAltitudeSection(metar)
-                }
+                let showDA: Bool = {
+                    switch config.visibility {
+                    case .always:        return true
+                    case .amberAndAbove: return daAmber || daRed
+                    case .redOnly:       return daRed
+                    default:             return false
+                    }
+                }()
+                if showDA { densityAltitudeSection(metar) }
             case .trend:
-                if let trend = vm.trend,
-                   prefs.shouldShow(.trend, amberCondition: trendAmber, redCondition: trendRed, changingCondition: trendChanging) {
-                    trendSection(trend, verification: vm.tafVerification)
+                if let trend = vm.trend {
+                    let showTrend: Bool = {
+                        switch config.visibility {
+                        case .always:        return true
+                        case .changingOnly:  return trendChanging
+                        case .amberAndAbove: return trendAmber || trendRed
+                        case .redOnly:       return trendRed
+                        default:             return false
+                        }
+                    }()
+                    if showTrend { trendSection(trend, verification: vm.tafVerification) }
                 }
             case .history:
-                if vm.metarHistory.count > 1, prefs.shouldShow(.history) {
+                if vm.metarHistory.count > 1, config.visibility != .hidden {
                     metarHistorySection(vm.metarHistory)
                 }
             case .taf:
-                if let taf = vm.taf, prefs.shouldShow(.taf) {
-                    let showRaw = prefs.shouldShow(.rawTaf)
+                if let taf = vm.taf, config.visibility != .hidden {
+                    let showRaw = prefs.metarSections.first(where: { $0.id == .rawTaf })?.visibility != .hidden
                     tafSection(taf, showRaw: showRaw)
                 }
             case .rawTaf:
-                EmptyView() // controlled via showRaw parameter inside tafSection
+                EmptyView()
             case .tafVerification:
-                if let verification = vm.tafVerification,
-                   prefs.shouldShow(.tafVerification, amberCondition: verAmber, redCondition: verRed) {
-                    tafVerificationSection(verification)
+                if let verification = vm.tafVerification {
+                    let showVer: Bool = {
+                        switch config.visibility {
+                        case .always:        return true
+                        case .amberAndAbove: return verAmber || verRed
+                        case .redOnly:       return verRed
+                        default:             return false
+                        }
+                    }()
+                    if showVer { tafVerificationSection(verification) }
                 }
             default:
                 EmptyView()
@@ -1294,25 +1321,39 @@ struct WeatherDetailView: View {
         ForEach(prefs.advisorySections) { config in
             switch config.id {
             case .advConditions:
-                if prefs.shouldShow(.advConditions) {
+                if config.visibility != .hidden {
                     advisoryConditionsCard(wx)
                 }
             case .advPerformance:
-                if wx.densityAltitudeFt != nil,
-                   prefs.shouldShow(.advPerformance, amberCondition: daAmber, redCondition: daRed) {
-                    advisoryDensityAltitudeCard(wx)
+                if wx.densityAltitudeFt != nil {
+                    let show: Bool = {
+                        switch config.visibility {
+                        case .always:        return true
+                        case .amberAndAbove: return daAmber || daRed
+                        case .redOnly:       return daRed
+                        default:             return false
+                        }
+                    }()
+                    if show { advisoryDensityAltitudeCard(wx) }
                 }
             case .advPilotAdvisories:
-                if !advisories.isEmpty,
-                   prefs.shouldShow(.advPilotAdvisories, amberCondition: hasAmber, redCondition: hasRed) {
-                    advisoryPilotAdvisoriesCard(advisories)
+                if !advisories.isEmpty {
+                    let show: Bool = {
+                        switch config.visibility {
+                        case .always:        return true
+                        case .amberAndAbove: return hasAmber || hasRed
+                        case .redOnly:       return hasRed
+                        default:             return false
+                        }
+                    }()
+                    if show { advisoryPilotAdvisoriesCard(advisories) }
                 }
             case .advTrends:
-                if let trends = wx.trends, prefs.shouldShow(.advTrends) {
+                if let trends = wx.trends, config.visibility != .hidden {
                     advisoryTrendsCard(trends)
                 }
             case .advForecast:
-                if !wx.forecast.isEmpty, prefs.shouldShow(.advForecast) {
+                if !wx.forecast.isEmpty, config.visibility != .hidden {
                     advisoryForecastStrip(wx.forecast)
                 }
             default:
