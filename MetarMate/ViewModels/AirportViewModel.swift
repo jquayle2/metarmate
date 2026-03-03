@@ -17,6 +17,46 @@ class AirportViewModel: ObservableObject {
     @Published var nearestMetars: [String: Metar] = [:]
     @Published var searchMetars: [String: Metar] = [:]
 
+    // MARK: - Search History
+    private static let historyKey = "searchHistory"
+    private static let maxHistory = 10
+
+    struct SearchHistoryEntry: Codable, Identifiable, Equatable {
+        var id: String { icao }
+        let icao: String
+        let name: String
+    }
+
+    @Published var searchHistory: [SearchHistoryEntry] = {
+        guard let data = UserDefaults.standard.data(forKey: AirportViewModel.historyKey),
+              let entries = try? JSONDecoder().decode([SearchHistoryEntry].self, from: data)
+        else { return [] }
+        return entries
+    }()
+
+    func recordSearch(_ airport: Airport) {
+        let entry = SearchHistoryEntry(icao: airport.icao, name: airport.name)
+        var history = searchHistory.filter { $0.icao != airport.icao }
+        history.insert(entry, at: 0)
+        if history.count > Self.maxHistory { history = Array(history.prefix(Self.maxHistory)) }
+        searchHistory = history
+        if let data = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(data, forKey: Self.historyKey)
+        }
+    }
+
+    func clearSearchHistory() {
+        searchHistory = []
+        UserDefaults.standard.removeObject(forKey: Self.historyKey)
+    }
+
+    func removeHistoryEntry(_ entry: SearchHistoryEntry) {
+        searchHistory.removeAll { $0.icao == entry.icao }
+        if let data = try? JSONEncoder().encode(searchHistory) {
+            UserDefaults.standard.set(data, forKey: Self.historyKey)
+        }
+    }
+
     private var searchMetarTask: Task<Void, Never>? = nil
 
     private let airportService = AirportService.shared
