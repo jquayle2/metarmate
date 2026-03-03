@@ -140,7 +140,7 @@ actor OpenMeteoService {
             pressure:          pressureTrend(delta: pressureDelta),
             windSpeed:         windTrend(delta: windDelta),
             tdSpread:          tdSpreadTrend(delta: tdDelta),
-            visibility:        visTrend(delta: visDelta),
+            visibility:        visTrend(delta: visDelta, currentKm: last.visKm),
             pressureDeltaHpa:  pressureDelta,
             windDeltaKt:       windDelta,
             tdSpreadDeltaC:    tdDelta,
@@ -170,10 +170,12 @@ actor OpenMeteoService {
         return .steady
     }
 
-    private func visTrend(delta: Double?) -> TrendDirection {
+    private func visTrend(delta: Double?, currentKm: Double?) -> TrendDirection {
         guard let d = delta else { return .unknown }
-        if d > 1.0  { return .improving }      // +1 km
-        if d < -1.0 { return .deteriorating }  // -1 km
+        let currentMi = (currentKm ?? 99) * 0.621371
+        if currentMi >= 10 { return .steady }
+        if d > 1.0  { return .improving }
+        if d < -1.0 { return .deteriorating }
         return .steady
     }
 }
