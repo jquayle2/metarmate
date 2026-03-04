@@ -13,7 +13,7 @@ actor SynopticService {
 
     // TODO: Replace with your actual Synoptic API token
     // Sign up at https://customer.synopticdata.com to get one (free tier available)
-    private let token = "YOUR_TOKEN_HERE"
+    private let token = "70c11dd558a54cec8e620ee1284676df"
 
     private init() {}
 
