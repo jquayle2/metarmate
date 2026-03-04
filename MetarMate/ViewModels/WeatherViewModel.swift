@@ -25,8 +25,10 @@ class WeatherViewModel: ObservableObject {
     @Published var nearbyReportingAirports: [NearbyReportingAirport] = []
     @Published var advisoryWeather: AdvisoryWeather?  // Open-Meteo data for non-METAR airports
     @Published var isMetarFallback = false  // True when hasMetar station fell back to advisory
+    @Published var synopticLatest: SynopticObservation?  // 5-minute ASOS via Synoptic Data
 
     private let weatherService = WeatherService.shared
+    private let synopticService = SynopticService.shared
 
     // MARK: - Load with full Airport (preferred — enables hasMetar routing)
     func load(airport: Airport) async {
@@ -36,6 +38,7 @@ class WeatherViewModel: ObservableObject {
         nearbyReportingAirports = []
         advisoryWeather = nil
         isMetarFallback = false
+        synopticLatest = nil
 
         if !airport.hasMetar {
             await loadAdvisory(airport: airport)
@@ -45,6 +48,8 @@ class WeatherViewModel: ObservableObject {
                 isMetarFallback = true
                 error = nil
                 await loadAdvisory(airport: airport)
+            } else {
+                await loadSynoptic(icao: airport.icao)
             }
         }
         isLoading = false
@@ -129,6 +134,15 @@ class WeatherViewModel: ObservableObject {
             }
         } catch {
             self.error = error
+        }
+    }
+
+    // MARK: - Synoptic 5-minute ASOS (supplemental)
+    private func loadSynoptic(icao: String) async {
+        do {
+            synopticLatest = try await synopticService.fetchLatest(for: icao)
+        } catch {
+            synopticLatest = nil
         }
     }
 

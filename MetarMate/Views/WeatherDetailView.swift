@@ -210,10 +210,40 @@ struct WeatherDetailView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
+            if let synoptic = vm.synopticLatest {
+                synopticBadge(synoptic)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()
         .background(cardBackground)
+    }
+
+    private func synopticBadge(_ obs: SynopticObservation) -> some View {
+        let minutes = obs.minutesOld
+        let windText: String = {
+            guard let spd = obs.windSpeed else { return "" }
+            let dir = obs.windDirection.map { String(format: "%03d", $0) } ?? "VRB"
+            let gust = obs.windGust.map { String(format: "G%.0f", $0) } ?? ""
+            return " \(dir)@\(Int(spd))\(gust)kt"
+        }()
+        let visText: String = {
+            guard let v = obs.visibility else { return "" }
+            return String(format: " %.0fSM", v)
+        }()
+
+        return HStack(spacing: 4) {
+            Image(systemName: "antenna.radiowaves.left.and.right")
+                .font(.caption2)
+                .foregroundColor(.cyan)
+            Text("ASOS \(minutes)m ago\(windText)\(visText)")
+                .font(.caption2.monospaced())
+                .foregroundColor(.cyan)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.cyan.opacity(0.12))
+        .cornerRadius(6)
     }
 
     private func observationTimeView(_ metar: Metar) -> some View {
