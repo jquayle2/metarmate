@@ -241,7 +241,7 @@ struct WeatherDetailView: View {
     // MARK: - Decoded Conditions
     private func decodedConditionsSection(_ metar: Metar) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Conditions")
+            sectionHeader("Decoded METAR")
             conditionRow("wind", "Wind", windText(metar.wind), color: windConditionColor(metar.wind))
             conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility), color: visibilityConditionColor(metar.visibility))
             conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
