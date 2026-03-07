@@ -1275,7 +1275,7 @@ struct WeatherDetailView: View {
                 Image(systemName: "chart.bar.fill")
                     .foregroundColor(.secondary)
                     .font(.caption)
-                Text("WORST IN WINDOW  ·  \(spanLabel)  ·  \(stats.obsCount) obs")
+                Text("WORST CONDITIONS IN LAST \(spanLabel)  ·  \(stats.obsCount) obs")
                     .font(.caption2.bold())
                     .foregroundColor(.secondary)
                     .tracking(0.5)
