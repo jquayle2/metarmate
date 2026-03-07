@@ -40,12 +40,13 @@ struct Taf: Identifiable, Codable {
 
     var currentForecast: TafForecast? {
         let now = Date()
-        // Use the last period that has already started
-        if let current = forecasts.last(where: { $0.fromTime <= now }) {
+        // Find the base period (FM or BASE) currently active — skip TEMPO/BECMG/PROB overlays
+        let basePeriods = forecasts.filter { $0.type == .base || $0.type == .fm }
+        if let current = basePeriods.last(where: { $0.fromTime <= now }) {
             return current
         }
-        // TAF hasn't started yet — if it begins within 2 hours, use the first period
-        if let first = forecasts.first, first.fromTime.timeIntervalSinceNow < 7200 {
+        // TAF hasn't started yet — if it begins within 2 hours, use the first base period
+        if let first = basePeriods.first, first.fromTime.timeIntervalSinceNow < 7200 {
             return first
         }
         return nil
