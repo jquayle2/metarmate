@@ -75,6 +75,113 @@ struct MetarMateEntry: TimelineEntry {
     }
 }
 
+// MARK: - Lightweight NOAA fetch for widget extension
+// Avoids importing WeatherService/MetarParser (too heavy for extension).
+// Fetches a single METAR and builds a WidgetWeatherSnapshot directly.
+
+private enum WidgetFetcher {
+    static let baseURL = "https://aviationweather.gov/api/data"
+
+    static func fetchSnapshot(icao: String) async -> WidgetWeatherSnapshot? {
+        guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return nil }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            let raws = try JSONDecoder().decode([RawMetar].self, from: data)
+            guard let raw = raws.first else { return nil }
+            return buildSnapshot(from: raw, icao: icao)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func buildSnapshot(from raw: RawMetar, icao: String) -> WidgetWeatherSnapshot {
+        let stationId = raw.icaoId ?? icao
+        let fltCat = FlightCategory(rawValue: raw.fltCat ?? "VFR") ?? .vfr
+
+        let windDir = parseWindDirection(raw.wdir)
+        let windSpd = raw.wspd ?? 0
+        let windGst = raw.wgst
+        let isVariable = isVRB(raw.wdir)
+
+        let vis = parseVisibility(raw.visib)
+
+        let ceilingFt = parseCeiling(raw.clouds)
+
+        let obsDate: Date
+        if let epoch = raw.obsTime {
+            obsDate = Date(timeIntervalSince1970: TimeInterval(epoch))
+        } else {
+            obsDate = Date()
+        }
+
+        return WidgetWeatherSnapshot(
+            icao: stationId,
+            iata: nil,
+            airportName: raw.name ?? stationId,
+            flightCategory: fltCat,
+            windDirection: windDir,
+            windSpeed: windSpd,
+            windGust: windGst,
+            windIsVariable: isVariable,
+            visibility: vis,
+            ceilingFeet: ceilingFt,
+            temperature: raw.temp.map { Int($0) },
+            dewpoint: raw.dewp.map { Int($0) },
+            altimeter: raw.altim.map { $0 * 0.02953 },
+            trendDirection: .unknown,
+            trendHeadline: "Widget Refresh",
+            tafAccuracyPct: nil,
+            forecastWindDivergenceKt: nil,
+            forecastCeilingDivergenceFt: nil,
+            forecastVisibilityDivergenceSM: nil,
+            isAdvisory: false,
+            observationTime: obsDate,
+            snapshotTime: Date()
+        )
+    }
+
+    private static func parseWindDirection(_ wdir: AnyCodable?) -> Int? {
+        guard let w = wdir?.value else { return nil }
+        if let i = w as? Int { return i }
+        if let d = w as? Double { return Int(d) }
+        if let s = w as? String, let i = Int(s) { return i }
+        return nil
+    }
+
+    private static func isVRB(_ wdir: AnyCodable?) -> Bool {
+        guard let w = wdir?.value else { return false }
+        if let s = w as? String, s.uppercased() == "VRB" { return true }
+        return false
+    }
+
+    private static func parseVisibility(_ visib: AnyCodable?) -> Double {
+        guard let v = visib?.value else { return 10 }
+        if let d = v as? Double { return d }
+        if let i = v as? Int { return Double(i) }
+        if let s = v as? String {
+            if s.contains("10+") || s.contains("P6") || s.contains("6+") { return 10 }
+            if let d = Double(s) { return d }
+        }
+        return 10
+    }
+
+    private static func parseCeiling(_ clouds: [[String: AnyCodable]]?) -> Int? {
+        guard let layers = clouds else { return nil }
+        for layer in layers {
+            guard let coverVal = layer["cover"]?.value as? String else { continue }
+            let cover = coverVal.uppercased()
+            if cover == "BKN" || cover == "OVC" || cover == "VV" {
+                if let baseVal = layer["base"]?.value {
+                    if let i = baseVal as? Int { return i }
+                    if let d = baseVal as? Double { return Int(d) }
+                }
+            }
+        }
+        return nil
+    }
+}
+
 // MARK: - Configurable Timeline Provider
 
 struct ConfigurableProvider: AppIntentTimelineProvider {
@@ -83,25 +190,75 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
-        let icao = configuration.airportCode?.uppercased()
-        let snapshot = resolveSnapshot(for: configuration)
-        return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
+        let icao = resolveICAO(for: configuration)
+        if let icao {
+            let cached = WidgetDataManager.load(icao: icao)
+            if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
+                let merged = mergeWithCached(live: live, cached: cached)
+                WidgetDataManager.save(snapshot: merged)
+                return MetarMateEntry(date: .now, snapshot: merged, requestedICAO: nil)
+            }
+            return MetarMateEntry(date: .now, snapshot: cached, requestedICAO: cached == nil ? icao : nil)
+        }
+        let cached = WidgetDataManager.mostRecent()
+        return MetarMateEntry(date: .now, snapshot: cached, requestedICAO: nil)
     }
 
     func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
-        let icao = configuration.airportCode?.uppercased()
-        let snapshot = resolveSnapshot(for: configuration)
-        let entry = MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: snapshot == nil ? icao : nil)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
+        let icao = resolveICAO(for: configuration)
+        var snapshot: WidgetWeatherSnapshot?
+        var requestedICAO: String?
+
+        if let icao {
+            let cached = WidgetDataManager.load(icao: icao)
+            if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
+                let merged = mergeWithCached(live: live, cached: cached)
+                WidgetDataManager.save(snapshot: merged)
+                snapshot = merged
+            } else {
+                snapshot = cached
+                if snapshot == nil { requestedICAO = icao }
+            }
+        } else {
+            snapshot = WidgetDataManager.mostRecent()
+        }
+
+        let entry = MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: requestedICAO)
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: .now)!
         return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
 
-    private func resolveSnapshot(for configuration: SelectAirportIntent) -> WidgetWeatherSnapshot? {
-        if let code = configuration.airportCode, !code.isEmpty {
-            let icao = code.uppercased().trimmingCharacters(in: .whitespaces)
-            return WidgetDataManager.load(icao: icao)
-        }
-        return WidgetDataManager.mostRecent()
+    private func resolveICAO(for configuration: SelectAirportIntent) -> String? {
+        guard let code = configuration.airportCode, !code.isEmpty else { return nil }
+        return code.uppercased().trimmingCharacters(in: .whitespaces)
+    }
+
+    private func mergeWithCached(live: WidgetWeatherSnapshot, cached: WidgetWeatherSnapshot?) -> WidgetWeatherSnapshot {
+        guard let cached else { return live }
+        return WidgetWeatherSnapshot(
+            icao: live.icao,
+            iata: cached.iata ?? live.iata,
+            airportName: cached.airportName.count > live.airportName.count ? cached.airportName : live.airportName,
+            flightCategory: live.flightCategory,
+            windDirection: live.windDirection,
+            windSpeed: live.windSpeed,
+            windGust: live.windGust,
+            windIsVariable: live.windIsVariable,
+            visibility: live.visibility,
+            ceilingFeet: live.ceilingFeet,
+            temperature: live.temperature,
+            dewpoint: live.dewpoint,
+            altimeter: live.altimeter,
+            trendDirection: live.trendDirection != .unknown ? live.trendDirection : cached.trendDirection,
+            trendHeadline: live.trendHeadline != "Widget Refresh" ? live.trendHeadline : cached.trendHeadline,
+            tafAccuracyPct: cached.tafAccuracyPct,
+            forecastWindDivergenceKt: cached.forecastWindDivergenceKt,
+            forecastCeilingDivergenceFt: cached.forecastCeilingDivergenceFt,
+            forecastVisibilityDivergenceSM: cached.forecastVisibilityDivergenceSM,
+            isAdvisory: live.isAdvisory,
+            observationTime: live.observationTime,
+            snapshotTime: live.snapshotTime
+        )
     }
 }
 
