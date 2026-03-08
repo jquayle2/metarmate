@@ -1,6 +1,21 @@
 import Foundation
 import Combine
 
+// MARK: - Starting Tab
+enum StartingTab: String, Codable, CaseIterable {
+    case nearest   = "Nearest"
+    case search    = "Search"
+    case favorites = "Favorites"
+
+    var tabIndex: Int {
+        switch self {
+        case .nearest:   return 0
+        case .search:    return 1
+        case .favorites: return 2
+        }
+    }
+}
+
 // MARK: - Section Visibility Mode
 enum SectionVisibility: String, Codable, CaseIterable {
     case always         = "Always"
@@ -78,6 +93,15 @@ class LayoutPreferences: ObservableObject {
     // Stable keys — never bump these again. Migration handles new sections automatically.
     private let metarKey    = "metarSectionLayout"
     private let advisoryKey = "advisorySectionLayout"
+    private let startingTabKey = "startingTab"
+
+    @Published var startingTab: StartingTab {
+        didSet {
+            if let data = try? JSONEncoder().encode(startingTab) {
+                UserDefaults.standard.set(data, forKey: startingTabKey)
+            }
+        }
+    }
 
     @Published var metarSections: [SectionConfig] {
         didSet { save(metarSections, key: metarKey) }
@@ -110,7 +134,12 @@ class LayoutPreferences: ObservableObject {
     ]
 
     private init() {
-        // Try stable key first, then fall back to any legacy versioned keys
+        if let data = UserDefaults.standard.data(forKey: "startingTab"),
+           let tab = try? JSONDecoder().decode(StartingTab.self, from: data) {
+            startingTab = tab
+        } else {
+            startingTab = .nearest
+        }
         metarSections    = Self.loadAndMigrate(
             keys: ["metarSectionLayout", "metarSectionLayout_v3", "metarSectionLayout_v2", "metarSectionLayout_v1"],
             defaults: Self.defaultMetarSections

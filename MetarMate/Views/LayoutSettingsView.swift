@@ -9,20 +9,49 @@ struct LayoutSettingsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Section Type", selection: $selectedTab) {
-                    Text("METAR").tag(0)
-                    Text("Advisory").tag(1)
+            List {
+                Section {
+                    HStack {
+                        Label("Starting Tab", systemImage: "house")
+                            .font(.subheadline)
+                        Spacer()
+                        Picker("", selection: $prefs.startingTab) {
+                            ForEach(StartingTab.allCases, id: \.self) { tab in
+                                Text(tab.rawValue).tag(tab)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.secondary)
+                    }
+                } header: {
+                    Text("General")
+                } footer: {
+                    Text("Choose which tab appears when you open the app.")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
-                .pickerStyle(.segmented)
-                .padding()
+
+                Section {
+                    Picker("Section Type", selection: $selectedTab) {
+                        Text("METAR").tag(0)
+                        Text("Advisory").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Detail View Sections")
+                }
 
                 if selectedTab == 0 {
-                    metarList
+                    metarListSection
                 } else {
-                    advisoryList
+                    advisoryListSection
                 }
             }
+            .listStyle(.insetGrouped)
+            .environment(\.editMode, .constant(.active))
             .navigationTitle("Customize Layout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -63,49 +92,40 @@ struct LayoutSettingsView: View {
     }
 
     // MARK: - METAR List
-    private var metarList: some View {
-        List {
-            Section {
-                ForEach($prefs.metarSections) { $config in
-                    SectionConfigRow(config: $config)
-                }
-                .onMove { from, to in
-                    prefs.metarSections.move(fromOffsets: from, toOffset: to)
-                }
-            } header: {
-                Text("Drag to reorder · tap visibility to change")
-                    .textCase(nil)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } footer: {
-                Text("Sections set to \"Amber or above\" appear when caution-level conditions are present. \"Red only\" appears only for warning-level conditions.")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+    private var metarListSection: some View {
+        Section {
+            ForEach($prefs.metarSections) { $config in
+                SectionConfigRow(config: $config)
             }
+            .onMove { from, to in
+                prefs.metarSections.move(fromOffsets: from, toOffset: to)
+            }
+        } header: {
+            Text("Drag to reorder · tap visibility to change")
+                .textCase(nil)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        } footer: {
+            Text("Sections set to \"Amber or above\" appear when caution-level conditions are present. \"Red only\" appears only for warning-level conditions.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
         }
-        .listStyle(.insetGrouped)
-        .environment(\.editMode, .constant(.active))
     }
 
-    // MARK: - Advisory List
-    private var advisoryList: some View {
-        List {
-            Section {
-                ForEach($prefs.advisorySections) { $config in
-                    SectionConfigRow(config: $config)
-                }
-                .onMove { from, to in
-                    prefs.advisorySections.move(fromOffsets: from, toOffset: to)
-                }
-            } header: {
-                Text("Drag to reorder · tap visibility to change")
-                    .textCase(nil)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+    private var advisoryListSection: some View {
+        Section {
+            ForEach($prefs.advisorySections) { $config in
+                SectionConfigRow(config: $config)
             }
+            .onMove { from, to in
+                prefs.advisorySections.move(fromOffsets: from, toOffset: to)
+            }
+        } header: {
+            Text("Drag to reorder · tap visibility to change")
+                .textCase(nil)
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .listStyle(.insetGrouped)
-        .environment(\.editMode, .constant(.active))
     }
 }
 
