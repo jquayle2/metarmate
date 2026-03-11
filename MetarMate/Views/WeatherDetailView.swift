@@ -331,6 +331,18 @@ struct WeatherDetailView: View {
         var params = "xwcalc://calculate?"
         if let dir = obs.windDirection {
             params += "wind_dir=\(dir)"
+
+            if let best = RunwayService.shared.bestRunway(
+                for: airport.icao,
+                windDirection: dir,
+                windSpeed: obs.windSpeed ?? 0,
+                windGust: obs.windGust
+            ) {
+                let rwyNum = Int(best.runwayEnd.ident.prefix(2)) ?? 0
+                if rwyNum > 0 {
+                    params += "&runway=\(rwyNum)"
+                }
+            }
         }
         if let spd = obs.windSpeed {
             params += "&wind_speed=\(Int(spd))"
