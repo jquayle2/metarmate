@@ -35,13 +35,21 @@ final class RunwayService {
 
     func loadIfNeeded() {
         guard !loaded else { return }
-        guard let url = Bundle.main.url(forResource: "runways", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode([String: [Runway]].self, from: data) else {
+        guard let url = Bundle.main.url(forResource: "runways", withExtension: "json") else {
+            print("RunwayService: runways.json not found in bundle")
+            return
+        }
+        guard let data = try? Data(contentsOf: url) else {
+            print("RunwayService: failed to read runways.json")
+            return
+        }
+        guard let decoded = try? JSONDecoder().decode([String: [Runway]].self, from: data) else {
+            print("RunwayService: failed to decode runways.json")
             return
         }
         runwayData = decoded
         loaded = true
+        print("RunwayService: loaded \(runwayData.count) airports with runway data")
     }
 
     func runways(for icao: String) -> [RunwayEnd] {

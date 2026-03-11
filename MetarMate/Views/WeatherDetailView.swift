@@ -298,6 +298,8 @@ struct WeatherDetailView: View {
             .disabled(vm.boostRemaining == 0)
             .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
 
+            Spacer()
+
             if canOpenXWCalc {
                 Button {
                     openXWCalc(obs)
@@ -305,7 +307,7 @@ struct WeatherDetailView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.swap")
                             .font(.caption)
-                        Text("XW")
+                        Text("XW Calc")
                             .font(.caption.bold())
                     }
                     .foregroundColor(.orange)
@@ -338,10 +340,13 @@ struct WeatherDetailView: View {
                 windSpeed: obs.windSpeed ?? 0,
                 windGust: obs.windGust
             ) {
+                print("XW Calc: best runway for \(airport.icao) = \(best.runwayEnd.ident) (hdg \(best.runwayEnd.heading), xw \(best.crosswind), hw \(best.headwind))")
                 let rwyNum = Int(best.runwayEnd.ident.prefix(2)) ?? 0
                 if rwyNum > 0 {
                     params += "&runway=\(rwyNum)"
                 }
+            } else {
+                print("XW Calc: no runway data for \(airport.icao)")
             }
         }
         if let spd = obs.windSpeed {
@@ -353,6 +358,7 @@ struct WeatherDetailView: View {
             params += "&gust=0"
         }
         guard let url = URL(string: params) else { return }
+        print("XW Calc: opening URL = \(url.absoluteString)")
         UIApplication.shared.open(url)
     }
 
