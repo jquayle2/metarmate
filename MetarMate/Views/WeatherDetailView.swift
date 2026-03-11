@@ -246,30 +246,47 @@ struct WeatherDetailView: View {
     }
 
     private var asosBoostButton: some View {
-        Button {
-            Task { await vm.activateASOSBoost(icao: airport.icao) }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.caption)
-                Text("ASOS Boost")
-                    .font(.caption.bold())
-                Text("(\(vm.boostRemaining) left)")
-                    .font(.caption2)
-                    .foregroundColor(.cyan.opacity(0.7))
+        VStack(spacing: 6) {
+            if vm.boostRemaining > 0 {
+                Button {
+                    Task { await vm.activateASOSBoost(icao: airport.icao) }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.caption)
+                        Text("ASOS Boost")
+                            .font(.caption.bold())
+                        Text("(\(vm.boostRemaining) left today)")
+                            .font(.caption2)
+                            .foregroundColor(.cyan.opacity(0.7))
+                    }
+                    .foregroundColor(.cyan)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.cyan.opacity(0.15))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
+                    )
+                }
+            } else {
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.caption)
+                        Text("ASOS Boost")
+                            .font(.caption.bold())
+                    }
+                    .foregroundColor(.cyan.opacity(0.4))
+                    Text("ASOS data requires a paid feed, so usage is capped at 25/day. Resets at midnight. Additional usage will be available as an in-app option once MetarMate is live on the App Store.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
             }
-            .foregroundColor(.cyan)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.cyan.opacity(0.15))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
-            )
         }
-        .disabled(vm.boostRemaining == 0)
-        .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
     }
 
     private func asosBoostResult(_ obs: SynopticObservation) -> some View {
