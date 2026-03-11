@@ -11,6 +11,7 @@ struct WeatherDetailView: View {
     @ObservedObject private var prefs = LayoutPreferences.shared
     @State private var showLayoutSettings = false
     @State private var showNearbyAirports = false
+    @State private var showBoostLimitInfo = false
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -69,6 +70,9 @@ struct WeatherDetailView: View {
         }
         .sheet(isPresented: $showNearbyAirports) {
             NearbyAirportsView(referenceAirport: airport)
+        }
+        .sheet(isPresented: $showBoostLimitInfo) {
+            boostLimitSheet
         }
         .task {
             await vm.load(airport: airport)
@@ -271,22 +275,66 @@ struct WeatherDetailView: View {
                     )
                 }
             } else {
-                VStack(spacing: 4) {
+                Button {
+                    showBoostLimitInfo = true
+                } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .font(.caption)
                         Text("ASOS Boost")
                             .font(.caption.bold())
+                        Text("(0 left today)")
+                            .font(.caption2)
+                            .foregroundColor(.cyan.opacity(0.5))
                     }
                     .foregroundColor(.cyan.opacity(0.4))
-                    Text("ASOS data requires a paid feed, so usage is capped at 25/day. Resets at midnight. Additional usage will be available as an in-app option once MetarMate is live on the App Store.")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.cyan.opacity(0.08))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.cyan.opacity(0.15), lineWidth: 1)
+                    )
                 }
             }
         }
+    }
+
+    private var boostLimitSheet: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 40))
+                    .foregroundColor(.cyan)
+                    .padding(.top, 20)
+
+                Text("ASOS Boost Limit Reached")
+                    .font(.title3.bold())
+
+                Text("ASOS data comes from a paid weather feed, so usage is currently limited to 25 updates per day. Your count resets at midnight.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Text("Once MetarMate is live on the App Store, additional daily uses will be available as a low-cost in-app option.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { showBoostLimitInfo = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     private func asosBoostResult(_ obs: SynopticObservation) -> some View {
@@ -393,12 +441,12 @@ struct WeatherDetailView: View {
         .cornerRadius(4)
     }
 
-    // Compact wind strip showing last ~60 min of 5-min observations
+    // Wind strip showing last ~60 min of 5-min observations
     private var asosWindStrip: some View {
-        let recentObs = vm.synopticHistory.suffix(12)  // last 60 min at 5-min intervals
-        return VStack(alignment: .leading, spacing: 2) {
+        let recentObs = vm.synopticHistory.suffix(12)
+        return VStack(alignment: .leading, spacing: 4) {
             Text("WIND (last 60 min)")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .foregroundColor(.cyan.opacity(0.6))
             HStack(spacing: 2) {
                 ForEach(Array(recentObs.enumerated()), id: \.offset) { _, obs in
@@ -407,11 +455,11 @@ struct WeatherDetailView: View {
                     VStack(spacing: 1) {
                         if let g = gust, g > spd {
                             Text("\(g)")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(g >= 25 ? .red : g >= 15 ? .orange : .cyan)
                         }
                         Text("\(spd)")
-                            .font(.system(size: 8))
+                            .font(.system(size: 13))
                             .foregroundColor(.cyan.opacity(0.8))
                     }
                     .frame(maxWidth: .infinity)
@@ -425,57 +473,72 @@ struct WeatherDetailView: View {
     private func asosMetarDelta(_ obs: SynopticObservation, metar: Metar) -> some View {
         let deltas = computeASOSDeltas(obs, metar: metar)
         if !deltas.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("SINCE LAST METAR")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
                     .foregroundColor(.cyan.opacity(0.6))
-                ForEach(deltas, id: \.self) { delta in
-                    Text(delta)
-                        .font(.caption2)
-                        .foregroundColor(.cyan)
+                ForEach(deltas, id: \.text) { delta in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: delta.icon)
+                            .foregroundColor(delta.color.opacity(0.8))
+                            .frame(width: 20)
+                        Text(delta.text)
+                            .font(.subheadline)
+                            .foregroundColor(delta.color)
+                            .fontWeight(.semibold)
+                        Spacer()
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func computeASOSDeltas(_ obs: SynopticObservation, metar: Metar) -> [String] {
-        var deltas: [String] = []
+    private struct ASOSDelta: Hashable {
+        let text: String
+        let icon: String
+        let color: Color
 
-        // Wind speed delta
+        func hash(into hasher: inout Hasher) { hasher.combine(text) }
+        static func == (lhs: ASOSDelta, rhs: ASOSDelta) -> Bool { lhs.text == rhs.text }
+    }
+
+    private func computeASOSDeltas(_ obs: SynopticObservation, metar: Metar) -> [ASOSDelta] {
+        var deltas: [ASOSDelta] = []
+
         if let asosSpeed = obs.windSpeed {
             let metarSpeed = Double(metar.wind.speed)
             let diff = Int(asosSpeed) - Int(metarSpeed)
             if abs(diff) >= 5 {
-                deltas.append("Wind \(diff > 0 ? "+" : "")\(diff) kt")
+                let color: Color = abs(diff) >= 10 ? .orange : .cyan
+                deltas.append(ASOSDelta(text: "Wind \(diff > 0 ? "+" : "")\(diff) kt", icon: "wind", color: color))
             }
         }
 
-        // Gust appeared or changed significantly
         if let asosGust = obs.windGust, asosGust > 0 {
             let metarGust = metar.wind.gust ?? 0
             let diff = Int(asosGust) - metarGust
             if metarGust == 0 {
-                deltas.append("Gusts developed: \(Int(asosGust)) kt")
+                deltas.append(ASOSDelta(text: "Gusts developed: \(Int(asosGust)) kt", icon: "wind", color: .orange))
             } else if abs(diff) >= 5 {
-                deltas.append("Gusts \(diff > 0 ? "+" : "")\(diff) kt")
+                let color: Color = abs(diff) >= 10 ? .orange : .cyan
+                deltas.append(ASOSDelta(text: "Gusts \(diff > 0 ? "+" : "")\(diff) kt", icon: "wind", color: color))
             }
         }
 
-        // Wind direction shift
         if let asosDir = obs.windDirection, let metarDir = metar.wind.direction {
             var shift = abs(asosDir - metarDir)
             if shift > 180 { shift = 360 - shift }
             if shift >= 30 {
-                deltas.append("Wind shifted \(shift)°")
+                let color: Color = shift >= 45 ? .orange : .cyan
+                deltas.append(ASOSDelta(text: "Wind shifted \(shift)°", icon: "arrow.triangle.2.circlepath", color: color))
             }
         }
 
-        // Visibility drop
         if let asosVis = obs.visibility {
             let diff = asosVis - metar.visibility
             if diff <= -1.0 {
-                deltas.append(String(format: "Visibility %.0f SM (was %.0f)", asosVis, metar.visibility))
+                deltas.append(ASOSDelta(text: String(format: "Visibility %.0f SM (was %.0f)", asosVis, metar.visibility), icon: "eye.fill", color: .orange))
             }
         }
 
