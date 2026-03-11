@@ -273,29 +273,73 @@ struct WeatherDetailView: View {
     }
 
     private func asosBoostResult(_ obs: SynopticObservation) -> some View {
-        Button {
-            Task { await vm.activateASOSBoost(icao: airport.icao) }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.caption)
-                Text("ASOS Active")
-                    .font(.caption.bold())
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 10))
+        HStack(spacing: 8) {
+            Button {
+                Task { await vm.activateASOSBoost(icao: airport.icao) }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.caption)
+                    Text("ASOS Active")
+                        .font(.caption.bold())
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.cyan)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.cyan.opacity(0.15))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
+                )
             }
-            .foregroundColor(.cyan)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.cyan.opacity(0.15))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
-            )
+            .disabled(vm.boostRemaining == 0)
+            .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
+
+            if canOpenXWCalc {
+                Button {
+                    openXWCalc(obs)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.swap")
+                            .font(.caption)
+                        Text("XW")
+                            .font(.caption.bold())
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.15))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                }
+            }
         }
-        .disabled(vm.boostRemaining == 0)
-        .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
+    }
+
+    private var canOpenXWCalc: Bool {
+        guard let url = URL(string: "xwcalc://") else { return false }
+        return UIApplication.shared.canOpenURL(url)
+    }
+
+    private func openXWCalc(_ obs: SynopticObservation) {
+        var params = "xwcalc://calculate?"
+        if let dir = obs.windDirection {
+            params += "wind_dir=\(dir)"
+        }
+        if let spd = obs.windSpeed {
+            params += "&wind_speed=\(Int(spd))"
+        }
+        if let gust = obs.windGust, gust > (obs.windSpeed ?? 0) {
+            params += "&gust=\(Int(gust))"
+        }
+        guard let url = URL(string: params) else { return }
+        UIApplication.shared.open(url)
     }
 
     private func asosDataPill(_ text: String, icon: String) -> some View {
