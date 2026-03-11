@@ -337,6 +337,8 @@ struct WeatherDetailView: View {
         }
         if let gust = obs.windGust, gust > (obs.windSpeed ?? 0) {
             params += "&gust=\(Int(gust))"
+        } else {
+            params += "&gust=0"
         }
         guard let url = URL(string: params) else { return }
         UIApplication.shared.open(url)
