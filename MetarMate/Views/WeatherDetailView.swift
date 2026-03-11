@@ -30,6 +30,9 @@ struct WeatherDetailView: View {
                     errorView(error)
                 } else {
                     headerSection
+                    if vm.hasBoostData, let obs = vm.synopticLatest {
+                        decodedASOSSection(obs)
+                    }
                     if let metar = vm.metar {
                         metarSectionsInOrder(metar)
                     }
@@ -270,46 +273,29 @@ struct WeatherDetailView: View {
     }
 
     private func asosBoostResult(_ obs: SynopticObservation) -> some View {
-        VStack(spacing: 6) {
-            // Freshness line
-            HStack(spacing: 4) {
+        Button {
+            Task { await vm.activateASOSBoost(icao: airport.icao) }
+        } label: {
+            HStack(spacing: 6) {
                 Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.caption2)
-                    .foregroundColor(.cyan)
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    let minutes = Int(context.date.timeIntervalSince(obs.observationTime) / 60)
-                    Text("ASOS updated \(minutes)m ago")
-                        .font(.caption2.bold())
-                        .foregroundColor(.cyan)
-                }
+                    .font(.caption)
+                Text("ASOS Active")
+                    .font(.caption.bold())
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10))
             }
-
-            // Key conditions strip
-            HStack(spacing: 12) {
-                if let spd = obs.windSpeed {
-                    let dir = obs.windDirection.map { String(format: "%03d", $0) } ?? "VRB"
-                    let gust = obs.windGust.map { String(format: "G%.0f", $0) } ?? ""
-                    asosDataPill("\(dir)°@\(Int(spd))\(gust)kt", icon: "wind")
-                }
-                if let v = obs.visibility {
-                    asosDataPill(String(format: "%.0fSM", v), icon: "eye.fill")
-                }
-                if let alt = obs.altimeter {
-                    asosDataPill(String(format: "%.2f\"", alt), icon: "gauge")
-                }
-            }
-
-            // Wind history strip (last hour of 5-min data)
-            if !vm.synopticHistory.isEmpty {
-                asosWindStrip
-            }
-
-            // Delta from METAR callout
-            if let metar = vm.metar {
-                asosMetarDelta(obs, metar: metar)
-            }
+            .foregroundColor(.cyan)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.cyan.opacity(0.15))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
+            )
         }
-        .padding(.top, 4)
+        .disabled(vm.boostRemaining == 0)
+        .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
     }
 
     private func asosDataPill(_ text: String, icon: String) -> some View {
@@ -421,6 +407,101 @@ struct WeatherDetailView: View {
             Text("Observed \(minutes) min ago")
                 .font(.caption)
                 .foregroundColor(metar.isOld ? Color.red : .secondary)
+        }
+    }
+
+    // MARK: - Decoded ASOS Section
+    private func decodedASOSSection(_ obs: SynopticObservation) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.subheadline)
+                    .foregroundColor(.cyan)
+                Text("ASOS")
+                    .font(.subheadline.bold())
+                    .foregroundColor(.cyan)
+                    .tracking(1.5)
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    let minutes = Int(context.date.timeIntervalSince(obs.observationTime) / 60)
+                    Text("— \(minutes) min ago")
+                        .font(.subheadline)
+                        .foregroundColor(.cyan.opacity(0.7))
+                }
+                Spacer()
+                FlightCategoryBadge(category: obs.estimatedCategory)
+            }
+
+            if let spd = obs.windSpeed {
+                let dir = obs.windDirection.map { "\($0)°" } ?? "VRB"
+                let gustText = obs.windGust.map { " gusting \(Int($0)) kt" } ?? ""
+                let wind = Wind(direction: obs.windDirection, speed: Int(spd), gust: obs.windGust.map { Int($0) }, isVariable: obs.windDirection == nil)
+                conditionRow("wind", "Wind", "\(dir) at \(Int(spd)) kt\(gustText)", color: windConditionColor(wind))
+            }
+
+            if let v = obs.visibility {
+                let visText = v >= 10 ? "10+ SM" : String(format: "%.1f SM", v)
+                conditionRow("eye.fill", "Visibility", visText, color: visibilityConditionColor(v))
+            }
+
+            if let ceiling = obs.ceilingAGL {
+                let ceilingLayer = obs.cloudLayers.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
+                let coverageStr = ceilingLayer.map { $0.coverage.rawValue } ?? "BKN"
+                conditionRow("cloud.fill", "Ceiling", "\(coverageStr) at \(ceiling) ft", color: ceilingConditionColor(ceiling))
+            }
+
+            if !obs.cloudLayers.isEmpty {
+                let layerTexts = obs.cloudLayers.map { "\($0.coverage.rawValue) \($0.altitude) ft" }
+                let worstColor = obs.cloudLayers.map { synopticCloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
+                conditionRow("cloud.fill", "Clouds", layerTexts.joined(separator: ", "), color: worstColor)
+            }
+
+            if let t = obs.temperatureCelsius, let d = obs.dewpointCelsius {
+                let spread = t - d
+                conditionRow("thermometer", "Temp / Dewpoint",
+                             "\(t)°C / \(d)°C  (spread \(spread)°)",
+                             color: tempDewConditionColor(temp: t, dew: d))
+            }
+
+            if let alt = obs.altimeter {
+                conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", alt),
+                             color: altimeterConditionColor(alt))
+            }
+
+            if let wx = obs.weatherCondition, !wx.isEmpty {
+                conditionRow("cloud.bolt.rain.fill", "Weather",
+                             WeatherDecoder.decodeAll([wx]),
+                             color: wxPhenomenaConditionColor([wx]))
+            }
+
+            if !vm.synopticHistory.isEmpty {
+                asosWindStrip
+            }
+
+            if let metar = vm.metar {
+                asosMetarDelta(obs, metar: metar)
+            }
+        }
+        .padding()
+        .background(cardBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
+        )
+    }
+
+    private func synopticCloudLayerColor(_ layer: SynopticCloudLayer) -> Color {
+        let altFt = layer.altitude
+        switch layer.coverage {
+        case .few, .scattered:
+            if altFt < 3000 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
+            return .green
+        case .broken, .overcast, .verticalVisibility:
+            if altFt < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) }
+            if altFt < 1000 { return .red }
+            if altFt < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }
+            return .green
+        case .clear, .skyClear:
+            return .green
         }
     }
 
