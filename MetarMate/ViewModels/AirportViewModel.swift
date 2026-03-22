@@ -99,10 +99,35 @@ class AirportViewModel: ObservableObject {
     }
 
     private func fetchSearchMetars() async {
-        let icaos = searchResults.filter { $0.hasMetar }.map { $0.icao }
-        guard !icaos.isEmpty else { return }
-        if let metars = try? await weatherService.fetchMetars(for: icaos) {
-            searchMetars = metars
+        let metarAirports = searchResults.filter { $0.hasMetar }
+        guard !metarAirports.isEmpty else { return }
+
+        // Build lookup: NOAA ICAO -> original airport ICAO (e.g. KCMA -> CMA)
+        var noaaToOriginal: [String: String] = [:]
+        var noaaIds: [String] = []
+        for airport in metarAirports {
+            let code = airport.icao.uppercased()
+            if code.count == 3, code.allSatisfy({ $0.isLetter }), !code.hasPrefix("K") {
+                let kCode = "K\(code)"
+                noaaIds.append(kCode)
+                noaaToOriginal[kCode] = code
+            } else {
+                noaaIds.append(code)
+                noaaToOriginal[code] = code
+            }
+        }
+
+        if let metars = try? await weatherService.fetchMetars(for: noaaIds) {
+            // Map results back to original airport ICAO codes
+            var mapped: [String: Metar] = [:]
+            for (key, metar) in metars {
+                if let original = noaaToOriginal[key] {
+                    mapped[original] = metar
+                } else {
+                    mapped[key] = metar
+                }
+            }
+            searchMetars = mapped
         }
     }
 
@@ -114,9 +139,27 @@ class AirportViewModel: ObservableObject {
         nearestAirports = airportService.nearest(to: location, count: 15)
 
         // Fetch METARs only for airports with official reporting stations
-        let icaos = nearestAirports.filter { $0.hasMetar }.map { $0.icao }
-        if let metars = try? await weatherService.fetchMetars(for: icaos) {
-            nearestMetars = metars
+        // K-prefix 3-letter FAA codes for NOAA lookup, then map results back
+        let metarNearby = nearestAirports.filter { $0.hasMetar }
+        var nearNoaaToOrig: [String: String] = [:]
+        var nearNoaaIds: [String] = []
+        for airport in metarNearby {
+            let code = airport.icao.uppercased()
+            if code.count == 3, code.allSatisfy({ $0.isLetter }), !code.hasPrefix("K") {
+                let kCode = "K\(code)"
+                nearNoaaIds.append(kCode)
+                nearNoaaToOrig[kCode] = code
+            } else {
+                nearNoaaIds.append(code)
+                nearNoaaToOrig[code] = code
+            }
+        }
+        if let metars = try? await weatherService.fetchMetars(for: nearNoaaIds) {
+            var mapped: [String: Metar] = [:]
+            for (key, metar) in metars {
+                mapped[nearNoaaToOrig[key] ?? key] = metar
+            }
+            nearestMetars = mapped
         }
         isLoadingNearest = false
     }
