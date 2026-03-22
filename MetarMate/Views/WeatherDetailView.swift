@@ -576,7 +576,7 @@ struct WeatherDetailView: View {
             }
 
             if let spd = obs.windSpeed {
-                let dir = obs.windDirection.map { "\($0)°" } ?? "VRB"
+                let dir = obs.windDirection.map { String(format: "%03d°", $0) } ?? "VRB"
                 let gustText = obs.windGust.map { " gusting \(Int($0)) kt" } ?? ""
                 let wind = Wind(direction: obs.windDirection, speed: Int(spd), gust: obs.windGust.map { Int($0) }, isVariable: obs.windDirection == nil)
                 conditionRow("wind", "Wind", "\(dir) at \(Int(spd)) kt\(gustText)", color: windConditionColor(wind))
@@ -1408,7 +1408,7 @@ struct WeatherDetailView: View {
         if metar.wind.speed == 0 {
             parts.append("Calm")
         } else {
-            let dir = metar.wind.isVariable ? "VRB" : "\(metar.wind.direction ?? 0)°"
+            let dir = metar.wind.isVariable ? "VRB" : String(format: "%03d°", metar.wind.direction ?? 0)
             var w = "\(dir) \(metar.wind.speed) kt"
             if let g = metar.wind.gust { w += " G\(g)" }
             parts.append(w)
@@ -2060,7 +2060,7 @@ struct WeatherDetailView: View {
             sectionHeader("Conditions")
 
             // Wind
-            let windDir = wx.windDirectionDeg.map { "\($0)°" } ?? "Variable"
+            let windDir = wx.windDirectionDeg.map { String(format: "%03d°", $0) } ?? "Variable"
             let gustStr = wx.windGustKtRounded.map { " G\($0) kt" } ?? ""
             conditionRow("wind", "Wind",
                          "\(windDir)  \(wx.windSpeedKtRounded) kt\(gustStr)",
@@ -2475,7 +2475,7 @@ struct WeatherDetailView: View {
         let timeFmt = DateFormatter()
         let _ = { timeFmt.dateFormat = "h:mm a"; timeFmt.timeZone = .current }()
         let gStr = hour.windGustKtRounded.map { " G\($0) kt" } ?? ""
-        let windDir = hour.windDirectionDeg.map { "\($0)°" } ?? "Variable"
+        let windDir = hour.windDirectionDeg.map { String(format: "%03d°", $0) } ?? "Variable"
         let visStr = hour.visibilityMiles.map { $0 >= 10 ? "~10+ SM" : "~\(Int($0.rounded())) SM" } ?? "—"
 
         return HStack(spacing: 14) {
@@ -2740,7 +2740,7 @@ struct WeatherDetailView: View {
 
     private func windText(_ wind: Wind) -> String {
         if wind.speed == 0 { return "Calm" }
-        let dir = wind.isVariable ? "Variable" : "\(wind.direction ?? 0)°"
+        let dir = wind.isVariable ? "Variable" : String(format: "%03d°", wind.direction ?? 0)
         var text = "\(dir) at \(wind.speed) kt"
         if let gust = wind.gust { text += ", gusting \(gust) kt" }
         return text
