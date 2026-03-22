@@ -83,7 +83,8 @@ class WeatherViewModel: ObservableObject {
             // Before falling back to advisory, try K-prefix for 3-letter FAA codes (CMA → KCMA)
             let upper = airport.icao.uppercased()
             if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
-                await loadMETAR(icao: airport.icao)
+                let kIcao = "K\(upper)"
+                await loadMETAR(icao: kIcao)
                 if metar != nil {
                     isLoading = false
                     return
