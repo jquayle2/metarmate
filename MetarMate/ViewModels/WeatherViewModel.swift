@@ -80,6 +80,17 @@ class WeatherViewModel: ObservableObject {
         synopticError = nil
 
         if !airport.hasMetar {
+            // Before falling back to advisory, try K-prefix for 3-letter FAA codes (CMA → KCMA)
+            let upper = airport.icao.uppercased()
+            if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
+                await loadMETAR(icao: airport.icao)
+                if metar != nil {
+                    isLoading = false
+                    return
+                }
+                error = nil
+                noWeatherReporting = false
+            }
             await loadAdvisory(airport: airport)
         } else {
             await loadMETAR(icao: airport.icao)
@@ -115,6 +126,38 @@ class WeatherViewModel: ObservableObject {
             let fetchedTaf = await tafResult
 
             if fetchedHistory.isEmpty {
+                // For 3-letter FAA codes (CMA, SNA, etc.), try K-prefix (KCMA, KSNA)
+                let upper = icao.uppercased()
+                if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
+                    let kIcao = "K\(upper)"
+                    if let retryHistory = try? await weatherService.fetchMetarHistory(for: kIcao, hours: 6),
+                       !retryHistory.isEmpty {
+                        metarHistory = retryHistory
+                        metar = retryHistory.first
+                        let retryTaf = try? await weatherService.fetchTaf(for: kIcao)
+                        taf = retryTaf
+                        trend = WeatherTrend.derive(metars: retryHistory, taf: retryTaf)
+                        if let retryTaf {
+                            tafVerification = TafVerification.derive(metars: retryHistory, taf: retryTaf)
+                        } else {
+                            tafVerification = nil
+                        }
+                        lastUpdated = Date()
+                        if let currentMetar = metar {
+                            let snapshot = WidgetWeatherSnapshot.from(
+                                airport: AirportService.shared.airport(icao: icao) ?? Airport(
+                                    icao: icao, iata: nil, name: icao,
+                                    latitude: 0, longitude: 0, elevation: 0
+                                ),
+                                metar: currentMetar,
+                                trend: trend,
+                                tafVerification: tafVerification
+                            )
+                            WidgetDataManager.save(snapshot: snapshot)
+                        }
+                        return
+                    }
+                }
                 noWeatherReporting = true
                 metar = nil
                 metarHistory = []
