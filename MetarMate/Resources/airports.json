@@ -3521,7 +3521,7 @@
   {
     "icao": "0CD5",
     "iata": null,
-    "name": "Piñon Canyon Airport",
+    "name": "Pi\u00f1on Canyon Airport",
     "latitude": 37.490501,
     "longitude": -104.143997,
     "elevation": 5686,
@@ -6404,8 +6404,8 @@
     "name": "Himsel Army Airfield",
     "latitude": 39.33933,
     "longitude": -86.02983,
-    "elevation": 708,
-    "hasMetar": false
+    "elevation": 705,
+    "hasMetar": true
   },
   {
     "icao": "11IN",
@@ -7385,8 +7385,8 @@
     "name": "Boggs Field",
     "latitude": 38.82378,
     "longitude": -81.348843,
-    "elevation": 927,
-    "hasMetar": false
+    "elevation": 3041,
+    "hasMetar": true
   },
   {
     "icao": "14PA",
@@ -25400,7 +25400,7 @@
   {
     "icao": "46AZ",
     "iata": null,
-    "name": "Piñon Airport",
+    "name": "Pi\u00f1on Airport",
     "latitude": 36.09261,
     "longitude": -110.22954,
     "elevation": 6314,
@@ -36056,7 +36056,7 @@
   {
     "icao": "67KS",
     "iata": null,
-    "name": "Montezuma Coöp Airport",
+    "name": "Montezuma Co\u00f6p Airport",
     "latitude": 37.587355,
     "longitude": -100.434089,
     "elevation": 2780,
@@ -43196,8 +43196,8 @@
     "name": "Naval Outlying Landing Field Goliad",
     "latitude": 28.615516,
     "longitude": -97.616302,
-    "elevation": 324,
-    "hasMetar": false
+    "elevation": 1063,
+    "hasMetar": true
   },
   {
     "icao": "7TA0",
@@ -55319,8 +55319,8 @@
     "name": "Scotts Seaplane Base",
     "latitude": 48.2666015625,
     "longitude": -92.483497619629,
-    "elevation": 1119,
-    "hasMetar": false
+    "elevation": 1129,
+    "hasMetar": true
   },
   {
     "icao": "CGA",
@@ -55346,8 +55346,8 @@
     "name": "Ellen Church Field",
     "latitude": 43.3652992249,
     "longitude": -92.133102417,
-    "elevation": 1279,
-    "hasMetar": false
+    "elevation": 1276,
+    "hasMetar": true
   },
   {
     "icao": "CJX",
@@ -55355,8 +55355,8 @@
     "name": "Crooked Creek Airport",
     "latitude": 61.870315,
     "longitude": -158.137636,
-    "elevation": 178,
-    "hasMetar": false
+    "elevation": 584,
+    "hasMetar": true
   },
   {
     "icao": "CKU",
@@ -56454,7 +56454,7 @@
     "latitude": 42.908902,
     "longitude": -77.325226,
     "elevation": 814,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "D41",
@@ -56858,8 +56858,8 @@
     "name": "Dwight Airport",
     "latitude": 41.133301,
     "longitude": -88.440804,
-    "elevation": 632,
-    "hasMetar": false
+    "elevation": 633,
+    "hasMetar": true
   },
   {
     "icao": "18T",
@@ -58487,8 +58487,8 @@
     "name": "Branson West Airport",
     "latitude": 36.698497,
     "longitude": -93.402249,
-    "elevation": 1348,
-    "hasMetar": false
+    "elevation": 1286,
+    "hasMetar": true
   },
   {
     "icao": "G05",
@@ -59252,8 +59252,8 @@
     "name": "Harford Field",
     "latitude": 42.923686,
     "longitude": -106.310111,
-    "elevation": 5370,
-    "hasMetar": false
+    "elevation": 5371,
+    "hasMetar": true
   },
   {
     "icao": "HI01",
@@ -59396,8 +59396,8 @@
     "name": "Greene County/Lewis A. Jackson Regional Airport",
     "latitude": 39.690807,
     "longitude": -83.992585,
-    "elevation": 949,
-    "hasMetar": false
+    "elevation": 932,
+    "hasMetar": true
   },
   {
     "icao": "I27",
@@ -62708,8 +62708,8 @@
     "name": "Headland Municipal Airport",
     "latitude": 31.3643,
     "longitude": -85.311798,
-    "elevation": 359,
-    "hasMetar": false
+    "elevation": 358,
+    "hasMetar": true
   },
   {
     "icao": "0NE9",
@@ -62852,8 +62852,8 @@
     "name": "Abbeville Chris Crusta Memorial Airport",
     "latitude": 29.97579956,
     "longitude": -92.084198,
-    "elevation": 16,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "0R4",
@@ -63302,8 +63302,8 @@
     "name": "Jackson County Airport",
     "latitude": 34.174,
     "longitude": -83.560699,
-    "elevation": 951,
-    "hasMetar": false
+    "elevation": 942,
+    "hasMetar": true
   },
   {
     "icao": "19M",
@@ -63636,7 +63636,7 @@
     "latitude": 30.843879,
     "longitude": -85.601773,
     "elevation": 85,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "1K2",
@@ -63680,8 +63680,8 @@
     "name": "Port of South Louisiana Executive Regional Airport",
     "latitude": 30.087,
     "longitude": -90.582602,
-    "elevation": 7,
-    "hasMetar": false
+    "elevation": 3,
+    "hasMetar": true
   },
   {
     "icao": "1L1",
@@ -64265,8 +64265,8 @@
     "name": "Elbert County Airport Patz Field",
     "latitude": 34.095423,
     "longitude": -82.817581,
-    "elevation": 603,
-    "hasMetar": false
+    "elevation": 591,
+    "hasMetar": true
   },
   {
     "icao": "27K",
@@ -64481,8 +64481,8 @@
     "name": "Lamesa Municipal Airport",
     "latitude": 32.756302,
     "longitude": -101.919997,
-    "elevation": 2999,
-    "hasMetar": false
+    "elevation": 2986,
+    "hasMetar": true
   },
   {
     "icao": "2F7",
@@ -64625,8 +64625,8 @@
     "name": "Stanton County Municipal Airport",
     "latitude": 37.583039,
     "longitude": -101.733002,
-    "elevation": 3324,
-    "hasMetar": false
+    "elevation": 3323,
+    "hasMetar": true
   },
   {
     "icao": "2K4",
@@ -65300,8 +65300,8 @@
     "name": "Jack Barstow Airport",
     "latitude": 43.663054,
     "longitude": -84.258606,
-    "elevation": 635,
-    "hasMetar": false
+    "elevation": 623,
+    "hasMetar": true
   },
   {
     "icao": "3NY8",
@@ -65570,8 +65570,8 @@
     "name": "Greene County Regional Airport",
     "latitude": 33.598008,
     "longitude": -83.138158,
-    "elevation": 677,
-    "hasMetar": false
+    "elevation": 679,
+    "hasMetar": true
   },
   {
     "icao": "3JC",
@@ -65939,8 +65939,8 @@
     "name": "Perry-Foley Airport",
     "latitude": 30.0693,
     "longitude": -83.580597,
-    "elevation": 44,
-    "hasMetar": false
+    "elevation": 39,
+    "hasMetar": true
   },
   {
     "icao": "40U",
@@ -66146,8 +66146,8 @@
     "name": "Cherokee County Regional Airport",
     "latitude": 34.3106,
     "longitude": -84.423897,
-    "elevation": 1219,
-    "hasMetar": false
+    "elevation": 1217,
+    "hasMetar": true
   },
   {
     "icao": "47K",
@@ -66299,8 +66299,8 @@
     "name": "Atlanta Speedway Airport",
     "latitude": 33.389876,
     "longitude": -84.331011,
-    "elevation": 882,
-    "hasMetar": false
+    "elevation": 863,
+    "hasMetar": true
   },
   {
     "icao": "4A9",
@@ -66425,8 +66425,8 @@
     "name": "Hornell Municipal Airport",
     "latitude": 42.382139,
     "longitude": -77.68211,
-    "elevation": 1219,
-    "hasMetar": false
+    "elevation": 3999,
+    "hasMetar": true
   },
   {
     "icao": "4G8",
@@ -66452,8 +66452,8 @@
     "name": "Putnam County Airport",
     "latitude": 39.632596,
     "longitude": -86.813793,
-    "elevation": 842,
-    "hasMetar": false
+    "elevation": 833,
+    "hasMetar": true
   },
   {
     "icao": "4I9",
@@ -66632,8 +66632,8 @@
     "name": "H L Sonny Callahan Airport",
     "latitude": 30.460501,
     "longitude": -87.876999,
-    "elevation": 91,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "4R5",
@@ -66687,7 +66687,7 @@
     "latitude": 45.3596000671,
     "longitude": -117.253997803,
     "elevation": 4121,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "4S9",
@@ -66704,8 +66704,8 @@
     "name": "Reno-Stead Airport",
     "latitude": 39.6674,
     "longitude": -119.875999,
-    "elevation": 5050,
-    "hasMetar": false
+    "elevation": 5043,
+    "hasMetar": true
   },
   {
     "icao": "4T2",
@@ -66947,8 +66947,8 @@
     "name": "Fernandina Beach Municipal Airport",
     "latitude": 30.611799,
     "longitude": -81.461197,
-    "elevation": 16,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "55K",
@@ -67043,7 +67043,7 @@
   {
     "icao": "5A6",
     "iata": null,
-    "name": "Winona–Montgomery County Airport",
+    "name": "Winona\u2013Montgomery County Airport",
     "latitude": 33.4654007,
     "longitude": -89.72920227,
     "elevation": 364,
@@ -67235,8 +67235,8 @@
     "name": "Marion-Crittenden County James C Johnson Regional Airport",
     "latitude": 37.336265,
     "longitude": -88.109751,
-    "elevation": 650,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "5N2",
@@ -67340,11 +67340,11 @@
   {
     "icao": "DNA",
     "iata": null,
-    "name": "Doña Ana County International Jetport",
+    "name": "Do\u00f1a Ana County International Jetport",
     "latitude": 31.881001,
     "longitude": -106.705002,
-    "elevation": 4112,
-    "hasMetar": false
+    "elevation": 4114,
+    "hasMetar": true
   },
   {
     "icao": "5T9",
@@ -67424,8 +67424,8 @@
     "name": "Siler City Municipal Airport",
     "latitude": 35.7043,
     "longitude": -79.504204,
-    "elevation": 614,
-    "hasMetar": false
+    "elevation": 597,
+    "hasMetar": true
   },
   {
     "icao": "5Y1",
@@ -67496,8 +67496,8 @@
     "name": "Boulder City Municipal Airport",
     "latitude": 35.947161,
     "longitude": -114.858799,
-    "elevation": 2201,
-    "hasMetar": false
+    "elevation": 2146,
+    "hasMetar": true
   },
   {
     "icao": "61C",
@@ -67802,8 +67802,8 @@
     "name": "Barnes County Municipal Airport",
     "latitude": 46.94100189,
     "longitude": -98.01760101,
-    "elevation": 1402,
-    "hasMetar": false
+    "elevation": 1388,
+    "hasMetar": true
   },
   {
     "icao": "6D9",
@@ -68054,8 +68054,8 @@
     "name": "Ravalli County Airport",
     "latitude": 46.251499,
     "longitude": -114.125569,
-    "elevation": 3642,
-    "hasMetar": false
+    "elevation": 3648,
+    "hasMetar": true
   },
   {
     "icao": "6S8",
@@ -68468,8 +68468,8 @@
     "name": "Ohio County Airport",
     "latitude": 37.458302,
     "longitude": -86.849998,
-    "elevation": 535,
-    "hasMetar": false
+    "elevation": 1755,
+    "hasMetar": true
   },
   {
     "icao": "7K5",
@@ -68594,8 +68594,8 @@
     "name": "Ruby Valley Field",
     "latitude": 45.533702,
     "longitude": -112.300283,
-    "elevation": 4777,
-    "hasMetar": false
+    "elevation": 4741,
+    "hasMetar": true
   },
   {
     "icao": "7S5",
@@ -68676,7 +68676,7 @@
     "latitude": 42.259601593,
     "longitude": -104.727996826,
     "elevation": 4400,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "7V7",
@@ -69179,8 +69179,8 @@
     "name": "Astronaut Kent Rominger Airport",
     "latitude": 37.71360016,
     "longitude": -106.3539963,
-    "elevation": 7949,
-    "hasMetar": false
+    "elevation": 7933,
+    "hasMetar": true
   },
   {
     "icao": "8V2",
@@ -69440,8 +69440,8 @@
     "name": "Covington Municipal Airport",
     "latitude": 33.63249969,
     "longitude": -83.84960175,
-    "elevation": 809,
-    "hasMetar": false
+    "elevation": 787,
+    "hasMetar": true
   },
   {
     "icao": "9A4",
@@ -69683,8 +69683,8 @@
     "name": "Austin Airport",
     "latitude": 39.467708,
     "longitude": -117.197576,
-    "elevation": 5730,
-    "hasMetar": false
+    "elevation": 5735,
+    "hasMetar": true
   },
   {
     "icao": "DWX",
@@ -69692,8 +69692,8 @@
     "name": "Dixon Airport",
     "latitude": 41.038299560547,
     "longitude": -107.49700164795,
-    "elevation": 6520,
-    "hasMetar": false
+    "elevation": 6476,
+    "hasMetar": true
   },
   {
     "icao": "9U7",
@@ -69845,8 +69845,8 @@
     "name": "Logan County Airport",
     "latitude": 40.158699,
     "longitude": -89.334999,
-    "elevation": 597,
-    "hasMetar": false
+    "elevation": 587,
+    "hasMetar": true
   },
   {
     "icao": "KAAF",
@@ -69863,8 +69863,8 @@
     "name": "Colonel James Jabara Airport",
     "latitude": 37.74760056,
     "longitude": -97.22109985,
-    "elevation": 1421,
-    "hasMetar": false
+    "elevation": 1407,
+    "hasMetar": true
   },
   {
     "icao": "AAS",
@@ -69872,8 +69872,8 @@
     "name": "Taylor County Airport",
     "latitude": 37.358254,
     "longitude": -85.309434,
-    "elevation": 921,
-    "hasMetar": false
+    "elevation": 886,
+    "hasMetar": true
   },
   {
     "icao": "AAT",
@@ -69881,8 +69881,8 @@
     "name": "Alturas Municipal Airport",
     "latitude": 41.482736,
     "longitude": -120.565671,
-    "elevation": 4378,
-    "hasMetar": false
+    "elevation": 4383,
+    "hasMetar": true
   },
   {
     "icao": "KABE",
@@ -69944,8 +69944,8 @@
     "name": "Jimmy Carter Regional Airport",
     "latitude": 32.110802,
     "longitude": -84.188904,
-    "elevation": 468,
-    "hasMetar": false
+    "elevation": 459,
+    "hasMetar": true
   },
   {
     "icao": "KACK",
@@ -69962,8 +69962,8 @@
     "name": "Allen Parish Airport",
     "latitude": 30.750299,
     "longitude": -92.688301,
-    "elevation": 107,
-    "hasMetar": false
+    "elevation": 102,
+    "hasMetar": true
   },
   {
     "icao": "ACQ",
@@ -69971,8 +69971,8 @@
     "name": "Waseca Municipal Airport",
     "latitude": 44.073502,
     "longitude": -93.552902,
-    "elevation": 1126,
-    "hasMetar": false
+    "elevation": 1112,
+    "hasMetar": true
   },
   {
     "icao": "KACT",
@@ -70007,8 +70007,8 @@
     "name": "Henderson Field",
     "latitude": 34.717899,
     "longitude": -78.003601,
-    "elevation": 39,
-    "hasMetar": false
+    "elevation": 98,
+    "hasMetar": true
   },
   {
     "icao": "ADC",
@@ -70016,8 +70016,8 @@
     "name": "Wadena Municipal Airport",
     "latitude": 46.450298,
     "longitude": -95.210999,
-    "elevation": 1369,
-    "hasMetar": false
+    "elevation": 1365,
+    "hasMetar": true
   },
   {
     "icao": "KADG",
@@ -70061,8 +70061,8 @@
     "name": "Atwood-Rawlins City-County Airport",
     "latitude": 39.841209,
     "longitude": -101.043248,
-    "elevation": 2991,
-    "hasMetar": false
+    "elevation": 2949,
+    "hasMetar": true
   },
   {
     "icao": "ADU",
@@ -70070,8 +70070,8 @@
     "name": "Audubon County Airport",
     "latitude": 41.701401,
     "longitude": -94.920502,
-    "elevation": 1287,
-    "hasMetar": false
+    "elevation": 1283,
+    "hasMetar": true
   },
   {
     "icao": "KADW",
@@ -70097,8 +70097,8 @@
     "name": "Double Eagle II Airport",
     "latitude": 35.145199,
     "longitude": -106.794998,
-    "elevation": 5837,
-    "hasMetar": false
+    "elevation": 5810,
+    "hasMetar": true
   },
   {
     "icao": "AEJ",
@@ -70106,8 +70106,8 @@
     "name": "Central Colorado Regional Airport",
     "latitude": 38.812906,
     "longitude": -106.120062,
-    "elevation": 7946,
-    "hasMetar": false
+    "elevation": 7940,
+    "hasMetar": true
   },
   {
     "icao": "KAEL",
@@ -70151,8 +70151,8 @@
     "name": "Nebraska City Municipal Airport",
     "latitude": 40.606899,
     "longitude": -95.8657,
-    "elevation": 1165,
-    "hasMetar": false
+    "elevation": 1158,
+    "hasMetar": true
   },
   {
     "icao": "KAFN",
@@ -70178,8 +70178,8 @@
     "name": "Anson County Airport - Jeff Cloud Field",
     "latitude": 35.020599,
     "longitude": -80.077103,
-    "elevation": 300,
-    "hasMetar": false
+    "elevation": 299,
+    "hasMetar": true
   },
   {
     "icao": "KAFW",
@@ -70214,8 +70214,8 @@
     "name": "MacDill Air Force Base Auxiliary Field",
     "latitude": 27.6506,
     "longitude": -81.349403,
-    "elevation": 68,
-    "hasMetar": false
+    "elevation": 66,
+    "hasMetar": true
   },
   {
     "icao": "KAGS",
@@ -70232,8 +70232,8 @@
     "name": "Wagner Municipal Airport",
     "latitude": 43.064913,
     "longitude": -98.296654,
-    "elevation": 1475,
-    "hasMetar": false
+    "elevation": 1463,
+    "hasMetar": true
   },
   {
     "icao": "KAHC",
@@ -70268,8 +70268,8 @@
     "name": "Wahoo Municipal Airport",
     "latitude": 41.2412986755,
     "longitude": -96.59400177,
-    "elevation": 1224,
-    "hasMetar": false
+    "elevation": 1220,
+    "hasMetar": true
   },
   {
     "icao": "KAIA",
@@ -70286,8 +70286,8 @@
     "name": "Hopkins Field",
     "latitude": 38.239025,
     "longitude": -108.563354,
-    "elevation": 5940,
-    "hasMetar": false
+    "elevation": 5942,
+    "hasMetar": true
   },
   {
     "icao": "KAID",
@@ -70304,8 +70304,8 @@
     "name": "Langlade County Airport",
     "latitude": 45.154202,
     "longitude": -89.110703,
-    "elevation": 1521,
-    "hasMetar": false
+    "elevation": 1516,
+    "hasMetar": true
   },
   {
     "icao": "KAIK",
@@ -70331,8 +70331,8 @@
     "name": "Aitkin Municipal Airport Steve Kurtz Field",
     "latitude": 46.548401,
     "longitude": -93.676804,
-    "elevation": 1205,
-    "hasMetar": false
+    "elevation": 1204,
+    "hasMetar": true
   },
   {
     "icao": "KAIV",
@@ -70358,8 +70358,8 @@
     "name": "Mount Carmel Municipal Airport",
     "latitude": 38.606499,
     "longitude": -87.7267,
-    "elevation": 429,
-    "hasMetar": false
+    "elevation": 427,
+    "hasMetar": true
   },
   {
     "icao": "AJO",
@@ -70367,8 +70367,8 @@
     "name": "Corona Municipal Airport",
     "latitude": 33.897701,
     "longitude": -117.601997,
-    "elevation": 533,
-    "hasMetar": false
+    "elevation": 528,
+    "hasMetar": true
   },
   {
     "icao": "AJR",
@@ -70376,8 +70376,8 @@
     "name": "Habersham County Airport",
     "latitude": 34.499901,
     "longitude": -83.556702,
-    "elevation": 1448,
-    "hasMetar": false
+    "elevation": 1447,
+    "hasMetar": true
   },
   {
     "icao": "AJZ",
@@ -70385,8 +70385,8 @@
     "name": "Blake Field",
     "latitude": 38.7864,
     "longitude": -108.064003,
-    "elevation": 5193,
-    "hasMetar": false
+    "elevation": 5194,
+    "hasMetar": true
   },
   {
     "icao": "AKH",
@@ -70394,8 +70394,8 @@
     "name": "Gastonia Municipal Airport",
     "latitude": 35.202598,
     "longitude": -81.149902,
-    "elevation": 798,
-    "hasMetar": false
+    "elevation": 794,
+    "hasMetar": true
   },
   {
     "icao": "KAKO",
@@ -70412,8 +70412,8 @@
     "name": "Wakefield Municipal Airport",
     "latitude": 36.98720169067383,
     "longitude": -77.0010986328125,
-    "elevation": 113,
-    "hasMetar": false
+    "elevation": 112,
+    "hasMetar": true
   },
   {
     "icao": "KAKR",
@@ -70512,7 +70512,7 @@
     "latitude": 31.536100387573242,
     "longitude": -82.50659942626953,
     "elevation": 200,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KAMN",
@@ -70530,7 +70530,7 @@
     "latitude": 38.851501,
     "longitude": -83.566299,
     "elevation": 896,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KAMW",
@@ -70565,8 +70565,8 @@
     "name": "Anoka County-Blaine (Janes Field) Airport",
     "latitude": 45.145,
     "longitude": -93.211401,
-    "elevation": 912,
-    "hasMetar": false
+    "elevation": 906,
+    "hasMetar": true
   },
   {
     "icao": "ANJ",
@@ -70574,8 +70574,8 @@
     "name": "Sault Ste Marie Municipal Airport Sanderson Field",
     "latitude": 46.479198,
     "longitude": -84.368401,
-    "elevation": 716,
-    "hasMetar": false
+    "elevation": 722,
+    "hasMetar": true
   },
   {
     "icao": "KANK",
@@ -70628,8 +70628,8 @@
     "name": "Arco Butte County Airport",
     "latitude": 43.6035,
     "longitude": -113.334,
-    "elevation": 5332,
-    "hasMetar": false
+    "elevation": 5335,
+    "hasMetar": true
   },
   {
     "icao": "KAOH",
@@ -70655,8 +70655,8 @@
     "name": "Ava Bill Martin Memorial Airport",
     "latitude": 36.971901,
     "longitude": -92.6819,
-    "elevation": 1311,
-    "hasMetar": false
+    "elevation": 1312,
+    "hasMetar": true
   },
   {
     "icao": "KAPA",
@@ -70736,8 +70736,8 @@
     "name": "Zapata County Airport",
     "latitude": 26.968799591099998,
     "longitude": -99.2489013672,
-    "elevation": 422,
-    "hasMetar": false
+    "elevation": 423,
+    "hasMetar": true
   },
   {
     "icao": "AQO",
@@ -70745,8 +70745,8 @@
     "name": "Llano Municipal Airport",
     "latitude": 30.783700942993,
     "longitude": -98.662002563477,
-    "elevation": 1102,
-    "hasMetar": false
+    "elevation": 1096,
+    "hasMetar": true
   },
   {
     "icao": "AQP",
@@ -70754,8 +70754,8 @@
     "name": "Appleton Municipal Airport",
     "latitude": 45.228239,
     "longitude": -96.005856,
-    "elevation": 1020,
-    "hasMetar": false
+    "elevation": 1024,
+    "hasMetar": true
   },
   {
     "icao": "AQR",
@@ -70763,8 +70763,8 @@
     "name": "Atoka Municipal Airport",
     "latitude": 34.398300170898,
     "longitude": -96.148101806641,
-    "elevation": 590,
-    "hasMetar": false
+    "elevation": 584,
+    "hasMetar": true
   },
   {
     "icao": "AQW",
@@ -70772,8 +70772,8 @@
     "name": "Harriman and West Airport",
     "latitude": 42.6959,
     "longitude": -73.170403,
-    "elevation": 654,
-    "hasMetar": false
+    "elevation": 643,
+    "hasMetar": true
   },
   {
     "icao": "AQX",
@@ -70781,8 +70781,8 @@
     "name": "Allendale County Airport",
     "latitude": 32.995098,
     "longitude": -81.270203,
-    "elevation": 161,
-    "hasMetar": false
+    "elevation": 157,
+    "hasMetar": true
   },
   {
     "icao": "KARA",
@@ -70862,8 +70862,8 @@
     "name": "Slidell Airport",
     "latitude": 30.3451,
     "longitude": -89.820801,
-    "elevation": 29,
-    "hasMetar": false
+    "elevation": 26,
+    "hasMetar": true
   },
   {
     "icao": "KASE",
@@ -70898,8 +70898,8 @@
     "name": "Tri-County Airport at Henry Joyner Field",
     "latitude": 36.297501,
     "longitude": -77.170898,
-    "elevation": 68,
-    "hasMetar": false
+    "elevation": 66,
+    "hasMetar": true
   },
   {
     "icao": "KASL",
@@ -70934,8 +70934,8 @@
     "name": "Warsaw Municipal Airport",
     "latitude": 41.2747,
     "longitude": -85.840103,
-    "elevation": 850,
-    "hasMetar": false
+    "elevation": 830,
+    "hasMetar": true
   },
   {
     "icao": "KASX",
@@ -70961,8 +70961,8 @@
     "name": "Hall Miller Municipal Airport",
     "latitude": 33.101799,
     "longitude": -94.195297,
-    "elevation": 280,
-    "hasMetar": false
+    "elevation": 279,
+    "hasMetar": true
   },
   {
     "icao": "KATL",
@@ -71015,8 +71015,8 @@
     "name": "Aurora Municipal Al Potter Field",
     "latitude": 40.8941,
     "longitude": -97.994598,
-    "elevation": 1803,
-    "hasMetar": false
+    "elevation": 1801,
+    "hasMetar": true
   },
   {
     "icao": "KAUM",
@@ -71069,8 +71069,8 @@
     "name": "Mecklenburg Brunswick Regional Airport",
     "latitude": 36.688301,
     "longitude": -78.054497,
-    "elevation": 441,
-    "hasMetar": false
+    "elevation": 390,
+    "hasMetar": true
   },
   {
     "icao": "AVK",
@@ -71078,8 +71078,8 @@
     "name": "Alva Regional Airport",
     "latitude": 36.773201,
     "longitude": -98.669899,
-    "elevation": 1474,
-    "hasMetar": false
+    "elevation": 1476,
+    "hasMetar": true
   },
   {
     "icao": "KAVL",
@@ -71132,8 +71132,8 @@
     "name": "Washington Municipal Airport",
     "latitude": 41.276100158691406,
     "longitude": -91.67340087890625,
-    "elevation": 754,
-    "hasMetar": false
+    "elevation": 751,
+    "hasMetar": true
   },
   {
     "icao": "KAWM",
@@ -71150,8 +71150,8 @@
     "name": "Arlington Municipal Airport",
     "latitude": 48.161448,
     "longitude": -122.158442,
-    "elevation": 142,
-    "hasMetar": false
+    "elevation": 125,
+    "hasMetar": true
   },
   {
     "icao": "KAXA",
@@ -71168,8 +71168,8 @@
     "name": "Houston Southwest Airport",
     "latitude": 29.5061,
     "longitude": -95.476898,
-    "elevation": 68,
-    "hasMetar": false
+    "elevation": 59,
+    "hasMetar": true
   },
   {
     "icao": "KAXN",
@@ -71186,8 +71186,8 @@
     "name": "Clarion County Airport",
     "latitude": 41.2258,
     "longitude": -79.441002,
-    "elevation": 1458,
-    "hasMetar": false
+    "elevation": 1457,
+    "hasMetar": true
   },
   {
     "icao": "KAXS",
@@ -71240,8 +71240,8 @@
     "name": "Colorado City Municipal Airport",
     "latitude": 36.95919,
     "longitude": -113.013166,
-    "elevation": 4874,
-    "hasMetar": false
+    "elevation": 4843,
+    "hasMetar": true
   },
   {
     "icao": "AZE",
@@ -71249,8 +71249,8 @@
     "name": "Hazlehurst Airport",
     "latitude": 31.884700775146484,
     "longitude": -82.64739990234375,
-    "elevation": 255,
-    "hasMetar": false
+    "elevation": 256,
+    "hasMetar": true
   },
   {
     "icao": "KAZO",
@@ -71339,8 +71339,8 @@
     "name": "Huron County Memorial Airport",
     "latitude": 43.780201,
     "longitude": -82.985397,
-    "elevation": 763,
-    "hasMetar": false
+    "elevation": 751,
+    "hasMetar": true
   },
   {
     "icao": "KBAZ",
@@ -71420,8 +71420,8 @@
     "name": "Black River Falls Area Airport",
     "latitude": 44.250702,
     "longitude": -90.855301,
-    "elevation": 836,
-    "hasMetar": false
+    "elevation": 840,
+    "hasMetar": true
   },
   {
     "icao": "KBCT",
@@ -71465,8 +71465,8 @@
     "name": "Boulder Junction Payzer Airport",
     "latitude": 46.1374015808,
     "longitude": -89.64600372310001,
-    "elevation": 1666,
-    "hasMetar": false
+    "elevation": 1667,
+    "hasMetar": true
   },
   {
     "icao": "KBDL",
@@ -71483,8 +71483,8 @@
     "name": "Bend Municipal Airport",
     "latitude": 44.09479904,
     "longitude": -121.2009964,
-    "elevation": 3460,
-    "hasMetar": false
+    "elevation": 3425,
+    "hasMetar": true
   },
   {
     "icao": "BDQ",
@@ -71492,8 +71492,8 @@
     "name": "Morrilton Municipal Airport",
     "latitude": 35.1362,
     "longitude": -92.713501,
-    "elevation": 321,
-    "hasMetar": false
+    "elevation": 322,
+    "hasMetar": true
   },
   {
     "icao": "KBDR",
@@ -71528,8 +71528,8 @@
     "name": "Beeville Municipal Airport",
     "latitude": 28.361900329589844,
     "longitude": -97.79100036621094,
-    "elevation": 268,
-    "hasMetar": false
+    "elevation": 272,
+    "hasMetar": true
   },
   {
     "icao": "KBEC",
@@ -71565,7 +71565,7 @@
     "latitude": 45.165798,
     "longitude": -84.924103,
     "elevation": 719,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KBFD",
@@ -71663,8 +71663,8 @@
     "name": "Winchester Municipal Airport",
     "latitude": 35.177502,
     "longitude": -86.0662,
-    "elevation": 979,
-    "hasMetar": false
+    "elevation": 968,
+    "hasMetar": true
   },
   {
     "icao": "KBGM",
@@ -71699,8 +71699,8 @@
     "name": "Baxley Municipal Airport",
     "latitude": 31.71380043029785,
     "longitude": -82.393798828125,
-    "elevation": 201,
-    "hasMetar": false
+    "elevation": 200,
+    "hasMetar": true
   },
   {
     "icao": "BHK",
@@ -71708,8 +71708,8 @@
     "name": "Baker Municipal Airport",
     "latitude": 46.347599,
     "longitude": -104.259002,
-    "elevation": 2975,
-    "hasMetar": false
+    "elevation": 2966,
+    "hasMetar": true
   },
   {
     "icao": "KBHM",
@@ -71762,8 +71762,8 @@
     "name": "Early County Airport",
     "latitude": 31.397499084472656,
     "longitude": -84.8947982788086,
-    "elevation": 214,
-    "hasMetar": false
+    "elevation": 207,
+    "hasMetar": true
   },
   {
     "icao": "KBIL",
@@ -71789,8 +71789,8 @@
     "name": "West Michigan Regional Airport",
     "latitude": 42.742901,
     "longitude": -86.107399,
-    "elevation": 698,
-    "hasMetar": false
+    "elevation": 679,
+    "hasMetar": true
   },
   {
     "icao": "KBIX",
@@ -71879,8 +71879,8 @@
     "name": "Brooks County Airport",
     "latitude": 27.20680046,
     "longitude": -98.12120056,
-    "elevation": 113,
-    "hasMetar": false
+    "elevation": 112,
+    "hasMetar": true
   },
   {
     "icao": "KBKT",
@@ -71894,11 +71894,11 @@
   {
     "icao": "BKV",
     "iata": null,
-    "name": "Brooksville–Tampa Bay Regional Airport",
+    "name": "Brooksville\u2013Tampa Bay Regional Airport",
     "latitude": 28.469461,
     "longitude": -82.457114,
-    "elevation": 76,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "KBKW",
@@ -72014,8 +72014,8 @@
     "name": "Burnet Municipal Airport/Kate Craddock Field",
     "latitude": 30.738899,
     "longitude": -98.238602,
-    "elevation": 1284,
-    "hasMetar": false
+    "elevation": 1270,
+    "hasMetar": true
   },
   {
     "icao": "KBMT",
@@ -72158,8 +72158,8 @@
     "name": "Morehouse Memorial Airport",
     "latitude": 32.756,
     "longitude": -91.880556,
-    "elevation": 168,
-    "hasMetar": false
+    "elevation": 164,
+    "hasMetar": true
   },
   {
     "icao": "BQR",
@@ -72212,8 +72212,8 @@
     "name": "Belfast Municipal Airport",
     "latitude": 44.409401,
     "longitude": -69.011902,
-    "elevation": 198,
-    "hasMetar": false
+    "elevation": 197,
+    "hasMetar": true
   },
   {
     "icao": "BTA",
@@ -72221,8 +72221,8 @@
     "name": "Blair Executive Airport",
     "latitude": 41.414908,
     "longitude": -96.109136,
-    "elevation": 1325,
-    "hasMetar": false
+    "elevation": 1312,
+    "hasMetar": true
   },
   {
     "icao": "KBTF",
@@ -72338,8 +72338,8 @@
     "name": "Burlington Municipal Airport",
     "latitude": 42.69070053100586,
     "longitude": -88.30460357666016,
-    "elevation": 779,
-    "hasMetar": false
+    "elevation": 781,
+    "hasMetar": true
   },
   {
     "icao": "BUY",
@@ -72347,8 +72347,8 @@
     "name": "Burlington Alamance Regional Airport",
     "latitude": 36.048500061035156,
     "longitude": -79.47489929199219,
-    "elevation": 617,
-    "hasMetar": false
+    "elevation": 607,
+    "hasMetar": true
   },
   {
     "icao": "KBVI",
@@ -72365,8 +72365,8 @@
     "name": "Albion Municipal Airport",
     "latitude": 41.7286,
     "longitude": -98.055801,
-    "elevation": 1806,
-    "hasMetar": false
+    "elevation": 1795,
+    "hasMetar": true
   },
   {
     "icao": "KBVO",
@@ -72455,8 +72455,8 @@
     "name": "Bowman Regional Airport",
     "latitude": 46.165519,
     "longitude": -103.30075,
-    "elevation": 2965,
-    "hasMetar": false
+    "elevation": 2989,
+    "hasMetar": true
   },
   {
     "icao": "KBXA",
@@ -72473,8 +72473,8 @@
     "name": "Burke County Airport",
     "latitude": 33.04130172729492,
     "longitude": -82.00270080566406,
-    "elevation": 302,
-    "hasMetar": false
+    "elevation": 308,
+    "hasMetar": true
   },
   {
     "icao": "KBXK",
@@ -72869,8 +72869,8 @@
     "name": "Clarion Municipal Airport",
     "latitude": 42.741901,
     "longitude": -93.758904,
-    "elevation": 1162,
-    "hasMetar": false
+    "elevation": 1155,
+    "hasMetar": true
   },
   {
     "icao": "KCBE",
@@ -72896,8 +72896,8 @@
     "name": "Cambridge Municipal Airport",
     "latitude": 45.557499,
     "longitude": -93.264198,
-    "elevation": 945,
-    "hasMetar": false
+    "elevation": 935,
+    "hasMetar": true
   },
   {
     "icao": "KCBK",
@@ -72932,8 +72932,8 @@
     "name": "Clinton Municipal Airport",
     "latitude": 35.597801,
     "longitude": -92.451599,
-    "elevation": 514,
-    "hasMetar": false
+    "elevation": 499,
+    "hasMetar": true
   },
   {
     "icao": "KCCB",
@@ -72950,8 +72950,8 @@
     "name": "Newnan Coweta County Airport",
     "latitude": 33.3116,
     "longitude": -84.769798,
-    "elevation": 970,
-    "hasMetar": false
+    "elevation": 951,
+    "hasMetar": true
   },
   {
     "icao": "KCCR",
@@ -73004,8 +73004,8 @@
     "name": "Cambridge Municipal Airport",
     "latitude": 39.974998,
     "longitude": -81.577599,
-    "elevation": 799,
-    "hasMetar": false
+    "elevation": 791,
+    "hasMetar": true
   },
   {
     "icao": "KCDK",
@@ -73076,8 +73076,8 @@
     "name": "Westover Metropolitan Airport / Westover Air Reserve Base",
     "latitude": 42.194,
     "longitude": -72.534798,
-    "elevation": 241,
-    "hasMetar": false
+    "elevation": 236,
+    "hasMetar": true
   },
   {
     "icao": "CEK",
@@ -73085,8 +73085,8 @@
     "name": "Crete Municipal Airport",
     "latitude": 40.61790085,
     "longitude": -96.92489624,
-    "elevation": 1500,
-    "hasMetar": false
+    "elevation": 1499,
+    "hasMetar": true
   },
   {
     "icao": "KCEU",
@@ -73148,8 +73148,8 @@
     "name": "Buffalo Municipal Airport",
     "latitude": 45.159,
     "longitude": -93.8433,
-    "elevation": 967,
-    "hasMetar": false
+    "elevation": 958,
+    "hasMetar": true
   },
   {
     "icao": "CFJ",
@@ -73157,8 +73157,8 @@
     "name": "Crawfordsville Regional Airport",
     "latitude": 39.975602,
     "longitude": -86.919899,
-    "elevation": 799,
-    "hasMetar": false
+    "elevation": 797,
+    "hasMetar": true
   },
   {
     "icao": "KCFS",
@@ -73193,8 +73193,8 @@
     "name": "Crystal River Airport",
     "latitude": 28.867246,
     "longitude": -82.571009,
-    "elevation": 9,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KCGE",
@@ -73256,8 +73256,8 @@
     "name": "Chandler Municipal Airport",
     "latitude": 33.2691,
     "longitude": -111.810997,
-    "elevation": 1243,
-    "hasMetar": false
+    "elevation": 1240,
+    "hasMetar": true
   },
   {
     "icao": "KCHK",
@@ -73274,8 +73274,8 @@
     "name": "Wauchula Municipal Airport",
     "latitude": 27.5149,
     "longitude": -81.880501,
-    "elevation": 106,
-    "hasMetar": false
+    "elevation": 348,
+    "hasMetar": true
   },
   {
     "icao": "KCHO",
@@ -73292,8 +73292,8 @@
     "name": "Mississippi County Airport",
     "latitude": 36.842098,
     "longitude": -89.359703,
-    "elevation": 313,
-    "hasMetar": false
+    "elevation": 312,
+    "hasMetar": true
   },
   {
     "icao": "KCHS",
@@ -73310,8 +73310,8 @@
     "name": "Chillicothe Municipal Airport",
     "latitude": 39.7822,
     "longitude": -93.495697,
-    "elevation": 783,
-    "hasMetar": false
+    "elevation": 781,
+    "hasMetar": true
   },
   {
     "icao": "CHU",
@@ -73319,8 +73319,8 @@
     "name": "Houston County Airport",
     "latitude": 43.596401,
     "longitude": -91.503899,
-    "elevation": 1179,
-    "hasMetar": false
+    "elevation": 1178,
+    "hasMetar": true
   },
   {
     "icao": "KCIC",
@@ -73346,8 +73346,8 @@
     "name": "Choteau Airport",
     "latitude": 47.8283,
     "longitude": -112.167999,
-    "elevation": 3947,
-    "hasMetar": false
+    "elevation": 3944,
+    "hasMetar": true
   },
   {
     "icao": "KCIN",
@@ -73382,8 +73382,8 @@
     "name": "Culpeper Regional Airport",
     "latitude": 38.526699,
     "longitude": -77.858902,
-    "elevation": 316,
-    "hasMetar": false
+    "elevation": 295,
+    "hasMetar": true
   },
   {
     "icao": "KCKA",
@@ -73418,8 +73418,8 @@
     "name": "Crisp County Cordele Airport",
     "latitude": 31.9888,
     "longitude": -83.773903,
-    "elevation": 310,
-    "hasMetar": false
+    "elevation": 302,
+    "hasMetar": true
   },
   {
     "icao": "CKI",
@@ -73427,8 +73427,8 @@
     "name": "Williamsburg Regional Airport",
     "latitude": 33.717201,
     "longitude": -79.857002,
-    "elevation": 67,
-    "hasMetar": false
+    "elevation": 62,
+    "hasMetar": true
   },
   {
     "icao": "KCKM",
@@ -73454,13 +73454,13 @@
     "name": "Cherokee County Regional Airport",
     "latitude": 42.7317009,
     "longitude": -95.55590057,
-    "elevation": 1227,
-    "hasMetar": false
+    "elevation": 1211,
+    "hasMetar": true
   },
   {
     "icao": "KCKV",
     "iata": "CKV",
-    "name": "Clarksville–Montgomery County Regional Airport",
+    "name": "Clarksville\u2013Montgomery County Regional Airport",
     "latitude": 36.6218986511,
     "longitude": -87.4150009155,
     "elevation": 550,
@@ -73472,8 +73472,8 @@
     "name": "Pennridge Airport",
     "latitude": 40.389198303222656,
     "longitude": -75.29049682617188,
-    "elevation": 568,
-    "hasMetar": false
+    "elevation": 525,
+    "hasMetar": true
   },
   {
     "icao": "KCL",
@@ -73571,8 +73571,8 @@
     "name": "Camarillo International Airport",
     "latitude": 34.213699,
     "longitude": -119.094002,
-    "elevation": 77,
-    "hasMetar": false
+    "elevation": 66,
+    "hasMetar": true
   },
   {
     "icao": "CMD",
@@ -73580,8 +73580,8 @@
     "name": "Cullman Regional Airport-Folsom Field",
     "latitude": 34.2687,
     "longitude": -86.858002,
-    "elevation": 969,
-    "hasMetar": false
+    "elevation": 965,
+    "hasMetar": true
   },
   {
     "icao": "KCMH",
@@ -73607,8 +73607,8 @@
     "name": "H.A. Clark Memorial Field",
     "latitude": 35.305555,
     "longitude": -112.194393,
-    "elevation": 6680,
-    "hasMetar": false
+    "elevation": 6690,
+    "hasMetar": true
   },
   {
     "icao": "KCMX",
@@ -73643,8 +73643,8 @@
     "name": "Myers Field Airport",
     "latitude": 44.7295,
     "longitude": -96.265999,
-    "elevation": 1194,
-    "hasMetar": false
+    "elevation": 1191,
+    "hasMetar": true
   },
   {
     "icao": "CNC",
@@ -73652,8 +73652,8 @@
     "name": "Chariton Municipal Airport",
     "latitude": 41.01959991455078,
     "longitude": -93.35970306396484,
-    "elevation": 1050,
-    "hasMetar": false
+    "elevation": 1047,
+    "hasMetar": true
   },
   {
     "icao": "KCNH",
@@ -73697,8 +73697,8 @@
     "name": "Billy G Ray Field",
     "latitude": 41.07749938964844,
     "longitude": -102.46399688720703,
-    "elevation": 3682,
-    "hasMetar": false
+    "elevation": 3681,
+    "hasMetar": true
   },
   {
     "icao": "KCNU",
@@ -73787,8 +73787,8 @@
     "name": "Cloquet Carlton County Airport",
     "latitude": 46.701099,
     "longitude": -92.503601,
-    "elevation": 1279,
-    "hasMetar": false
+    "elevation": 1280,
+    "hasMetar": true
   },
   {
     "icao": "KCOS",
@@ -73823,8 +73823,8 @@
     "name": "Columbus County Municipal Airport",
     "latitude": 34.27289963,
     "longitude": -78.71499634,
-    "elevation": 99,
-    "hasMetar": false
+    "elevation": 89,
+    "hasMetar": true
   },
   {
     "icao": "CPK",
@@ -73832,8 +73832,8 @@
     "name": "Chesapeake Regional Airport",
     "latitude": 36.6656,
     "longitude": -76.320702,
-    "elevation": 19,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "KCPM",
@@ -73868,8 +73868,8 @@
     "name": "Cleburne Regional Airport",
     "latitude": 32.353802,
     "longitude": -97.433701,
-    "elevation": 854,
-    "hasMetar": false
+    "elevation": 853,
+    "hasMetar": true
   },
   {
     "icao": "CPU",
@@ -73877,8 +73877,8 @@
     "name": "Calaveras Co Maury Rasmussen Field",
     "latitude": 38.14609909057617,
     "longitude": -120.64800262451172,
-    "elevation": 1325,
-    "hasMetar": false
+    "elevation": 1312,
+    "hasMetar": true
   },
   {
     "icao": "CQA",
@@ -73886,8 +73886,8 @@
     "name": "Lakefield Airport",
     "latitude": 40.4841,
     "longitude": -84.560097,
-    "elevation": 894,
-    "hasMetar": false
+    "elevation": 892,
+    "hasMetar": true
   },
   {
     "icao": "CQB",
@@ -73895,8 +73895,8 @@
     "name": "Chandler Regional Airport",
     "latitude": 35.723801,
     "longitude": -96.820297,
-    "elevation": 984,
-    "hasMetar": false
+    "elevation": 978,
+    "hasMetar": true
   },
   {
     "icao": "CQM",
@@ -73904,8 +73904,8 @@
     "name": "Cook Municipal Airport",
     "latitude": 47.821899,
     "longitude": -92.6894,
-    "elevation": 1327,
-    "hasMetar": false
+    "elevation": 1332,
+    "hasMetar": true
   },
   {
     "icao": "KCQW",
@@ -73922,8 +73922,8 @@
     "name": "Chatham Municipal Airport",
     "latitude": 41.68840026855469,
     "longitude": -69.989501953125,
-    "elevation": 68,
-    "hasMetar": false
+    "elevation": 56,
+    "hasMetar": true
   },
   {
     "icao": "KCR",
@@ -74012,8 +74012,8 @@
     "name": "Corning Municipal Airport",
     "latitude": 40.994099,
     "longitude": -94.754997,
-    "elevation": 1274,
-    "hasMetar": false
+    "elevation": 1273,
+    "hasMetar": true
   },
   {
     "icao": "CSB",
@@ -74021,8 +74021,8 @@
     "name": "Cambridge Municipal Airport",
     "latitude": 40.306599,
     "longitude": -100.162003,
-    "elevation": 2414,
-    "hasMetar": false
+    "elevation": 2415,
+    "hasMetar": true
   },
   {
     "icao": "KCSG",
@@ -74075,8 +74075,8 @@
     "name": "West Georgia Regional Airport / O V Gray Field",
     "latitude": 33.631001,
     "longitude": -85.152,
-    "elevation": 1161,
-    "hasMetar": false
+    "elevation": 1152,
+    "hasMetar": true
   },
   {
     "icao": "CTK",
@@ -74084,8 +74084,8 @@
     "name": "Ingersoll Airport",
     "latitude": 40.5690994263,
     "longitude": -90.074798584,
-    "elevation": 684,
-    "hasMetar": false
+    "elevation": 673,
+    "hasMetar": true
   },
   {
     "icao": "KCTY",
@@ -74129,8 +74129,8 @@
     "name": "Carmi Municipal Airport",
     "latitude": 38.0895,
     "longitude": -88.1231,
-    "elevation": 388,
-    "hasMetar": false
+    "elevation": 381,
+    "hasMetar": true
   },
   {
     "icao": "CUT",
@@ -74138,8 +74138,8 @@
     "name": "Custer County Airport",
     "latitude": 43.733299,
     "longitude": -103.617996,
-    "elevation": 5602,
-    "hasMetar": false
+    "elevation": 5577,
+    "hasMetar": true
   },
   {
     "icao": "CVB",
@@ -74147,8 +74147,8 @@
     "name": "Castroville Municipal Airport",
     "latitude": 29.3419,
     "longitude": -98.850899,
-    "elevation": 771,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "KCVG",
@@ -74210,8 +74210,8 @@
     "name": "Charlevoix Municipal Airport",
     "latitude": 45.304798,
     "longitude": -85.274803,
-    "elevation": 669,
-    "hasMetar": false
+    "elevation": 643,
+    "hasMetar": true
   },
   {
     "icao": "KCWA",
@@ -74255,8 +74255,8 @@
     "name": "Claxton Evans County Airport",
     "latitude": 32.195099,
     "longitude": -81.869598,
-    "elevation": 112,
-    "hasMetar": false
+    "elevation": 105,
+    "hasMetar": true
   },
   {
     "icao": "CXE",
@@ -74264,8 +74264,8 @@
     "name": "Chase City Municipal Airport",
     "latitude": 36.788299560546875,
     "longitude": -78.50160217285156,
-    "elevation": 503,
-    "hasMetar": false
+    "elevation": 505,
+    "hasMetar": true
   },
   {
     "icao": "KCXL",
@@ -74300,8 +74300,8 @@
     "name": "Camilla Mitchell County Airport",
     "latitude": 31.21315,
     "longitude": -84.235396,
-    "elevation": 175,
-    "hasMetar": false
+    "elevation": 157,
+    "hasMetar": true
   },
   {
     "icao": "CXW",
@@ -74310,7 +74310,7 @@
     "latitude": 35.019889,
     "longitude": -92.555111,
     "elevation": 276,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KCXY",
@@ -74327,8 +74327,8 @@
     "name": "Pickaway County Memorial Airport",
     "latitude": 39.515999,
     "longitude": -82.982101,
-    "elevation": 684,
-    "hasMetar": false
+    "elevation": 686,
+    "hasMetar": true
   },
   {
     "icao": "KCYS",
@@ -74345,8 +74345,8 @@
     "name": "Clay Center Municipal Airport",
     "latitude": 39.3871,
     "longitude": -97.157204,
-    "elevation": 1208,
-    "hasMetar": false
+    "elevation": 1207,
+    "hasMetar": true
   },
   {
     "icao": "CZD",
@@ -74354,8 +74354,8 @@
     "name": "Cozad Municipal Airport",
     "latitude": 40.86909866,
     "longitude": -100.0039978,
-    "elevation": 2503,
-    "hasMetar": false
+    "elevation": 2625,
+    "hasMetar": true
   },
   {
     "icao": "CZG",
@@ -74363,8 +74363,8 @@
     "name": "Tri Cities Airport",
     "latitude": 42.078499,
     "longitude": -76.096296,
-    "elevation": 833,
-    "hasMetar": false
+    "elevation": 2733,
+    "hasMetar": true
   },
   {
     "icao": "KCZK",
@@ -74381,8 +74381,8 @@
     "name": "Tom B. David Field",
     "latitude": 34.455399,
     "longitude": -84.939201,
-    "elevation": 647,
-    "hasMetar": false
+    "elevation": 646,
+    "hasMetar": true
   },
   {
     "icao": "KCZT",
@@ -74588,8 +74588,8 @@
     "name": "Springerville Municipal Airport",
     "latitude": 34.131101,
     "longitude": -109.310255,
-    "elevation": 7055,
-    "hasMetar": false
+    "elevation": 7047,
+    "hasMetar": true
   },
   {
     "icao": "D73",
@@ -74670,7 +74670,7 @@
     "latitude": 44.033401,
     "longitude": -90.085098,
     "elevation": 919,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KDAG",
@@ -74705,8 +74705,8 @@
     "name": "Skyhaven Airport",
     "latitude": 43.2841,
     "longitude": -70.929298,
-    "elevation": 322,
-    "hasMetar": false
+    "elevation": 328,
+    "hasMetar": true
   },
   {
     "icao": "KDAY",
@@ -74750,8 +74750,8 @@
     "name": "Chester Catawba Regional Airport",
     "latitude": 34.789299,
     "longitude": -81.195801,
-    "elevation": 656,
-    "hasMetar": false
+    "elevation": 627,
+    "hasMetar": true
   },
   {
     "icao": "KDCU",
@@ -74768,8 +74768,8 @@
     "name": "Daviess County Airport",
     "latitude": 38.700401,
     "longitude": -87.1297,
-    "elevation": 473,
-    "hasMetar": false
+    "elevation": 469,
+    "hasMetar": true
   },
   {
     "icao": "KDDC",
@@ -74786,8 +74786,8 @@
     "name": "William H Morse State Airport",
     "latitude": 42.8913,
     "longitude": -73.246399,
-    "elevation": 827,
-    "hasMetar": false
+    "elevation": 791,
+    "hasMetar": true
   },
   {
     "icao": "KDEC",
@@ -74804,8 +74804,8 @@
     "name": "Deland Municipal Sidney H Taylor Field",
     "latitude": 29.066999,
     "longitude": -81.283798,
-    "elevation": 79,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "KDEH",
@@ -74831,8 +74831,8 @@
     "name": "J Lynn Helms Sevier County Airport",
     "latitude": 34.047001,
     "longitude": -94.399399,
-    "elevation": 355,
-    "hasMetar": false
+    "elevation": 351,
+    "hasMetar": true
   },
   {
     "icao": "DET",
@@ -74840,8 +74840,8 @@
     "name": "Coleman A. Young Municipal Airport",
     "latitude": 42.40919876,
     "longitude": -83.00990295,
-    "elevation": 626,
-    "hasMetar": false
+    "elevation": 623,
+    "hasMetar": true
   },
   {
     "icao": "DEW",
@@ -74849,8 +74849,8 @@
     "name": "Deer Park Airport",
     "latitude": 47.966599,
     "longitude": -117.427002,
-    "elevation": 2211,
-    "hasMetar": false
+    "elevation": 2205,
+    "hasMetar": true
   },
   {
     "icao": "KDFI",
@@ -74912,8 +74912,8 @@
     "name": "Driggs/Reed Memorial Airport",
     "latitude": 43.742667,
     "longitude": -111.096829,
-    "elevation": 6229,
-    "hasMetar": false
+    "elevation": 6220,
+    "hasMetar": true
   },
   {
     "icao": "KDIK",
@@ -74930,8 +74930,8 @@
     "name": "DeKalb Taylor Municipal Airport",
     "latitude": 41.936316,
     "longitude": -88.704128,
-    "elevation": 914,
-    "hasMetar": false
+    "elevation": 909,
+    "hasMetar": true
   },
   {
     "icao": "KDKK",
@@ -74948,8 +74948,8 @@
     "name": "Houston County Airport",
     "latitude": 31.306999,
     "longitude": -95.403801,
-    "elevation": 348,
-    "hasMetar": false
+    "elevation": 344,
+    "hasMetar": true
   },
   {
     "icao": "DKX",
@@ -74957,8 +74957,8 @@
     "name": "Knoxville Downtown Island Airport",
     "latitude": 35.963902,
     "longitude": -83.873901,
-    "elevation": 833,
-    "hasMetar": false
+    "elevation": 830,
+    "hasMetar": true
   },
   {
     "icao": "KDLC",
@@ -74993,8 +74993,8 @@
     "name": "Baraboo Wisconsin Dells Regional Airport",
     "latitude": 43.522701,
     "longitude": -89.770203,
-    "elevation": 979,
-    "hasMetar": false
+    "elevation": 974,
+    "hasMetar": true
   },
   {
     "icao": "KDLN",
@@ -75011,8 +75011,8 @@
     "name": "Delano Municipal Airport",
     "latitude": 35.745601654052734,
     "longitude": -119.23699951171875,
-    "elevation": 314,
-    "hasMetar": false
+    "elevation": 318,
+    "hasMetar": true
   },
   {
     "icao": "KDLS",
@@ -75029,8 +75029,8 @@
     "name": "Delaware Municipal Airport",
     "latitude": 40.279701,
     "longitude": -83.114799,
-    "elevation": 945,
-    "hasMetar": false
+    "elevation": 942,
+    "hasMetar": true
   },
   {
     "icao": "KDMA",
@@ -75065,8 +75065,8 @@
     "name": "Carroll County Regional Jack B Poage Field",
     "latitude": 39.60829926,
     "longitude": -77.00769806,
-    "elevation": 789,
-    "hasMetar": false
+    "elevation": 784,
+    "hasMetar": true
   },
   {
     "icao": "KDNL",
@@ -75137,8 +75137,8 @@
     "name": "Duplin County Airport",
     "latitude": 35.00009918,
     "longitude": -77.98169708,
-    "elevation": 136,
-    "hasMetar": false
+    "elevation": 128,
+    "hasMetar": true
   },
   {
     "icao": "DQH",
@@ -75146,8 +75146,8 @@
     "name": "Douglas Municipal Gene Chambers Airport",
     "latitude": 31.4767,
     "longitude": -82.860497,
-    "elevation": 257,
-    "hasMetar": false
+    "elevation": 249,
+    "hasMetar": true
   },
   {
     "icao": "KDRA",
@@ -75191,8 +75191,8 @@
     "name": "Delta Regional Airport",
     "latitude": 35.1200556,
     "longitude": -90.8265,
-    "elevation": 239,
-    "hasMetar": false
+    "elevation": 240,
+    "hasMetar": true
   },
   {
     "icao": "KDRT",
@@ -75254,8 +75254,8 @@
     "name": "Denton Enterprise Airport",
     "latitude": 33.201769,
     "longitude": -97.197983,
-    "elevation": 643,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "KDTS",
@@ -75308,8 +75308,8 @@
     "name": "Toledo Suburban Airport",
     "latitude": 41.73590087890625,
     "longitude": -83.65540313720703,
-    "elevation": 669,
-    "hasMetar": false
+    "elevation": 666,
+    "hasMetar": true
   },
   {
     "icao": "KDUJ",
@@ -75326,8 +75326,8 @@
     "name": "Moore County Airport",
     "latitude": 35.857899,
     "longitude": -102.013,
-    "elevation": 3705,
-    "hasMetar": false
+    "elevation": 3704,
+    "hasMetar": true
   },
   {
     "icao": "DVK",
@@ -75335,8 +75335,8 @@
     "name": "Stuart Powell Field",
     "latitude": 37.579409,
     "longitude": -84.774347,
-    "elevation": 1022,
-    "hasMetar": false
+    "elevation": 1014,
+    "hasMetar": true
   },
   {
     "icao": "KDVL",
@@ -75389,8 +75389,8 @@
     "name": "Yolo County Davis Woodland Winters Airport",
     "latitude": 38.57910156,
     "longitude": -121.8570023,
-    "elevation": 100,
-    "hasMetar": false
+    "elevation": 92,
+    "hasMetar": true
   },
   {
     "icao": "KDWH",
@@ -75407,8 +75407,8 @@
     "name": "Ashland Regional Airport",
     "latitude": 38.554501,
     "longitude": -82.737999,
-    "elevation": 546,
-    "hasMetar": false
+    "elevation": 541,
+    "hasMetar": true
   },
   {
     "icao": "DXE",
@@ -75416,8 +75416,8 @@
     "name": "Dexter Municipal Airport",
     "latitude": 36.77750015,
     "longitude": -89.94120026,
-    "elevation": 304,
-    "hasMetar": false
+    "elevation": 305,
+    "hasMetar": true
   },
   {
     "icao": "KDXR",
@@ -75434,8 +75434,8 @@
     "name": "Lac Qui Parle County Airport",
     "latitude": 44.986198,
     "longitude": -96.177696,
-    "elevation": 1082,
-    "hasMetar": false
+    "elevation": 1073,
+    "hasMetar": true
   },
   {
     "icao": "DYA",
@@ -75443,8 +75443,8 @@
     "name": "Demopolis Municipal Airport",
     "latitude": 32.463799,
     "longitude": -87.954102,
-    "elevation": 113,
-    "hasMetar": false
+    "elevation": 108,
+    "hasMetar": true
   },
   {
     "icao": "DYB",
@@ -75452,8 +75452,8 @@
     "name": "Summerville Airport",
     "latitude": 33.0634,
     "longitude": -80.279297,
-    "elevation": 56,
-    "hasMetar": false
+    "elevation": 49,
+    "hasMetar": true
   },
   {
     "icao": "KDYL",
@@ -75470,8 +75470,8 @@
     "name": "Dyersburg Regional Airport",
     "latitude": 35.999158,
     "longitude": -89.404898,
-    "elevation": 338,
-    "hasMetar": false
+    "elevation": 322,
+    "hasMetar": true
   },
   {
     "icao": "KDYS",
@@ -75488,8 +75488,8 @@
     "name": "Sky Harbor Airport",
     "latitude": 46.721901,
     "longitude": -92.043404,
-    "elevation": 610,
-    "hasMetar": false
+    "elevation": 607,
+    "hasMetar": true
   },
   {
     "icao": "DZB",
@@ -75497,8 +75497,8 @@
     "name": "Horseshoe Bay Resort Airpark",
     "latitude": 30.52709961,
     "longitude": -98.35870361,
-    "elevation": 1093,
-    "hasMetar": false
+    "elevation": 1079,
+    "hasMetar": true
   },
   {
     "icao": "DZJ",
@@ -75506,8 +75506,8 @@
     "name": "Blairsville Airport",
     "latitude": 34.855099,
     "longitude": -83.996902,
-    "elevation": 1911,
-    "hasMetar": false
+    "elevation": 1896,
+    "hasMetar": true
   },
   {
     "icao": "E01",
@@ -75767,8 +75767,8 @@
     "name": "Belen Regional Airport",
     "latitude": 34.645198,
     "longitude": -106.834,
-    "elevation": 5194,
-    "hasMetar": false
+    "elevation": 5200,
+    "hasMetar": true
   },
   {
     "icao": "E89",
@@ -75812,8 +75812,8 @@
     "name": "Eagle Grove Municipal Airport",
     "latitude": 42.709801,
     "longitude": -93.9161,
-    "elevation": 1133,
-    "hasMetar": false
+    "elevation": 1132,
+    "hasMetar": true
   },
   {
     "icao": "KEAN",
@@ -75875,8 +75875,8 @@
     "name": "South Texas International at Edinburg Airport",
     "latitude": 26.4417,
     "longitude": -98.1222,
-    "elevation": 75,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "KEBS",
@@ -75920,8 +75920,8 @@
     "name": "Edwards County Airport",
     "latitude": 29.9468994140625,
     "longitude": -100.17400360107422,
-    "elevation": 2372,
-    "hasMetar": false
+    "elevation": 2379,
+    "hasMetar": true
   },
   {
     "icao": "EDC",
@@ -75929,8 +75929,8 @@
     "name": "Austin Executive Airport",
     "latitude": 30.398049,
     "longitude": -97.566909,
-    "elevation": 620,
-    "hasMetar": false
+    "elevation": 604,
+    "hasMetar": true
   },
   {
     "icao": "KEDE",
@@ -75956,8 +75956,8 @@
     "name": "Bellefontaine Regional Airport",
     "latitude": 40.372299,
     "longitude": -83.819,
-    "elevation": 1122,
-    "hasMetar": false
+    "elevation": 1119,
+    "hasMetar": true
   },
   {
     "icao": "KEDN",
@@ -75974,8 +75974,8 @@
     "name": "University Airport",
     "latitude": 38.531502,
     "longitude": -121.786489,
-    "elevation": 69,
-    "hasMetar": false
+    "elevation": 66,
+    "hasMetar": true
   },
   {
     "icao": "KEDW",
@@ -76020,7 +76020,7 @@
     "latitude": 40.04880142211914,
     "longitude": -107.88600158691406,
     "elevation": 6421,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "EET",
@@ -76028,8 +76028,8 @@
     "name": "Shelby County Airport",
     "latitude": 33.17699814,
     "longitude": -86.78279877,
-    "elevation": 586,
-    "hasMetar": false
+    "elevation": 564,
+    "hasMetar": true
   },
   {
     "icao": "EFC",
@@ -76037,8 +76037,8 @@
     "name": "Belle Fourche Municipal Airport",
     "latitude": 44.73419952,
     "longitude": -103.8619995,
-    "elevation": 3191,
-    "hasMetar": false
+    "elevation": 3176,
+    "hasMetar": true
   },
   {
     "icao": "KEFD",
@@ -76064,8 +76064,8 @@
     "name": "Monroe Municipal Airport",
     "latitude": 42.614899,
     "longitude": -89.590401,
-    "elevation": 1086,
-    "hasMetar": false
+    "elevation": 1089,
+    "hasMetar": true
   },
   {
     "icao": "KEFW",
@@ -76100,8 +76100,8 @@
     "name": "Emmetsburg Municipal Airport",
     "latitude": 43.10200119018555,
     "longitude": -94.70469665527344,
-    "elevation": 1205,
-    "hasMetar": false
+    "elevation": 1204,
+    "hasMetar": true
   },
   {
     "icao": "EGT",
@@ -76109,8 +76109,8 @@
     "name": "Wellington Municipal Airport",
     "latitude": 37.323601,
     "longitude": -97.388298,
-    "elevation": 1277,
-    "hasMetar": false
+    "elevation": 1270,
+    "hasMetar": true
   },
   {
     "icao": "KEGV",
@@ -76127,8 +76127,8 @@
     "name": "Elkhart Morton County Airport",
     "latitude": 37.000702,
     "longitude": -101.879997,
-    "elevation": 3622,
-    "hasMetar": false
+    "elevation": 3619,
+    "hasMetar": true
   },
   {
     "icao": "EHO",
@@ -76136,8 +76136,8 @@
     "name": "Shelby-Cleveland County Regional Airport",
     "latitude": 35.2556,
     "longitude": -81.600998,
-    "elevation": 847,
-    "hasMetar": false
+    "elevation": 856,
+    "hasMetar": true
   },
   {
     "icao": "EHR",
@@ -76145,8 +76145,8 @@
     "name": "Henderson City County Airport",
     "latitude": 37.8078,
     "longitude": -87.685699,
-    "elevation": 387,
-    "hasMetar": false
+    "elevation": 384,
+    "hasMetar": true
   },
   {
     "icao": "EIK",
@@ -76154,8 +76154,8 @@
     "name": "Erie Municipal Airport",
     "latitude": 40.010200500488,
     "longitude": -105.047996521,
-    "elevation": 5130,
-    "hasMetar": false
+    "elevation": 5089,
+    "hasMetar": true
   },
   {
     "icao": "EIW",
@@ -76163,8 +76163,8 @@
     "name": "County Memorial Airport",
     "latitude": 36.535301,
     "longitude": -89.599701,
-    "elevation": 296,
-    "hasMetar": false
+    "elevation": 295,
+    "hasMetar": true
   },
   {
     "icao": "KEK",
@@ -76217,8 +76217,8 @@
     "name": "Wayne County Airport",
     "latitude": 36.855301,
     "longitude": -84.856102,
-    "elevation": 963,
-    "hasMetar": false
+    "elevation": 955,
+    "hasMetar": true
   },
   {
     "icao": "EKS",
@@ -76226,8 +76226,8 @@
     "name": "Ennis Big Sky Airport",
     "latitude": 45.271801,
     "longitude": -111.649002,
-    "elevation": 5423,
-    "hasMetar": false
+    "elevation": 5367,
+    "hasMetar": true
   },
   {
     "icao": "KEKX",
@@ -76244,8 +76244,8 @@
     "name": "Bessemer Airport",
     "latitude": 33.312901,
     "longitude": -86.925903,
-    "elevation": 700,
-    "hasMetar": false
+    "elevation": 699,
+    "hasMetar": true
   },
   {
     "icao": "KELA",
@@ -76361,8 +76361,8 @@
     "name": "Emporia Greensville Regional Airport",
     "latitude": 36.6869010925293,
     "longitude": -77.48280334472656,
-    "elevation": 127,
-    "hasMetar": false
+    "elevation": 115,
+    "hasMetar": true
   },
   {
     "icao": "KEND",
@@ -76406,8 +76406,8 @@
     "name": "Newberry County Airport",
     "latitude": 34.309299,
     "longitude": -81.639702,
-    "elevation": 570,
-    "hasMetar": false
+    "elevation": 545,
+    "hasMetar": true
   },
   {
     "icao": "KEOK",
@@ -76424,8 +76424,8 @@
     "name": "Pike County Airport",
     "latitude": 39.166901,
     "longitude": -82.9282,
-    "elevation": 660,
-    "hasMetar": false
+    "elevation": 2165,
+    "hasMetar": true
   },
   {
     "icao": "KEOS",
@@ -76451,8 +76451,8 @@
     "name": "Eastport Municipal Airport",
     "latitude": 44.910099,
     "longitude": -67.012703,
-    "elevation": 45,
-    "hasMetar": false
+    "elevation": 43,
+    "hasMetar": true
   },
   {
     "icao": "KEQA",
@@ -76469,8 +76469,8 @@
     "name": "Charlotte-Monroe Executive Airport",
     "latitude": 35.01879883,
     "longitude": -80.62020111,
-    "elevation": 679,
-    "hasMetar": false
+    "elevation": 673,
+    "hasMetar": true
   },
   {
     "icao": "KERI",
@@ -76505,8 +76505,8 @@
     "name": "Luce County Airport",
     "latitude": 46.311199,
     "longitude": -85.457298,
-    "elevation": 869,
-    "hasMetar": false
+    "elevation": 856,
+    "hasMetar": true
   },
   {
     "icao": "KESC",
@@ -76568,8 +76568,8 @@
     "name": "Tarboro Edgecombe Airport",
     "latitude": 35.93709945678711,
     "longitude": -77.54660034179688,
-    "elevation": 53,
-    "hasMetar": false
+    "elevation": 49,
+    "hasMetar": true
   },
   {
     "icao": "ETH",
@@ -76577,8 +76577,8 @@
     "name": "Wheaton Municipal Airport",
     "latitude": 45.782058,
     "longitude": -96.543627,
-    "elevation": 1025,
-    "hasMetar": false
+    "elevation": 1014,
+    "hasMetar": true
   },
   {
     "icao": "KETN",
@@ -76613,8 +76613,8 @@
     "name": "Caldwell Executive Airport",
     "latitude": 43.641899,
     "longitude": -116.636002,
-    "elevation": 2432,
-    "hasMetar": false
+    "elevation": 2431,
+    "hasMetar": true
   },
   {
     "icao": "EVB",
@@ -76622,13 +76622,13 @@
     "name": "New Smyrna Beach Municipal Airport",
     "latitude": 29.0557,
     "longitude": -80.948898,
-    "elevation": 10,
-    "hasMetar": false
+    "elevation": 7,
+    "hasMetar": true
   },
   {
     "icao": "KEVM",
     "iata": "EVM",
-    "name": "Eveleth–Virginia Municipal Airport",
+    "name": "Eveleth\u2013Virginia Municipal Airport",
     "latitude": 47.42458,
     "longitude": -92.499204,
     "elevation": 1379,
@@ -76640,8 +76640,8 @@
     "name": "Northwest Missouri Regional Airport",
     "latitude": 40.352501,
     "longitude": -94.915001,
-    "elevation": 1145,
-    "hasMetar": false
+    "elevation": 1152,
+    "hasMetar": true
   },
   {
     "icao": "KEVV",
@@ -76667,8 +76667,8 @@
     "name": "Summit Airport",
     "latitude": 39.520401,
     "longitude": -75.720398,
-    "elevation": 70,
-    "hasMetar": false
+    "elevation": 66,
+    "hasMetar": true
   },
   {
     "icao": "KEWB",
@@ -76712,8 +76712,8 @@
     "name": "Davidson County Executive Airport",
     "latitude": 35.781101,
     "longitude": -80.303802,
-    "elevation": 733,
-    "hasMetar": false
+    "elevation": 725,
+    "hasMetar": true
   },
   {
     "icao": "EYE",
@@ -76721,8 +76721,8 @@
     "name": "Eagle Creek Airpark",
     "latitude": 39.830699920654,
     "longitude": -86.294403076172,
-    "elevation": 823,
-    "hasMetar": false
+    "elevation": 814,
+    "hasMetar": true
   },
   {
     "icao": "EYF",
@@ -76730,8 +76730,8 @@
     "name": "Curtis L Brown Jr Field",
     "latitude": 34.60179901,
     "longitude": -78.57929993,
-    "elevation": 131,
-    "hasMetar": false
+    "elevation": 128,
+    "hasMetar": true
   },
   {
     "icao": "KEYW",
@@ -76749,7 +76749,7 @@
     "latitude": 38.2668,
     "longitude": -77.449203,
     "elevation": 85,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "EZI",
@@ -76757,8 +76757,8 @@
     "name": "Kewanee Municipal Airport",
     "latitude": 41.2052,
     "longitude": -89.963898,
-    "elevation": 858,
-    "hasMetar": false
+    "elevation": 856,
+    "hasMetar": true
   },
   {
     "icao": "EZM",
@@ -76766,8 +76766,8 @@
     "name": "Heart of Georgia Regional Airport",
     "latitude": 32.214199,
     "longitude": -83.127998,
-    "elevation": 304,
-    "hasMetar": false
+    "elevation": 282,
+    "hasMetar": true
   },
   {
     "icao": "EZS",
@@ -76775,8 +76775,8 @@
     "name": "Shawano Municipal Airport",
     "latitude": 44.787514,
     "longitude": -88.560481,
-    "elevation": 813,
-    "hasMetar": false
+    "elevation": 810,
+    "hasMetar": true
   },
   {
     "icao": "EZZ",
@@ -76785,7 +76785,7 @@
     "latitude": 39.7276,
     "longitude": -94.276398,
     "elevation": 1040,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "F00",
@@ -76883,8 +76883,8 @@
     "name": "Minden Airport",
     "latitude": 32.646,
     "longitude": -93.298103,
-    "elevation": 278,
-    "hasMetar": false
+    "elevation": 276,
+    "hasMetar": true
   },
   {
     "icao": "KRCE",
@@ -77117,8 +77117,8 @@
     "name": "Stigler Regional Airport",
     "latitude": 35.289101,
     "longitude": -95.093903,
-    "elevation": 599,
-    "hasMetar": false
+    "elevation": 577,
+    "hasMetar": true
   },
   {
     "icao": "F85",
@@ -77342,8 +77342,8 @@
     "name": "Fairfield County Airport",
     "latitude": 34.315498,
     "longitude": -81.108803,
-    "elevation": 577,
-    "hasMetar": false
+    "elevation": 571,
+    "hasMetar": true
   },
   {
     "icao": "KFDY",
@@ -77387,8 +77387,8 @@
     "name": "Peachtree City Falcon Field",
     "latitude": 33.3573,
     "longitude": -84.5718,
-    "elevation": 808,
-    "hasMetar": false
+    "elevation": 794,
+    "hasMetar": true
   },
   {
     "icao": "KFFL",
@@ -77432,8 +77432,8 @@
     "name": "Fremont Municipal Airport",
     "latitude": 43.436854,
     "longitude": -85.996592,
-    "elevation": 772,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "KFFZ",
@@ -77450,8 +77450,8 @@
     "name": "Collegedale Municipal Airport",
     "latitude": 35.044315,
     "longitude": -85.020146,
-    "elevation": 860,
-    "hasMetar": false
+    "elevation": 2822,
+    "hasMetar": true
   },
   {
     "icao": "FGX",
@@ -77459,8 +77459,8 @@
     "name": "Fleming Mason Airport",
     "latitude": 38.5418014526,
     "longitude": -83.74340057370001,
-    "elevation": 913,
-    "hasMetar": false
+    "elevation": 915,
+    "hasMetar": true
   },
   {
     "icao": "KFHR",
@@ -77486,8 +77486,8 @@
     "name": "Clearfield Lawrence Airport",
     "latitude": 41.049032,
     "longitude": -78.415003,
-    "elevation": 1516,
-    "hasMetar": false
+    "elevation": 1512,
+    "hasMetar": true
   },
   {
     "icao": "FIT",
@@ -77495,8 +77495,8 @@
     "name": "Fitchburg Municipal Airport",
     "latitude": 42.554100036621094,
     "longitude": -71.75900268554688,
-    "elevation": 348,
-    "hasMetar": false
+    "elevation": 335,
+    "hasMetar": true
   },
   {
     "icao": "FKA",
@@ -77504,8 +77504,8 @@
     "name": "Fillmore County Airport",
     "latitude": 43.6768,
     "longitude": -92.179703,
-    "elevation": 1277,
-    "hasMetar": false
+    "elevation": 1273,
+    "hasMetar": true
   },
   {
     "icao": "KFKL",
@@ -77531,8 +77531,8 @@
     "name": "Frankfort Clinton County Regional Airport",
     "latitude": 40.273399,
     "longitude": -86.562202,
-    "elevation": 861,
-    "hasMetar": false
+    "elevation": 853,
+    "hasMetar": true
   },
   {
     "icao": "FKS",
@@ -77540,8 +77540,8 @@
     "name": "Frankfort Dow Memorial Field",
     "latitude": 44.625198,
     "longitude": -86.200798,
-    "elevation": 633,
-    "hasMetar": false
+    "elevation": 620,
+    "hasMetar": true
   },
   {
     "icao": "KFLD",
@@ -77630,8 +77630,8 @@
     "name": "Fort Morgan Municipal Airport",
     "latitude": 40.335758,
     "longitude": -103.804371,
-    "elevation": 4569,
-    "hasMetar": false
+    "elevation": 4514,
+    "hasMetar": true
   },
   {
     "icao": "KFMN",
@@ -77657,8 +77657,8 @@
     "name": "Fairmont State Airport",
     "latitude": 40.586102,
     "longitude": -97.573097,
-    "elevation": 1636,
-    "hasMetar": false
+    "elevation": 1634,
+    "hasMetar": true
   },
   {
     "icao": "FNB",
@@ -77666,8 +77666,8 @@
     "name": "Brenner Field",
     "latitude": 40.0788,
     "longitude": -95.592003,
-    "elevation": 984,
-    "hasMetar": false
+    "elevation": 988,
+    "hasMetar": true
   },
   {
     "icao": "KFNL",
@@ -77693,8 +77693,8 @@
     "name": "Flora Municipal Airport",
     "latitude": 38.66490173339844,
     "longitude": -88.4530029296875,
-    "elevation": 473,
-    "hasMetar": false
+    "elevation": 463,
+    "hasMetar": true
   },
   {
     "icao": "KFOD",
@@ -77738,8 +77738,8 @@
     "name": "Rohnerville Airport",
     "latitude": 40.55390167,
     "longitude": -124.1330032,
-    "elevation": 393,
-    "hasMetar": false
+    "elevation": 387,
+    "hasMetar": true
   },
   {
     "icao": "FOZ",
@@ -77747,8 +77747,8 @@
     "name": "Bigfork Municipal Airport",
     "latitude": 47.783865,
     "longitude": -93.65098,
-    "elevation": 1348,
-    "hasMetar": false
+    "elevation": 1352,
+    "hasMetar": true
   },
   {
     "icao": "FPK",
@@ -77756,8 +77756,8 @@
     "name": "Fitch H Beach Airport",
     "latitude": 42.574501,
     "longitude": -84.811401,
-    "elevation": 891,
-    "hasMetar": false
+    "elevation": 883,
+    "hasMetar": true
   },
   {
     "icao": "KFPR",
@@ -77774,8 +77774,8 @@
     "name": "Rutherford County Marchman Field",
     "latitude": 35.4282,
     "longitude": -81.935097,
-    "elevation": 1077,
-    "hasMetar": false
+    "elevation": 1066,
+    "hasMetar": true
   },
   {
     "icao": "KFRG",
@@ -77837,8 +77837,8 @@
     "name": "Fosston Municipal Airport-Anderson Field",
     "latitude": 47.5928,
     "longitude": -95.773499,
-    "elevation": 1277,
-    "hasMetar": false
+    "elevation": 1276,
+    "hasMetar": true
   },
   {
     "icao": "KFSI",
@@ -77873,8 +77873,8 @@
     "name": "Franklin County State Airport",
     "latitude": 44.9403,
     "longitude": -73.097504,
-    "elevation": 228,
-    "hasMetar": false
+    "elevation": 230,
+    "hasMetar": true
   },
   {
     "icao": "KFST",
@@ -77928,7 +77928,7 @@
     "latitude": 38.83810043334961,
     "longitude": -92.00260162353516,
     "elevation": 886,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KFTW",
@@ -77972,8 +77972,8 @@
     "name": "Farmville Regional Airport",
     "latitude": 37.35749817,
     "longitude": -78.43779755,
-    "elevation": 416,
-    "hasMetar": false
+    "elevation": 423,
+    "hasMetar": true
   },
   {
     "icao": "KFWA",
@@ -77990,8 +77990,8 @@
     "name": "Fairfield Municipal Airport",
     "latitude": 38.378601,
     "longitude": -88.412697,
-    "elevation": 436,
-    "hasMetar": false
+    "elevation": 430,
+    "hasMetar": true
   },
   {
     "icao": "FWN",
@@ -77999,8 +77999,8 @@
     "name": "Sussex Airport",
     "latitude": 41.200199127197266,
     "longitude": -74.62300109863281,
-    "elevation": 421,
-    "hasMetar": false
+    "elevation": 423,
+    "hasMetar": true
   },
   {
     "icao": "FWQ",
@@ -78008,8 +78008,8 @@
     "name": "Rostraver Airport",
     "latitude": 40.209702,
     "longitude": -79.831398,
-    "elevation": 1228,
-    "hasMetar": false
+    "elevation": 1220,
+    "hasMetar": true
   },
   {
     "icao": "FWS",
@@ -78017,8 +78017,8 @@
     "name": "Fort Worth Spinks Airport",
     "latitude": 32.565201,
     "longitude": -97.308098,
-    "elevation": 700,
-    "hasMetar": false
+    "elevation": 692,
+    "hasMetar": true
   },
   {
     "icao": "KFXE",
@@ -78045,7 +78045,7 @@
     "latitude": 35.207699,
     "longitude": -89.394501,
     "elevation": 436,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "FYJ",
@@ -78053,8 +78053,8 @@
     "name": "Middle Peninsula Regional Airport",
     "latitude": 37.521299,
     "longitude": -76.762762,
-    "elevation": 20,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KFYM",
@@ -78080,8 +78080,8 @@
     "name": "Fitzgerald Municipal Airport",
     "latitude": 31.683700561523438,
     "longitude": -83.27050018310547,
-    "elevation": 365,
-    "hasMetar": false
+    "elevation": 344,
+    "hasMetar": true
   },
   {
     "icao": "FZI",
@@ -78089,8 +78089,8 @@
     "name": "Fostoria Metropolitan Airport",
     "latitude": 41.1908,
     "longitude": -83.394501,
-    "elevation": 752,
-    "hasMetar": false
+    "elevation": 748,
+    "hasMetar": true
   },
   {
     "icao": "FZY",
@@ -78098,8 +78098,8 @@
     "name": "Oswego County Airport",
     "latitude": 43.3508,
     "longitude": -76.3881,
-    "elevation": 475,
-    "hasMetar": false
+    "elevation": 469,
+    "hasMetar": true
   },
   {
     "icao": "KGAB",
@@ -78125,8 +78125,8 @@
     "name": "Hutson Field",
     "latitude": 48.404701232910156,
     "longitude": -97.37090301513672,
-    "elevation": 824,
-    "hasMetar": false
+    "elevation": 820,
+    "hasMetar": true
   },
   {
     "icao": "KGAG",
@@ -78152,8 +78152,8 @@
     "name": "South Lafourche Leonard Miller Jr Airport",
     "latitude": 29.441052,
     "longitude": -90.261129,
-    "elevation": 1,
-    "hasMetar": false
+    "elevation": 0,
+    "hasMetar": true
   },
   {
     "icao": "GAS",
@@ -78161,8 +78161,8 @@
     "name": "Gallia Meigs Regional Airport",
     "latitude": 38.834099,
     "longitude": -82.163399,
-    "elevation": 566,
-    "hasMetar": false
+    "elevation": 564,
+    "hasMetar": true
   },
   {
     "icao": "GAX",
@@ -78197,8 +78197,8 @@
     "name": "Gila Bend Air Force Auxiliary Airport",
     "latitude": 32.887501,
     "longitude": -112.720001,
-    "elevation": 883,
-    "hasMetar": false
+    "elevation": 856,
+    "hasMetar": true
   },
   {
     "icao": "KGBR",
@@ -78242,8 +78242,8 @@
     "name": "Claremore Regional Airport",
     "latitude": 36.292702,
     "longitude": -95.479599,
-    "elevation": 733,
-    "hasMetar": false
+    "elevation": 705,
+    "hasMetar": true
   },
   {
     "icao": "KGCN",
@@ -78260,8 +78260,8 @@
     "name": "Guthrie County Regional Airport",
     "latitude": 41.687801361083984,
     "longitude": -94.4352035522461,
-    "elevation": 1230,
-    "hasMetar": false
+    "elevation": 1220,
+    "hasMetar": true
   },
   {
     "icao": "KGCY",
@@ -78278,8 +78278,8 @@
     "name": "Granite Falls Municipal Airport / Lenzen-Roe Memorial Field",
     "latitude": 44.7533,
     "longitude": -95.556,
-    "elevation": 1047,
-    "hasMetar": false
+    "elevation": 1037,
+    "hasMetar": true
   },
   {
     "icao": "GDJ",
@@ -78287,8 +78287,8 @@
     "name": "Granbury Regional Airport",
     "latitude": 32.442222,
     "longitude": -97.824444,
-    "elevation": 835,
-    "hasMetar": false
+    "elevation": 771,
+    "hasMetar": true
   },
   {
     "icao": "KGDM",
@@ -78342,7 +78342,7 @@
     "latitude": 38.881901,
     "longitude": -83.882698,
     "elevation": 958,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "GEU",
@@ -78350,8 +78350,8 @@
     "name": "Glendale Municipal Airport",
     "latitude": 33.52690124511719,
     "longitude": -112.29499816894531,
-    "elevation": 1071,
-    "hasMetar": false
+    "elevation": 1047,
+    "hasMetar": true
   },
   {
     "icao": "GEV",
@@ -78359,8 +78359,8 @@
     "name": "Ashe County Airport",
     "latitude": 36.432418,
     "longitude": -81.418519,
-    "elevation": 3180,
-    "hasMetar": false
+    "elevation": 3153,
+    "hasMetar": true
   },
   {
     "icao": "KGEY",
@@ -78377,8 +78377,8 @@
     "name": "Shelbyville Municipal Airport",
     "latitude": 39.586044,
     "longitude": -85.804024,
-    "elevation": 803,
-    "hasMetar": false
+    "elevation": 804,
+    "hasMetar": true
   },
   {
     "icao": "KGFD",
@@ -78413,8 +78413,8 @@
     "name": "Greenfield Municipal Airport",
     "latitude": 41.327,
     "longitude": -94.445702,
-    "elevation": 1364,
-    "hasMetar": false
+    "elevation": 1362,
+    "hasMetar": true
   },
   {
     "icao": "KGGE",
@@ -78432,7 +78432,7 @@
     "latitude": 40.869499,
     "longitude": -101.733002,
     "elevation": 3425,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KGGG",
@@ -78449,8 +78449,8 @@
     "name": "Grinnell Regional Airport",
     "latitude": 41.70991,
     "longitude": -92.736052,
-    "elevation": 1008,
-    "hasMetar": false
+    "elevation": 1001,
+    "hasMetar": true
   },
   {
     "icao": "GGP",
@@ -78458,8 +78458,8 @@
     "name": "Logansport Cass County Airport",
     "latitude": 40.711201,
     "longitude": -86.374901,
-    "elevation": 738,
-    "hasMetar": false
+    "elevation": 735,
+    "hasMetar": true
   },
   {
     "icao": "KGGW",
@@ -78476,8 +78476,8 @@
     "name": "Marshfield Municipal George Harlow Field",
     "latitude": 42.097665,
     "longitude": -70.67283,
-    "elevation": 11,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KGHM",
@@ -78494,8 +78494,8 @@
     "name": "Glenwood Municipal Airport",
     "latitude": 45.64390182495117,
     "longitude": -95.32039642333984,
-    "elevation": 1393,
-    "hasMetar": false
+    "elevation": 1388,
+    "hasMetar": true
   },
   {
     "icao": "KGIC",
@@ -78548,8 +78548,8 @@
     "name": "Arlington Municipal Airport",
     "latitude": 32.66389846801758,
     "longitude": -97.09429931640625,
-    "elevation": 628,
-    "hasMetar": false
+    "elevation": 620,
+    "hasMetar": true
   },
   {
     "icao": "KGLD",
@@ -78611,8 +78611,8 @@
     "name": "Clinton Memorial Airport",
     "latitude": 38.35660171508789,
     "longitude": -93.68419647216797,
-    "elevation": 822,
-    "hasMetar": false
+    "elevation": 810,
+    "hasMetar": true
   },
   {
     "icao": "GMJ",
@@ -78620,8 +78620,8 @@
     "name": "Grove Municipal Airport",
     "latitude": 36.6068,
     "longitude": -94.738602,
-    "elevation": 831,
-    "hasMetar": false
+    "elevation": 823,
+    "hasMetar": true
   },
   {
     "icao": "KGMU",
@@ -78638,8 +78638,8 @@
     "name": "Granby Grand County Airport",
     "latitude": 40.089698791503906,
     "longitude": -105.91699981689453,
-    "elevation": 8203,
-    "hasMetar": false
+    "elevation": 8202,
+    "hasMetar": true
   },
   {
     "icao": "GNC",
@@ -78647,8 +78647,8 @@
     "name": "Gaines County Airport",
     "latitude": 32.676807,
     "longitude": -102.649927,
-    "elevation": 3315,
-    "hasMetar": false
+    "elevation": 3287,
+    "hasMetar": true
   },
   {
     "icao": "GNF",
@@ -78656,8 +78656,8 @@
     "name": "Grenada Municipal Airport",
     "latitude": 33.8325,
     "longitude": -89.798203,
-    "elevation": 208,
-    "hasMetar": false
+    "elevation": 194,
+    "hasMetar": true
   },
   {
     "icao": "KGNG",
@@ -78710,8 +78710,8 @@
     "name": "Nevada County Airport",
     "latitude": 39.223998,
     "longitude": -121.002997,
-    "elevation": 3152,
-    "hasMetar": false
+    "elevation": 3117,
+    "hasMetar": true
   },
   {
     "icao": "GOP",
@@ -78719,8 +78719,8 @@
     "name": "Gatesville Municipal Airport",
     "latitude": 31.421301,
     "longitude": -97.796996,
-    "elevation": 905,
-    "hasMetar": false
+    "elevation": 892,
+    "hasMetar": true
   },
   {
     "icao": "GOV",
@@ -78728,8 +78728,8 @@
     "name": "Grayling Army Air Field",
     "latitude": 44.680302,
     "longitude": -84.728897,
-    "elevation": 1158,
-    "hasMetar": false
+    "elevation": 1148,
+    "hasMetar": true
   },
   {
     "icao": "GPH",
@@ -78737,8 +78737,8 @@
     "name": "Midwest National Air Center Airport",
     "latitude": 39.3325,
     "longitude": -94.309601,
-    "elevation": 777,
-    "hasMetar": false
+    "elevation": 764,
+    "hasMetar": true
   },
   {
     "icao": "KGPI",
@@ -78755,8 +78755,8 @@
     "name": "Grand Prairie Municipal Airport",
     "latitude": 32.698799,
     "longitude": -97.046898,
-    "elevation": 588,
-    "hasMetar": false
+    "elevation": 584,
+    "hasMetar": true
   },
   {
     "icao": "KGPT",
@@ -78909,7 +78909,7 @@
     "latitude": 40.9263,
     "longitude": -100.148003,
     "elevation": 2559,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KGTF",
@@ -78944,8 +78944,8 @@
     "name": "Georgetown Executive Airport at Johnny Gantt Field",
     "latitude": 30.677543,
     "longitude": -97.678524,
-    "elevation": 790,
-    "hasMetar": false
+    "elevation": 761,
+    "hasMetar": true
   },
   {
     "icao": "KGUC",
@@ -79007,8 +79007,8 @@
     "name": "Genesee County Airport",
     "latitude": 43.0317,
     "longitude": -78.167603,
-    "elevation": 914,
-    "hasMetar": false
+    "elevation": 915,
+    "hasMetar": true
   },
   {
     "icao": "KGVT",
@@ -79025,13 +79025,13 @@
     "name": "De Kalb County Airport",
     "latitude": 41.307201,
     "longitude": -85.0644,
-    "elevation": 880,
-    "hasMetar": false
+    "elevation": 879,
+    "hasMetar": true
   },
   {
     "icao": "KGWO",
     "iata": "GWO",
-    "name": "Greenwood–Leflore Airport",
+    "name": "Greenwood\u2013Leflore Airport",
     "latitude": 33.495025,
     "longitude": -90.088204,
     "elevation": 162,
@@ -79043,8 +79043,8 @@
     "name": "Gwinner Roger Melroe Field",
     "latitude": 46.2187,
     "longitude": -97.643204,
-    "elevation": 1266,
-    "hasMetar": false
+    "elevation": 1250,
+    "hasMetar": true
   },
   {
     "icao": "KGWS",
@@ -79061,8 +79061,8 @@
     "name": "Wayne Executive Jetport",
     "latitude": 35.460602,
     "longitude": -77.964897,
-    "elevation": 134,
-    "hasMetar": false
+    "elevation": 131,
+    "hasMetar": true
   },
   {
     "icao": "KGX",
@@ -79076,7 +79076,7 @@
   {
     "icao": "KGXY",
     "iata": "GXY",
-    "name": "Greeley–Weld County Airport",
+    "name": "Greeley\u2013Weld County Airport",
     "latitude": 40.4374008179,
     "longitude": -104.633003235,
     "elevation": 4697,
@@ -79088,8 +79088,8 @@
     "name": "Giddings-Lee County Airport",
     "latitude": 30.1693,
     "longitude": -96.980003,
-    "elevation": 485,
-    "hasMetar": false
+    "elevation": 459,
+    "hasMetar": true
   },
   {
     "icao": "KGYH",
@@ -79115,8 +79115,8 @@
     "name": "Glencoe Municipal Airport",
     "latitude": 44.756001,
     "longitude": -94.0812,
-    "elevation": 992,
-    "hasMetar": false
+    "elevation": 997,
+    "hasMetar": true
   },
   {
     "icao": "KGYR",
@@ -79133,8 +79133,8 @@
     "name": "Gary/Chicago International Airport",
     "latitude": 41.617087,
     "longitude": -87.413206,
-    "elevation": 591,
-    "hasMetar": false
+    "elevation": 587,
+    "hasMetar": true
   },
   {
     "icao": "KGZ",
@@ -79151,8 +79151,8 @@
     "name": "Evergreen Regional Airport/Middleton Field",
     "latitude": 31.4158,
     "longitude": -87.043999,
-    "elevation": 259,
-    "hasMetar": false
+    "elevation": 253,
+    "hasMetar": true
   },
   {
     "icao": "GZN",
@@ -79160,8 +79160,8 @@
     "name": "Gregory M. Simmons Memorial Airport",
     "latitude": 32.367348,
     "longitude": -99.023642,
-    "elevation": 1711,
-    "hasMetar": false
+    "elevation": 1713,
+    "hasMetar": true
   },
   {
     "icao": "GZS",
@@ -79169,8 +79169,8 @@
     "name": "Abernathy Field",
     "latitude": 35.153702,
     "longitude": -87.056801,
-    "elevation": 685,
-    "hasMetar": false
+    "elevation": 650,
+    "hasMetar": true
   },
   {
     "icao": "H04",
@@ -79214,8 +79214,8 @@
     "name": "Camdenton Memorial Airport",
     "latitude": 37.974024,
     "longitude": -92.691254,
-    "elevation": 1062,
-    "hasMetar": false
+    "elevation": 1053,
+    "hasMetar": true
   },
   {
     "icao": "H34",
@@ -79340,8 +79340,8 @@
     "name": "Hannibal Regional Airport",
     "latitude": 39.724499,
     "longitude": -91.443703,
-    "elevation": 769,
-    "hasMetar": false
+    "elevation": 755,
+    "hasMetar": true
   },
   {
     "icao": "KHAF",
@@ -79376,8 +79376,8 @@
     "name": "Mohall Municipal Airport",
     "latitude": 48.76839828491211,
     "longitude": -101.53700256347656,
-    "elevation": 1649,
-    "hasMetar": false
+    "elevation": 1650,
+    "hasMetar": true
   },
   {
     "icao": "KHBG",
@@ -79394,8 +79394,8 @@
     "name": "Asheboro Regional Airport",
     "latitude": 35.65449905,
     "longitude": -79.8946991,
-    "elevation": 671,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "KHBR",
@@ -79412,8 +79412,8 @@
     "name": "Jim Hogg County Airport",
     "latitude": 27.349599838256836,
     "longitude": -98.73699951171875,
-    "elevation": 663,
-    "hasMetar": false
+    "elevation": 656,
+    "hasMetar": true
   },
   {
     "icao": "HBZ",
@@ -79421,8 +79421,8 @@
     "name": "Heber Springs Municipal Airport",
     "latitude": 35.5117,
     "longitude": -92.013,
-    "elevation": 632,
-    "hasMetar": false
+    "elevation": 630,
+    "hasMetar": true
   },
   {
     "icao": "HCD",
@@ -79430,8 +79430,8 @@
     "name": "Hutchinson Municipal Butler Field",
     "latitude": 44.859901,
     "longitude": -94.3825,
-    "elevation": 1062,
-    "hasMetar": false
+    "elevation": 1050,
+    "hasMetar": true
   },
   {
     "icao": "HCO",
@@ -79439,8 +79439,8 @@
     "name": "Hallock Municipal Airport",
     "latitude": 48.752701,
     "longitude": -96.943001,
-    "elevation": 819,
-    "hasMetar": false
+    "elevation": 820,
+    "hasMetar": true
   },
   {
     "icao": "HCR",
@@ -79448,8 +79448,8 @@
     "name": "Heber Valley Airport",
     "latitude": 40.4818,
     "longitude": -111.429001,
-    "elevation": 5637,
-    "hasMetar": false
+    "elevation": 5604,
+    "hasMetar": true
   },
   {
     "icao": "HDC",
@@ -79457,8 +79457,8 @@
     "name": "Hammond Northshore Regional Airport",
     "latitude": 30.521601,
     "longitude": -90.418404,
-    "elevation": 47,
-    "hasMetar": false
+    "elevation": 39,
+    "hasMetar": true
   },
   {
     "icao": "KHDE",
@@ -79484,8 +79484,8 @@
     "name": "South Texas Regional Airport at Hondo",
     "latitude": 29.35950088501,
     "longitude": -99.176696777344,
-    "elevation": 930,
-    "hasMetar": false
+    "elevation": 919,
+    "hasMetar": true
   },
   {
     "icao": "KHEE",
@@ -79511,8 +79511,8 @@
     "name": "Herlong Airport",
     "latitude": 30.2778,
     "longitude": -81.805901,
-    "elevation": 87,
-    "hasMetar": false
+    "elevation": 82,
+    "hasMetar": true
   },
   {
     "icao": "HEI",
@@ -79520,8 +79520,8 @@
     "name": "Hettinger Municipal Airport",
     "latitude": 46.0149,
     "longitude": -102.655998,
-    "elevation": 2705,
-    "hasMetar": false
+    "elevation": 2703,
+    "hasMetar": true
   },
   {
     "icao": "HEQ",
@@ -79529,13 +79529,13 @@
     "name": "Holyoke Airport",
     "latitude": 40.569400787353516,
     "longitude": -102.27300262451172,
-    "elevation": 3730,
-    "hasMetar": false
+    "elevation": 3727,
+    "hasMetar": true
   },
   {
     "icao": "KHEZ",
     "iata": "HEZ",
-    "name": "Natchez–Adams County Airport / Hardy-Anders Field",
+    "name": "Natchez\u2013Adams County Airport / Hardy-Anders Field",
     "latitude": 31.614817,
     "longitude": -91.297331,
     "elevation": 272,
@@ -79565,8 +79565,8 @@
     "name": "Monett Regional Airport",
     "latitude": 36.9062,
     "longitude": -94.012802,
-    "elevation": 1314,
-    "hasMetar": false
+    "elevation": 1306,
+    "hasMetar": true
   },
   {
     "icao": "HFY",
@@ -79574,8 +79574,8 @@
     "name": "Indy South Greenwood Airport",
     "latitude": 39.628399,
     "longitude": -86.087898,
-    "elevation": 822,
-    "hasMetar": false
+    "elevation": 820,
+    "hasMetar": true
   },
   {
     "icao": "KHGR",
@@ -79592,8 +79592,8 @@
     "name": "Hemphill County Airport",
     "latitude": 35.89530182,
     "longitude": -100.4039993,
-    "elevation": 2396,
-    "hasMetar": false
+    "elevation": 2392,
+    "hasMetar": true
   },
   {
     "icao": "HHG",
@@ -79601,8 +79601,8 @@
     "name": "Huntington Municipal Airport",
     "latitude": 40.852901,
     "longitude": -85.4571,
-    "elevation": 806,
-    "hasMetar": false
+    "elevation": 810,
+    "hasMetar": true
   },
   {
     "icao": "KHHR",
@@ -79656,7 +79656,7 @@
     "latitude": 39.07289886,
     "longitude": -93.67749786,
     "elevation": 840,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KHII",
@@ -79682,8 +79682,8 @@
     "name": "Hebron Municipal Airport",
     "latitude": 40.151884,
     "longitude": -97.583953,
-    "elevation": 1466,
-    "hasMetar": false
+    "elevation": 1473,
+    "hasMetar": true
   },
   {
     "icao": "HJO",
@@ -79692,7 +79692,7 @@
     "latitude": 36.31669998,
     "longitude": -119.6279984,
     "elevation": 240,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KHKA",
@@ -79763,8 +79763,8 @@
     "name": "Twin County Airport",
     "latitude": 36.766102,
     "longitude": -80.823601,
-    "elevation": 2693,
-    "hasMetar": false
+    "elevation": 2687,
+    "hasMetar": true
   },
   {
     "icao": "KHMN",
@@ -79790,8 +79790,8 @@
     "name": "Bedford County Airport",
     "latitude": 40.085952,
     "longitude": -78.513359,
-    "elevation": 1162,
-    "hasMetar": false
+    "elevation": 1152,
+    "hasMetar": true
   },
   {
     "icao": "KHNB",
@@ -79817,8 +79817,8 @@
     "name": "Harlan Municipal Airport",
     "latitude": 41.58440017700195,
     "longitude": -95.339599609375,
-    "elevation": 1231,
-    "hasMetar": false
+    "elevation": 1194,
+    "hasMetar": true
   },
   {
     "icao": "HNZ",
@@ -79826,8 +79826,8 @@
     "name": "Henderson Oxford Airport",
     "latitude": 36.361599,
     "longitude": -78.529198,
-    "elevation": 526,
-    "hasMetar": false
+    "elevation": 518,
+    "hasMetar": true
   },
   {
     "icao": "KHOB",
@@ -79844,8 +79844,8 @@
     "name": "Highland County Airport",
     "latitude": 39.188801,
     "longitude": -83.538803,
-    "elevation": 977,
-    "hasMetar": false
+    "elevation": 955,
+    "hasMetar": true
   },
   {
     "icao": "HOE",
@@ -79853,8 +79853,8 @@
     "name": "Homerville Airport",
     "latitude": 31.055901,
     "longitude": -82.774101,
-    "elevation": 186,
-    "hasMetar": false
+    "elevation": 184,
+    "hasMetar": true
   },
   {
     "icao": "KHON",
@@ -79925,8 +79925,8 @@
     "name": "Hugoton Municipal Airport",
     "latitude": 37.163101,
     "longitude": -101.371002,
-    "elevation": 3134,
-    "hasMetar": false
+    "elevation": 3136,
+    "hasMetar": true
   },
   {
     "icao": "KHQM",
@@ -79943,8 +79943,8 @@
     "name": "Thomson-McDuffie County Airport",
     "latitude": 33.52970123,
     "longitude": -82.51650238,
-    "elevation": 501,
-    "hasMetar": false
+    "elevation": 463,
+    "hasMetar": true
   },
   {
     "icao": "HQZ",
@@ -79952,8 +79952,8 @@
     "name": "Mesquite Metro Airport",
     "latitude": 32.747002,
     "longitude": -96.530403,
-    "elevation": 447,
-    "hasMetar": false
+    "elevation": 446,
+    "hasMetar": true
   },
   {
     "icao": "KHRI",
@@ -79970,8 +79970,8 @@
     "name": "Harnett Regional Jetport Airport",
     "latitude": 35.379398,
     "longitude": -78.733002,
-    "elevation": 202,
-    "hasMetar": false
+    "elevation": 180,
+    "hasMetar": true
   },
   {
     "icao": "KHRL",
@@ -79997,8 +79997,8 @@
     "name": "Hurlburt Field",
     "latitude": 30.427799,
     "longitude": -86.689301,
-    "elevation": 38,
-    "hasMetar": false
+    "elevation": 33,
+    "hasMetar": true
   },
   {
     "icao": "HRU",
@@ -80007,7 +80007,7 @@
     "latitude": 38.694698333740234,
     "longitude": -96.80799865722656,
     "elevation": 1480,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "HRX",
@@ -80015,8 +80015,8 @@
     "name": "Hereford Municipal Airport",
     "latitude": 34.85779953,
     "longitude": -102.3259964,
-    "elevation": 3788,
-    "hasMetar": false
+    "elevation": 3783,
+    "hasMetar": true
   },
   {
     "icao": "HSA",
@@ -80024,8 +80024,8 @@
     "name": "Stennis International Airport",
     "latitude": 30.3678,
     "longitude": -89.454597,
-    "elevation": 23,
-    "hasMetar": false
+    "elevation": 20,
+    "hasMetar": true
   },
   {
     "icao": "KHSB",
@@ -80042,8 +80042,8 @@
     "name": "Sundance Airpark",
     "latitude": 35.601799,
     "longitude": -97.7062,
-    "elevation": 1193,
-    "hasMetar": false
+    "elevation": 1175,
+    "hasMetar": true
   },
   {
     "icao": "KHSE",
@@ -80060,8 +80060,8 @@
     "name": "Hot Springs County Airport",
     "latitude": 43.713602,
     "longitude": -108.389687,
-    "elevation": 4895,
-    "hasMetar": false
+    "elevation": 4911,
+    "hasMetar": true
   },
   {
     "icao": "KHSI",
@@ -80087,8 +80087,8 @@
     "name": "Hot Springs Municipal Airport",
     "latitude": 43.366615,
     "longitude": -103.390545,
-    "elevation": 3150,
-    "hasMetar": false
+    "elevation": 3140,
+    "hasMetar": true
   },
   {
     "icao": "KHST",
@@ -80168,8 +80168,8 @@
     "name": "Terre Haute Regional Airport, Hulman Field",
     "latitude": 39.4515,
     "longitude": -87.307602,
-    "elevation": 589,
-    "hasMetar": false
+    "elevation": 571,
+    "hasMetar": true
   },
   {
     "icao": "KHUL",
@@ -80204,8 +80204,8 @@
     "name": "Hopkinsville Christian County Airport",
     "latitude": 36.856998,
     "longitude": -87.455101,
-    "elevation": 564,
-    "hasMetar": false
+    "elevation": 561,
+    "hasMetar": true
   },
   {
     "icao": "KHVE",
@@ -80268,7 +80268,7 @@
     "latitude": 46.448601,
     "longitude": -109.852997,
     "elevation": 4311,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KHWV",
@@ -80285,8 +80285,8 @@
     "name": "Warrenton Fauquier Airport",
     "latitude": 38.5863,
     "longitude": -77.710602,
-    "elevation": 336,
-    "hasMetar": false
+    "elevation": 305,
+    "hasMetar": true
   },
   {
     "icao": "KHXD",
@@ -80303,8 +80303,8 @@
     "name": "Hartford Municipal Airport",
     "latitude": 43.3493,
     "longitude": -88.391098,
-    "elevation": 1069,
-    "hasMetar": false
+    "elevation": 1070,
+    "hasMetar": true
   },
   {
     "icao": "KHYA",
@@ -80321,8 +80321,8 @@
     "name": "San Marcos Regional Airport",
     "latitude": 29.8927,
     "longitude": -97.862999,
-    "elevation": 597,
-    "hasMetar": false
+    "elevation": 591,
+    "hasMetar": true
   },
   {
     "icao": "KHYR",
@@ -80348,8 +80348,8 @@
     "name": "Conway Horry County Airport",
     "latitude": 33.828499,
     "longitude": -79.1222,
-    "elevation": 35,
-    "hasMetar": false
+    "elevation": 33,
+    "hasMetar": true
   },
   {
     "icao": "HYX",
@@ -80357,8 +80357,8 @@
     "name": "Saginaw County H.W. Browne Airport",
     "latitude": 43.433399,
     "longitude": -83.862297,
-    "elevation": 601,
-    "hasMetar": false
+    "elevation": 594,
+    "hasMetar": true
   },
   {
     "icao": "HZD",
@@ -80366,8 +80366,8 @@
     "name": "Carroll County Airport",
     "latitude": 36.089298,
     "longitude": -88.463303,
-    "elevation": 497,
-    "hasMetar": false
+    "elevation": 482,
+    "hasMetar": true
   },
   {
     "icao": "HZE",
@@ -80375,8 +80375,8 @@
     "name": "Mercer County Regional Airport",
     "latitude": 47.28990173,
     "longitude": -101.5810013,
-    "elevation": 1814,
-    "hasMetar": false
+    "elevation": 1778,
+    "hasMetar": true
   },
   {
     "icao": "KHZL",
@@ -80393,8 +80393,8 @@
     "name": "False River Regional Airport",
     "latitude": 30.7183,
     "longitude": -91.478699,
-    "elevation": 40,
-    "hasMetar": false
+    "elevation": 36,
+    "hasMetar": true
   },
   {
     "icao": "HZX",
@@ -80402,8 +80402,8 @@
     "name": "Isedor Iverson Airport",
     "latitude": 46.61880111694336,
     "longitude": -93.30979919433594,
-    "elevation": 1228,
-    "hasMetar": false
+    "elevation": 1227,
+    "hasMetar": true
   },
   {
     "icao": "KHZY",
@@ -80438,8 +80438,8 @@
     "name": "Sidney Municipal Airport",
     "latitude": 40.241402,
     "longitude": -84.150902,
-    "elevation": 1044,
-    "hasMetar": false
+    "elevation": 3425,
+    "hasMetar": true
   },
   {
     "icao": "I16",
@@ -80510,8 +80510,8 @@
     "name": "Central Kentucky Regional Airport",
     "latitude": 37.630798,
     "longitude": -84.332298,
-    "elevation": 1002,
-    "hasMetar": false
+    "elevation": 988,
+    "hasMetar": true
   },
   {
     "icao": "I40",
@@ -80528,8 +80528,8 @@
     "name": "James A Rhodes Airport",
     "latitude": 38.9814,
     "longitude": -82.577904,
-    "elevation": 726,
-    "hasMetar": false
+    "elevation": 735,
+    "hasMetar": true
   },
   {
     "icao": "I50",
@@ -80564,8 +80564,8 @@
     "name": "Santa Rosa Route 66 Airport",
     "latitude": 34.93439865,
     "longitude": -104.6429977,
-    "elevation": 4792,
-    "hasMetar": false
+    "elevation": 4806,
+    "hasMetar": true
   },
   {
     "icao": "I63",
@@ -80744,8 +80744,8 @@
     "name": "Kimball Municipal Robert E Arraj Field",
     "latitude": 41.1880989074707,
     "longitude": -103.677001953125,
-    "elevation": 4926,
-    "hasMetar": false
+    "elevation": 4902,
+    "hasMetar": true
   },
   {
     "icao": "KICL",
@@ -80762,8 +80762,8 @@
     "name": "Winner Regional Airport",
     "latitude": 43.390202,
     "longitude": -99.842102,
-    "elevation": 2033,
-    "hasMetar": false
+    "elevation": 2028,
+    "hasMetar": true
   },
   {
     "icao": "KICT",
@@ -80795,7 +80795,7 @@
   {
     "icao": "KIDI",
     "iata": "IDI",
-    "name": "Indiana County–Jimmy Stewart Airport",
+    "name": "Indiana County\u2013Jimmy Stewart Airport",
     "latitude": 40.631119,
     "longitude": -79.101884,
     "elevation": 1405,
@@ -80807,8 +80807,8 @@
     "name": "Indianola Municipal Airport",
     "latitude": 33.485699,
     "longitude": -90.678902,
-    "elevation": 126,
-    "hasMetar": false
+    "elevation": 128,
+    "hasMetar": true
   },
   {
     "icao": "KIDP",
@@ -80834,8 +80834,8 @@
     "name": "Natchitoches Regional Airport",
     "latitude": 31.735701,
     "longitude": -93.099098,
-    "elevation": 121,
-    "hasMetar": false
+    "elevation": 115,
+    "hasMetar": true
   },
   {
     "icao": "KIFA",
@@ -80870,8 +80870,8 @@
     "name": "Lansing Municipal Airport",
     "latitude": 41.534901,
     "longitude": -87.529503,
-    "elevation": 620,
-    "hasMetar": false
+    "elevation": 614,
+    "hasMetar": true
   },
   {
     "icao": "IIB",
@@ -80879,8 +80879,8 @@
     "name": "Independence Municipal Airport",
     "latitude": 42.456836,
     "longitude": -91.94767,
-    "elevation": 979,
-    "hasMetar": false
+    "elevation": 965,
+    "hasMetar": true
   },
   {
     "icao": "IIY",
@@ -80888,8 +80888,8 @@
     "name": "Washington Wilkes County Airport",
     "latitude": 33.77939987,
     "longitude": -82.81580353,
-    "elevation": 646,
-    "hasMetar": false
+    "elevation": 630,
+    "hasMetar": true
   },
   {
     "icao": "IJD",
@@ -80897,8 +80897,8 @@
     "name": "Windham Airport",
     "latitude": 41.743999,
     "longitude": -72.180298,
-    "elevation": 247,
-    "hasMetar": false
+    "elevation": 240,
+    "hasMetar": true
   },
   {
     "icao": "KIJX",
@@ -80915,8 +80915,8 @@
     "name": "Kleberg County Airport",
     "latitude": 27.5509,
     "longitude": -98.030899,
-    "elevation": 130,
-    "hasMetar": false
+    "elevation": 121,
+    "hasMetar": true
   },
   {
     "icao": "KIKK",
@@ -80933,8 +80933,8 @@
     "name": "Ankeny Regional Airport",
     "latitude": 41.691399,
     "longitude": -93.566399,
-    "elevation": 910,
-    "hasMetar": false
+    "elevation": 886,
+    "hasMetar": true
   },
   {
     "icao": "KILE",
@@ -81023,8 +81023,8 @@
     "name": "Inverness Airport",
     "latitude": 28.803588,
     "longitude": -82.318311,
-    "elevation": 50,
-    "hasMetar": false
+    "elevation": 46,
+    "hasMetar": true
   },
   {
     "icao": "INJ",
@@ -81032,8 +81032,8 @@
     "name": "Hillsboro Municipal Airport",
     "latitude": 32.0835,
     "longitude": -97.097198,
-    "elevation": 686,
-    "hasMetar": false
+    "elevation": 682,
+    "hasMetar": true
   },
   {
     "icao": "KINK",
@@ -81086,8 +81086,8 @@
     "name": "Mount Sterling Montgomery County Airport",
     "latitude": 38.058102,
     "longitude": -83.979599,
-    "elevation": 1019,
-    "hasMetar": false
+    "elevation": 988,
+    "hasMetar": true
   },
   {
     "icao": "KIOW",
@@ -81104,8 +81104,8 @@
     "name": "Lincolnton Lincoln County Regional Airport",
     "latitude": 35.483299,
     "longitude": -81.161301,
-    "elevation": 877,
-    "hasMetar": false
+    "elevation": 873,
+    "hasMetar": true
   },
   {
     "icao": "KIPL",
@@ -81149,8 +81149,8 @@
     "name": "Sibley Municipal Airport",
     "latitude": 43.36949921,
     "longitude": -95.75980377,
-    "elevation": 1538,
-    "hasMetar": false
+    "elevation": 1539,
+    "hasMetar": true
   },
   {
     "icao": "KISM",
@@ -81212,8 +81212,8 @@
     "name": "Kit Carson County Airport",
     "latitude": 39.2425,
     "longitude": -102.285004,
-    "elevation": 4219,
-    "hasMetar": false
+    "elevation": 4216,
+    "hasMetar": true
   },
   {
     "icao": "KIWA",
@@ -81239,8 +81239,8 @@
     "name": "Wabash Municipal Airport",
     "latitude": 40.762991,
     "longitude": -85.799747,
-    "elevation": 796,
-    "hasMetar": false
+    "elevation": 797,
+    "hasMetar": true
   },
   {
     "icao": "KIWI",
@@ -81266,8 +81266,8 @@
     "name": "Halifax-Northampton Regional Airport",
     "latitude": 36.3298,
     "longitude": -77.635231,
-    "elevation": 145,
-    "hasMetar": false
+    "elevation": 141,
+    "hasMetar": true
   },
   {
     "icao": "KIXD",
@@ -81338,8 +81338,8 @@
     "name": "Campbell County Airport  - Colonel Tommy C Stiner Airfield",
     "latitude": 36.334073,
     "longitude": -84.162977,
-    "elevation": 1180,
-    "hasMetar": false
+    "elevation": 1148,
+    "hasMetar": true
   },
   {
     "icao": "KJAX",
@@ -81374,8 +81374,8 @@
     "name": "Wood County Airport - Collins Field",
     "latitude": 32.742199,
     "longitude": -95.496498,
-    "elevation": 434,
-    "hasMetar": false
+    "elevation": 417,
+    "hasMetar": true
   },
   {
     "icao": "KJDN",
@@ -81401,8 +81401,8 @@
     "name": "Jerome County Airport",
     "latitude": 42.72669982910156,
     "longitude": -114.45700073242188,
-    "elevation": 4053,
-    "hasMetar": false
+    "elevation": 4022,
+    "hasMetar": true
   },
   {
     "icao": "JES",
@@ -81410,8 +81410,8 @@
     "name": "Jesup Wayne County Airport",
     "latitude": 31.554001,
     "longitude": -81.8825,
-    "elevation": 107,
-    "hasMetar": false
+    "elevation": 85,
+    "hasMetar": true
   },
   {
     "icao": "KJFK",
@@ -81428,8 +81428,8 @@
     "name": "Walker County Airport Bevill Field",
     "latitude": 33.902,
     "longitude": -87.314201,
-    "elevation": 482,
-    "hasMetar": false
+    "elevation": 472,
+    "hasMetar": true
   },
   {
     "icao": "JFZ",
@@ -81437,8 +81437,8 @@
     "name": "Tazewell County Airport",
     "latitude": 37.063702,
     "longitude": -81.798302,
-    "elevation": 2653,
-    "hasMetar": false
+    "elevation": 2654,
+    "hasMetar": true
   },
   {
     "icao": "JGG",
@@ -81446,8 +81446,8 @@
     "name": "Williamsburg Jamestown Airport",
     "latitude": 37.239201,
     "longitude": -76.716103,
-    "elevation": 49,
-    "hasMetar": false
+    "elevation": 43,
+    "hasMetar": true
   },
   {
     "icao": "KJHW",
@@ -81473,8 +81473,8 @@
     "name": "Moorhead Municipal Airport",
     "latitude": 46.83917,
     "longitude": -96.663703,
-    "elevation": 918,
-    "hasMetar": false
+    "elevation": 919,
+    "hasMetar": true
   },
   {
     "icao": "JKL",
@@ -81482,8 +81482,8 @@
     "name": "Julian Carroll Airport",
     "latitude": 37.59389877319336,
     "longitude": -83.31729888916016,
-    "elevation": 1381,
-    "hasMetar": false
+    "elevation": 1358,
+    "hasMetar": true
   },
   {
     "icao": "KJLN",
@@ -81500,8 +81500,8 @@
     "name": "Mora Municipal Airport",
     "latitude": 45.886101,
     "longitude": -93.271796,
-    "elevation": 1012,
-    "hasMetar": false
+    "elevation": 988,
+    "hasMetar": true
   },
   {
     "icao": "KJMS",
@@ -81518,8 +81518,8 @@
     "name": "Johnston Regional Airport",
     "latitude": 35.540901,
     "longitude": -78.390297,
-    "elevation": 164,
-    "hasMetar": false
+    "elevation": 135,
+    "hasMetar": true
   },
   {
     "icao": "KJOT",
@@ -81563,8 +81563,8 @@
     "name": "Sallisaw Municipal Airport",
     "latitude": 35.438202,
     "longitude": -94.802803,
-    "elevation": 527,
-    "hasMetar": false
+    "elevation": 518,
+    "hasMetar": true
   },
   {
     "icao": "KJVL",
@@ -81581,8 +81581,8 @@
     "name": "Clark Regional Airport",
     "latitude": 38.365398,
     "longitude": -85.738197,
-    "elevation": 474,
-    "hasMetar": false
+    "elevation": 463,
+    "hasMetar": true
   },
   {
     "icao": "JWG",
@@ -81590,8 +81590,8 @@
     "name": "Watonga Regional Airport",
     "latitude": 35.8647,
     "longitude": -98.420799,
-    "elevation": 1550,
-    "hasMetar": false
+    "elevation": 1539,
+    "hasMetar": true
   },
   {
     "icao": "JWN",
@@ -81599,8 +81599,8 @@
     "name": "John C Tune Airport",
     "latitude": 36.1824,
     "longitude": -86.886703,
-    "elevation": 495,
-    "hasMetar": false
+    "elevation": 489,
+    "hasMetar": true
   },
   {
     "icao": "JWY",
@@ -81608,8 +81608,8 @@
     "name": "Mid-Way Regional Airport",
     "latitude": 32.4587,
     "longitude": -96.912399,
-    "elevation": 713,
-    "hasMetar": false
+    "elevation": 692,
+    "hasMetar": true
   },
   {
     "icao": "JXI",
@@ -81617,8 +81617,8 @@
     "name": "Fox Stephens Field Gilmer Municipal Airport",
     "latitude": 32.699001,
     "longitude": -94.948898,
-    "elevation": 415,
-    "hasMetar": false
+    "elevation": 427,
+    "hasMetar": true
   },
   {
     "icao": "KJXN",
@@ -81635,8 +81635,8 @@
     "name": "St James Municipal Airport",
     "latitude": 43.986301,
     "longitude": -94.557899,
-    "elevation": 1067,
-    "hasMetar": false
+    "elevation": 1060,
+    "hasMetar": true
   },
   {
     "icao": "JYL",
@@ -81644,8 +81644,8 @@
     "name": "Plantation Airpark",
     "latitude": 32.645302,
     "longitude": -81.597099,
-    "elevation": 188,
-    "hasMetar": false
+    "elevation": 177,
+    "hasMetar": true
   },
   {
     "icao": "JYM",
@@ -81653,8 +81653,8 @@
     "name": "Hillsdale Municipal Airport",
     "latitude": 41.92129898071289,
     "longitude": -84.58580017089844,
-    "elevation": 1182,
-    "hasMetar": false
+    "elevation": 1171,
+    "hasMetar": true
   },
   {
     "icao": "JYO",
@@ -81662,8 +81662,8 @@
     "name": "Leesburg Executive Airport",
     "latitude": 39.077999,
     "longitude": -77.557503,
-    "elevation": 389,
-    "hasMetar": false
+    "elevation": 367,
+    "hasMetar": true
   },
   {
     "icao": "JYR",
@@ -81671,8 +81671,8 @@
     "name": "York Municipal Airport",
     "latitude": 40.896801,
     "longitude": -97.622803,
-    "elevation": 1670,
-    "hasMetar": false
+    "elevation": 1667,
+    "hasMetar": true
   },
   {
     "icao": "JZI",
@@ -81680,8 +81680,8 @@
     "name": "Charleston Executive Airport",
     "latitude": 32.698238,
     "longitude": -80.005675,
-    "elevation": 17,
-    "hasMetar": false
+    "elevation": 16,
+    "hasMetar": true
   },
   {
     "icao": "JZP",
@@ -81689,8 +81689,8 @@
     "name": "Pickens County Airport",
     "latitude": 34.4534,
     "longitude": -84.457397,
-    "elevation": 1535,
-    "hasMetar": false
+    "elevation": 1516,
+    "hasMetar": true
   },
   {
     "icao": "PCD",
@@ -81698,8 +81698,8 @@
     "name": "Perryville Regional Airport",
     "latitude": 37.868698,
     "longitude": -89.862099,
-    "elevation": 372,
-    "hasMetar": false
+    "elevation": 367,
+    "hasMetar": true
   },
   {
     "icao": "K06",
@@ -81752,8 +81752,8 @@
     "name": "Wendell H Ford Airport",
     "latitude": 37.384838,
     "longitude": -83.259662,
-    "elevation": 1256,
-    "hasMetar": false
+    "elevation": 1253,
+    "hasMetar": true
   },
   {
     "icao": "SJS",
@@ -81761,8 +81761,8 @@
     "name": "Big Sandy Regional Airport",
     "latitude": 37.750999,
     "longitude": -82.636703,
-    "elevation": 1221,
-    "hasMetar": false
+    "elevation": 1178,
+    "hasMetar": true
   },
   {
     "icao": "K24",
@@ -82175,8 +82175,8 @@
     "name": "Louisiana Regional Airport",
     "latitude": 30.172701,
     "longitude": -90.940598,
-    "elevation": 14,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "L39",
@@ -82436,8 +82436,8 @@
     "name": "Floyd W. Jones Lebanon Airport",
     "latitude": 37.6483,
     "longitude": -92.652397,
-    "elevation": 1321,
-    "hasMetar": false
+    "elevation": 1309,
+    "hasMetar": true
   },
   {
     "icao": "LBR",
@@ -82445,8 +82445,8 @@
     "name": "Clarksville Red River City-J D Trissell Field",
     "latitude": 33.593201,
     "longitude": -95.063599,
-    "elevation": 440,
-    "hasMetar": false
+    "elevation": 433,
+    "hasMetar": true
   },
   {
     "icao": "KLBT",
@@ -82661,8 +82661,8 @@
     "name": "Hearne Municipal Airport",
     "latitude": 30.871799,
     "longitude": -96.6222,
-    "elevation": 285,
-    "hasMetar": false
+    "elevation": 272,
+    "hasMetar": true
   },
   {
     "icao": "LHM",
@@ -82670,8 +82670,8 @@
     "name": "Lincoln Regional Karl Harder Field",
     "latitude": 38.909199,
     "longitude": -121.350998,
-    "elevation": 121,
-    "hasMetar": false
+    "elevation": 118,
+    "hasMetar": true
   },
   {
     "icao": "LHQ",
@@ -82679,8 +82679,8 @@
     "name": "Fairfield County Airport",
     "latitude": 39.7556,
     "longitude": -82.657097,
-    "elevation": 868,
-    "hasMetar": false
+    "elevation": 850,
+    "hasMetar": true
   },
   {
     "icao": "KLHV",
@@ -82707,7 +82707,7 @@
     "latitude": 38.049702,
     "longitude": -103.509003,
     "elevation": 4229,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KLHZ",
@@ -82751,8 +82751,8 @@
     "name": "Litchfield Municipal Airport",
     "latitude": 45.097099,
     "longitude": -94.507301,
-    "elevation": 1140,
-    "hasMetar": false
+    "elevation": 1138,
+    "hasMetar": true
   },
   {
     "icao": "KLKP",
@@ -82769,8 +82769,8 @@
     "name": "Lancaster County-Mc Whirter Field",
     "latitude": 34.7229,
     "longitude": -80.854599,
-    "elevation": 486,
-    "hasMetar": false
+    "elevation": 545,
+    "hasMetar": true
   },
   {
     "icao": "KLKU",
@@ -82806,7 +82806,7 @@
     "latitude": 33.5525016784668,
     "longitude": -102.37200164794922,
     "elevation": 3514,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "LLQ",
@@ -82814,8 +82814,8 @@
     "name": "Monticello Municipal Ellis Field",
     "latitude": 33.638599,
     "longitude": -91.750999,
-    "elevation": 270,
-    "hasMetar": false
+    "elevation": 282,
+    "hasMetar": true
   },
   {
     "icao": "LLR",
@@ -82823,8 +82823,8 @@
     "name": "Little River Airport",
     "latitude": 39.262001037597656,
     "longitude": -123.75399780273438,
-    "elevation": 572,
-    "hasMetar": false
+    "elevation": 1877,
+    "hasMetar": true
   },
   {
     "icao": "LLU",
@@ -82832,8 +82832,8 @@
     "name": "Lamar Municipal Airport",
     "latitude": 37.487246,
     "longitude": -94.313298,
-    "elevation": 1009,
-    "hasMetar": false
+    "elevation": 1010,
+    "hasMetar": true
   },
   {
     "icao": "LMO",
@@ -82841,8 +82841,8 @@
     "name": "Vance Brand Airport",
     "latitude": 40.1637,
     "longitude": -105.163002,
-    "elevation": 5055,
-    "hasMetar": false
+    "elevation": 5036,
+    "hasMetar": true
   },
   {
     "icao": "KLMS",
@@ -82877,8 +82877,8 @@
     "name": "Lancaster Airport",
     "latitude": 32.577564,
     "longitude": -96.717494,
-    "elevation": 501,
-    "hasMetar": false
+    "elevation": 499,
+    "hasMetar": true
   },
   {
     "icao": "KLND",
@@ -82904,8 +82904,8 @@
     "name": "Kings Land O' Lakes Airport",
     "latitude": 46.153999,
     "longitude": -89.212097,
-    "elevation": 1704,
-    "hasMetar": false
+    "elevation": 1696,
+    "hasMetar": true
   },
   {
     "icao": "KLNN",
@@ -83003,8 +83003,8 @@
     "name": "Lorain County Regional Airport",
     "latitude": 41.344299,
     "longitude": -82.177597,
-    "elevation": 793,
-    "hasMetar": false
+    "elevation": 791,
+    "hasMetar": true
   },
   {
     "icao": "KLQK",
@@ -83021,8 +83021,8 @@
     "name": "Larned Pawnee County Airport",
     "latitude": 38.20859909,
     "longitude": -99.08599854,
-    "elevation": 2012,
-    "hasMetar": false
+    "elevation": 2008,
+    "hasMetar": true
   },
   {
     "icao": "KLRD",
@@ -83048,8 +83048,8 @@
     "name": "Lincoln Regional Airport",
     "latitude": 45.362202,
     "longitude": -68.534698,
-    "elevation": 208,
-    "hasMetar": false
+    "elevation": 207,
+    "hasMetar": true
   },
   {
     "icao": "KLRJ",
@@ -83066,8 +83066,8 @@
     "name": "Mount Pleasant Regional Airport Faison Field",
     "latitude": 32.8978,
     "longitude": -79.782898,
-    "elevation": 12,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KLRU",
@@ -83084,8 +83084,8 @@
     "name": "Lawrence Smith Memorial Airport",
     "latitude": 38.609863,
     "longitude": -94.343548,
-    "elevation": 915,
-    "hasMetar": false
+    "elevation": 892,
+    "hasMetar": true
   },
   {
     "icao": "KLSB",
@@ -83166,7 +83166,7 @@
     "latitude": 33.254601,
     "longitude": -97.580597,
     "elevation": 1047,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KLUF",
@@ -83183,8 +83183,8 @@
     "name": "Ellington Airport",
     "latitude": 35.507,
     "longitude": -86.803902,
-    "elevation": 717,
-    "hasMetar": false
+    "elevation": 715,
+    "hasMetar": true
   },
   {
     "icao": "KLUK",
@@ -83210,8 +83210,8 @@
     "name": "Menomonie Municipal Score Field",
     "latitude": 44.8923,
     "longitude": -91.867897,
-    "elevation": 895,
-    "hasMetar": false
+    "elevation": 889,
+    "hasMetar": true
   },
   {
     "icao": "LUX",
@@ -83219,8 +83219,8 @@
     "name": "Laurens County Airport",
     "latitude": 34.507099,
     "longitude": -81.947197,
-    "elevation": 697,
-    "hasMetar": false
+    "elevation": 699,
+    "hasMetar": true
   },
   {
     "icao": "LVJ",
@@ -83228,8 +83228,8 @@
     "name": "Pearland Regional Airport",
     "latitude": 29.521299,
     "longitude": -95.242104,
-    "elevation": 44,
-    "hasMetar": false
+    "elevation": 36,
+    "hasMetar": true
   },
   {
     "icao": "KLVK",
@@ -83264,8 +83264,8 @@
     "name": "Airlake Airport",
     "latitude": 44.627899,
     "longitude": -93.228104,
-    "elevation": 960,
-    "hasMetar": false
+    "elevation": 958,
+    "hasMetar": true
   },
   {
     "icao": "KLVS",
@@ -83282,8 +83282,8 @@
     "name": "South Haven Area Regional Airport",
     "latitude": 42.3512,
     "longitude": -86.255699,
-    "elevation": 666,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "KLWB",
@@ -83354,8 +83354,8 @@
     "name": "Little Falls-Morrison County-Lindbergh field",
     "latitude": 45.949699,
     "longitude": -94.347397,
-    "elevation": 1123,
-    "hasMetar": false
+    "elevation": 1099,
+    "hasMetar": true
   },
   {
     "icao": "KLXN",
@@ -83373,7 +83373,7 @@
     "latitude": 38.959702,
     "longitude": -94.371399,
     "elevation": 1004,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KLXV",
@@ -83390,8 +83390,8 @@
     "name": "Mexia Limestone County Airport",
     "latitude": 31.639799118041992,
     "longitude": -96.51470184326172,
-    "elevation": 544,
-    "hasMetar": false
+    "elevation": 538,
+    "hasMetar": true
   },
   {
     "icao": "KLYH",
@@ -83417,8 +83417,8 @@
     "name": "Quentin Aanenson Airfield - Luverne Municipal Airport",
     "latitude": 43.616217,
     "longitude": -96.217946,
-    "elevation": 1431,
-    "hasMetar": false
+    "elevation": 1427,
+    "hasMetar": true
   },
   {
     "icao": "LZD",
@@ -83426,8 +83426,8 @@
     "name": "Danielson Airport",
     "latitude": 41.819698333740234,
     "longitude": -71.9010009765625,
-    "elevation": 238,
-    "hasMetar": false
+    "elevation": 781,
+    "hasMetar": true
   },
   {
     "icao": "KLZU",
@@ -83444,8 +83444,8 @@
     "name": "Lampasas Airport",
     "latitude": 31.106199,
     "longitude": -98.1959,
-    "elevation": 1215,
-    "hasMetar": false
+    "elevation": 1168,
+    "hasMetar": true
   },
   {
     "icao": "M01",
@@ -83534,8 +83534,8 @@
     "name": "John Bell Williams Airport",
     "latitude": 32.30329895,
     "longitude": -90.40850067,
-    "elevation": 247,
-    "hasMetar": false
+    "elevation": 240,
+    "hasMetar": true
   },
   {
     "icao": "M17",
@@ -83669,8 +83669,8 @@
     "name": "Music City Executive Airport",
     "latitude": 36.375076,
     "longitude": -86.408414,
-    "elevation": 583,
-    "hasMetar": false
+    "elevation": 584,
+    "hasMetar": true
   },
   {
     "icao": "M34",
@@ -84038,8 +84038,8 @@
     "name": "Marianna Municipal Airport",
     "latitude": 30.837799,
     "longitude": -85.1819,
-    "elevation": 110,
-    "hasMetar": false
+    "elevation": 108,
+    "hasMetar": true
   },
   {
     "icao": "MAL",
@@ -84047,8 +84047,8 @@
     "name": "Malone Dufort Airport",
     "latitude": 44.853699,
     "longitude": -74.328903,
-    "elevation": 790,
-    "hasMetar": false
+    "elevation": 771,
+    "hasMetar": true
   },
   {
     "icao": "MAO",
@@ -84056,8 +84056,8 @@
     "name": "Marion County Airport",
     "latitude": 34.181198,
     "longitude": -79.334702,
-    "elevation": 92,
-    "hasMetar": false
+    "elevation": 89,
+    "hasMetar": true
   },
   {
     "icao": "KMAW",
@@ -84111,7 +84111,7 @@
     "latitude": 35.877499,
     "longitude": -86.377502,
     "elevation": 614,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KMBY",
@@ -84218,8 +84218,8 @@
     "name": "White County Airport",
     "latitude": 40.708801,
     "longitude": -86.7668,
-    "elevation": 676,
-    "hasMetar": false
+    "elevation": 673,
+    "hasMetar": true
   },
   {
     "icao": "MCZ",
@@ -84227,8 +84227,8 @@
     "name": "Martin County Airport",
     "latitude": 35.86220169067383,
     "longitude": -77.1781997680664,
-    "elevation": 76,
-    "hasMetar": false
+    "elevation": 75,
+    "hasMetar": true
   },
   {
     "icao": "KMDD",
@@ -84263,8 +84263,8 @@
     "name": "Madison County Executive Airport-Tom Sharp Jr Field",
     "latitude": 34.8614006,
     "longitude": -86.55750275,
-    "elevation": 756,
-    "hasMetar": false
+    "elevation": 725,
+    "hasMetar": true
   },
   {
     "icao": "KMDS",
@@ -84326,8 +84326,8 @@
     "name": "Meade Municipal Airport",
     "latitude": 37.27690124511719,
     "longitude": -100.35600280761719,
-    "elevation": 2529,
-    "hasMetar": false
+    "elevation": 2520,
+    "hasMetar": true
   },
   {
     "icao": "KMEM",
@@ -84362,8 +84362,8 @@
     "name": "James G. Whiting Memorial Field",
     "latitude": 42.178299,
     "longitude": -95.793602,
-    "elevation": 1116,
-    "hasMetar": false
+    "elevation": 1115,
+    "hasMetar": true
   },
   {
     "icao": "MEZ",
@@ -84371,8 +84371,8 @@
     "name": "Mena Intermountain Municipal Airport",
     "latitude": 34.545399,
     "longitude": -94.202698,
-    "elevation": 1080,
-    "hasMetar": false
+    "elevation": 1050,
+    "hasMetar": true
   },
   {
     "icao": "KMFD",
@@ -84443,8 +84443,8 @@
     "name": "Maple Lake Municipal Airport",
     "latitude": 45.236,
     "longitude": -93.985603,
-    "elevation": 1028,
-    "hasMetar": false
+    "elevation": 1017,
+    "hasMetar": true
   },
   {
     "icao": "KMGJ",
@@ -84470,8 +84470,8 @@
     "name": "Harbor Springs Airport",
     "latitude": 45.42559814453125,
     "longitude": -84.91339874267578,
-    "elevation": 686,
-    "hasMetar": false
+    "elevation": 673,
+    "hasMetar": true
   },
   {
     "icao": "KMGR",
@@ -84534,7 +84534,7 @@
     "latitude": 32.373885,
     "longitude": -82.081775,
     "elevation": 197,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KMHR",
@@ -84641,8 +84641,8 @@
     "name": "Picayune Municipal Airport",
     "latitude": 30.48749924,
     "longitude": -89.65119934,
-    "elevation": 55,
-    "hasMetar": false
+    "elevation": 56,
+    "hasMetar": true
   },
   {
     "icao": "KMJQ",
@@ -84668,8 +84668,8 @@
     "name": "Miller Municipal Airport",
     "latitude": 44.5252,
     "longitude": -98.958099,
-    "elevation": 1569,
-    "hasMetar": false
+    "elevation": 1565,
+    "hasMetar": true
   },
   {
     "icao": "KMKC",
@@ -84704,8 +84704,8 @@
     "name": "Mountain Empire Airport",
     "latitude": 36.894901,
     "longitude": -81.349899,
-    "elevation": 2558,
-    "hasMetar": false
+    "elevation": 2549,
+    "hasMetar": true
   },
   {
     "icao": "KMKL",
@@ -84722,8 +84722,8 @@
     "name": "Comanche County City Airport",
     "latitude": 31.9168,
     "longitude": -98.600304,
-    "elevation": 1385,
-    "hasMetar": false
+    "elevation": 1404,
+    "hasMetar": true
   },
   {
     "icao": "KMKO",
@@ -84740,8 +84740,8 @@
     "name": "Berkeley County Airport",
     "latitude": 33.185501,
     "longitude": -80.036301,
-    "elevation": 73,
-    "hasMetar": false
+    "elevation": 72,
+    "hasMetar": true
   },
   {
     "icao": "KMKT",
@@ -84758,8 +84758,8 @@
     "name": "Marksville Municipal Airport",
     "latitude": 31.09469985961914,
     "longitude": -92.06909942626953,
-    "elevation": 79,
-    "hasMetar": false
+    "elevation": 259,
+    "hasMetar": true
   },
   {
     "icao": "KMKY",
@@ -84884,8 +84884,8 @@
     "name": "Meriden Markham Municipal Airport",
     "latitude": 41.50870132446289,
     "longitude": -72.82949829101562,
-    "elevation": 103,
-    "hasMetar": false
+    "elevation": 98,
+    "hasMetar": true
   },
   {
     "icao": "KMML",
@@ -84939,7 +84939,7 @@
     "latitude": 36.992802,
     "longitude": -91.7145,
     "elevation": 1181,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "MNI",
@@ -84947,13 +84947,13 @@
     "name": "Santee Cooper Regional Airport",
     "latitude": 33.587101,
     "longitude": -80.208702,
-    "elevation": 103,
-    "hasMetar": false
+    "elevation": 95,
+    "hasMetar": true
   },
   {
     "icao": "KMNM",
     "iata": "MNM",
-    "name": "Menominee–Marinette Twin County Airport",
+    "name": "Menominee\u2013Marinette Twin County Airport",
     "latitude": 45.126701,
     "longitude": -87.638397,
     "elevation": 625,
@@ -84974,8 +84974,8 @@
     "name": "Monroe County Airport",
     "latitude": 35.545399,
     "longitude": -84.380203,
-    "elevation": 1031,
-    "hasMetar": false
+    "elevation": 1004,
+    "hasMetar": true
   },
   {
     "icao": "MNZ",
@@ -84983,8 +84983,8 @@
     "name": "Hamilton Municipal Airport",
     "latitude": 31.665899,
     "longitude": -98.148598,
-    "elevation": 1299,
-    "hasMetar": false
+    "elevation": 1302,
+    "hasMetar": true
   },
   {
     "icao": "MO1",
@@ -85010,8 +85010,8 @@
     "name": "Washington Regional Airport",
     "latitude": 38.587601,
     "longitude": -90.993797,
-    "elevation": 488,
-    "hasMetar": false
+    "elevation": 482,
+    "hasMetar": true
   },
   {
     "icao": "MO8",
@@ -85082,8 +85082,8 @@
     "name": "Philadelphia Municipal Airport",
     "latitude": 32.7994,
     "longitude": -89.125999,
-    "elevation": 458,
-    "hasMetar": false
+    "elevation": 440,
+    "hasMetar": true
   },
   {
     "icao": "MPG",
@@ -85091,8 +85091,8 @@
     "name": "Marshall County Airport",
     "latitude": 39.880798,
     "longitude": -80.735802,
-    "elevation": 1214,
-    "hasMetar": false
+    "elevation": 3983,
+    "hasMetar": true
   },
   {
     "icao": "KMPI",
@@ -85172,8 +85172,8 @@
     "name": "Indianapolis Regional Airport",
     "latitude": 39.843498,
     "longitude": -85.8971,
-    "elevation": 862,
-    "hasMetar": false
+    "elevation": 860,
+    "hasMetar": true
   },
   {
     "icao": "KMQS",
@@ -85235,8 +85235,8 @@
     "name": "Michael J. Smith Field",
     "latitude": 34.73360062,
     "longitude": -76.66059875,
-    "elevation": 11,
-    "hasMetar": false
+    "elevation": 7,
+    "hasMetar": true
   },
   {
     "icao": "MRJ",
@@ -85244,8 +85244,8 @@
     "name": "Iowa County Airport",
     "latitude": 42.886799,
     "longitude": -90.236198,
-    "elevation": 1171,
-    "hasMetar": false
+    "elevation": 1148,
+    "hasMetar": true
   },
   {
     "icao": "KMRN",
@@ -85262,8 +85262,8 @@
     "name": "Union County Airport",
     "latitude": 40.224701,
     "longitude": -83.351601,
-    "elevation": 1021,
-    "hasMetar": false
+    "elevation": 991,
+    "hasMetar": true
   },
   {
     "icao": "KMRY",
@@ -85304,7 +85304,7 @@
   {
     "icao": "KMSP",
     "iata": "MSP",
-    "name": "Minneapolis–Saint Paul International Airport / Wold–Chamberlain Field",
+    "name": "Minneapolis\u2013Saint Paul International Airport / Wold\u2013Chamberlain Field",
     "latitude": 44.880081,
     "longitude": -93.221741,
     "elevation": 841,
@@ -85397,8 +85397,8 @@
     "name": "Blue Ridge Airport",
     "latitude": 36.630699,
     "longitude": -80.018303,
-    "elevation": 941,
-    "hasMetar": false
+    "elevation": 906,
+    "hasMetar": true
   },
   {
     "icao": "KMTW",
@@ -85469,8 +85469,8 @@
     "name": "Monte Vista Municipal Airport",
     "latitude": 37.52730178833008,
     "longitude": -106.0479965209961,
-    "elevation": 7611,
-    "hasMetar": false
+    "elevation": 7612,
+    "hasMetar": true
   },
   {
     "icao": "KMVL",
@@ -85487,8 +85487,8 @@
     "name": "Machias Valley Airport",
     "latitude": 44.70309829711914,
     "longitude": -67.47859954833984,
-    "elevation": 96,
-    "hasMetar": false
+    "elevation": 95,
+    "hasMetar": true
   },
   {
     "icao": "KMVN",
@@ -85541,8 +85541,8 @@
     "name": "Mount Airy Surry County Airport",
     "latitude": 36.45970154,
     "longitude": -80.5530014,
-    "elevation": 1249,
-    "hasMetar": false
+    "elevation": 1227,
+    "hasMetar": true
   },
   {
     "icao": "KMWL",
@@ -85622,8 +85622,8 @@
     "name": "Mexico Memorial Airport",
     "latitude": 39.157501,
     "longitude": -91.818298,
-    "elevation": 823,
-    "hasMetar": false
+    "elevation": 817,
+    "hasMetar": true
   },
   {
     "icao": "KMYL",
@@ -85658,8 +85658,8 @@
     "name": "Marysville Municipal Airport",
     "latitude": 39.856417,
     "longitude": -96.630688,
-    "elevation": 1283,
-    "hasMetar": false
+    "elevation": 1273,
+    "hasMetar": true
   },
   {
     "icao": "MZH",
@@ -85667,8 +85667,8 @@
     "name": "Moose Lake Carlton County Airport",
     "latitude": 46.418800354003906,
     "longitude": -92.80470275878906,
-    "elevation": 1076,
-    "hasMetar": false
+    "elevation": 1086,
+    "hasMetar": true
   },
   {
     "icao": "KMZJ",
@@ -85982,8 +85982,8 @@
     "name": "Beaufort MCAS - Merritt Field",
     "latitude": 32.4774017334,
     "longitude": -80.723197937,
-    "elevation": 37,
-    "hasMetar": false
+    "elevation": 30,
+    "hasMetar": true
   },
   {
     "icao": "KNBG",
@@ -86027,8 +86027,8 @@
     "name": "Whiting Field Naval Air Station South Airport",
     "latitude": 30.704399,
     "longitude": -87.023003,
-    "elevation": 177,
-    "hasMetar": false
+    "elevation": 167,
+    "hasMetar": true
   },
   {
     "icao": "KNEL",
@@ -86072,8 +86072,8 @@
     "name": "Fentress Naval Auxiliary Landing Field",
     "latitude": 36.691641,
     "longitude": -76.134996,
-    "elevation": 16,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "NFG",
@@ -86081,8 +86081,8 @@
     "name": "Camp Pendleton MCAS (Munn Field) Airport",
     "latitude": 33.30130005,
     "longitude": -117.3550034,
-    "elevation": 78,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "NFJ",
@@ -86090,8 +86090,8 @@
     "name": "Choctaw Nolf Airport",
     "latitude": 30.506901,
     "longitude": -86.959702,
-    "elevation": 102,
-    "hasMetar": false
+    "elevation": 112,
+    "hasMetar": true
   },
   {
     "icao": "KNFL",
@@ -86162,8 +86162,8 @@
     "name": "China Lake Naws (Armitage Field) Airport",
     "latitude": 35.6853981,
     "longitude": -117.6920013,
-    "elevation": 2283,
-    "hasMetar": false
+    "elevation": 2238,
+    "hasMetar": true
   },
   {
     "icao": "KNIP",
@@ -86189,8 +86189,8 @@
     "name": "Marine Corps Auxiliary Landing Field Bogue",
     "latitude": 34.690399,
     "longitude": -77.029701,
-    "elevation": 21,
-    "hasMetar": false
+    "elevation": 16,
+    "hasMetar": true
   },
   {
     "icao": "NJW",
@@ -86198,8 +86198,8 @@
     "name": "Joe Williams Naval Outlying Field",
     "latitude": 32.798529,
     "longitude": -88.834333,
-    "elevation": 539,
-    "hasMetar": false
+    "elevation": 541,
+    "hasMetar": true
   },
   {
     "icao": "KNKT",
@@ -86234,8 +86234,8 @@
     "name": "Naval Air Station Meridian / McCain Field",
     "latitude": 32.5531,
     "longitude": -88.55406,
-    "elevation": 316,
-    "hasMetar": false
+    "elevation": 308,
+    "hasMetar": true
   },
   {
     "icao": "NOG",
@@ -86243,8 +86243,8 @@
     "name": "Orange Grove Naval Auxiliary Landing Field",
     "latitude": 27.9011,
     "longitude": -98.051697,
-    "elevation": 257,
-    "hasMetar": false
+    "elevation": 236,
+    "hasMetar": true
   },
   {
     "icao": "NOW",
@@ -86252,8 +86252,8 @@
     "name": "Port Angeles Cgas Airport",
     "latitude": 48.141499,
     "longitude": -123.414001,
-    "elevation": 13,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KNPA",
@@ -86306,8 +86306,8 @@
     "name": "Coupeville Nolf Airport",
     "latitude": 48.18830108642578,
     "longitude": -122.63200378417969,
-    "elevation": 199,
-    "hasMetar": false
+    "elevation": 200,
+    "hasMetar": true
   },
   {
     "icao": "KNRB",
@@ -86324,8 +86324,8 @@
     "name": "Norton Municipal Airport",
     "latitude": 39.850399017333984,
     "longitude": -99.89469909667969,
-    "elevation": 2383,
-    "hasMetar": false
+    "elevation": 2382,
+    "hasMetar": true
   },
   {
     "icao": "NRQ",
@@ -86360,8 +86360,8 @@
     "name": "San Nicolas Island Nolf Airport",
     "latitude": 33.23979949951172,
     "longitude": -119.45800018310547,
-    "elevation": 506,
-    "hasMetar": false
+    "elevation": 528,
+    "hasMetar": true
   },
   {
     "icao": "KNTD",
@@ -86387,8 +86387,8 @@
     "name": "San Clemente Island Naval Auxiliary Landing Field",
     "latitude": 33.02270126,
     "longitude": -118.5879974,
-    "elevation": 184,
-    "hasMetar": false
+    "elevation": 171,
+    "hasMetar": true
   },
   {
     "icao": "NUI",
@@ -86396,8 +86396,8 @@
     "name": "Naval Outlying Landing Field Webster",
     "latitude": 38.144222,
     "longitude": -76.426892,
-    "elevation": 22,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "KNUQ",
@@ -86441,8 +86441,8 @@
     "name": "Twentynine Palms Strategic Expeditionary Landing Field",
     "latitude": 34.2962,
     "longitude": -116.162003,
-    "elevation": 2051,
-    "hasMetar": false
+    "elevation": 2001,
+    "hasMetar": true
   },
   {
     "icao": "NY0",
@@ -86765,8 +86765,8 @@
     "name": "Westover Field Amador County Airport",
     "latitude": 38.376801,
     "longitude": -120.793999,
-    "elevation": 1690,
-    "hasMetar": false
+    "elevation": 1699,
+    "hasMetar": true
   },
   {
     "icao": "O79",
@@ -86855,8 +86855,8 @@
     "name": "Woodbine Municipal Airport",
     "latitude": 39.2192,
     "longitude": -74.7948,
-    "elevation": 42,
-    "hasMetar": false
+    "elevation": 138,
+    "hasMetar": true
   },
   {
     "icao": "KOCF",
@@ -86882,8 +86882,8 @@
     "name": "J. Douglas Bake Memorial Airport",
     "latitude": 44.874286,
     "longitude": -87.91171,
-    "elevation": 604,
-    "hasMetar": false
+    "elevation": 594,
+    "hasMetar": true
   },
   {
     "icao": "KOCW",
@@ -86900,8 +86900,8 @@
     "name": "Odessa Schlemeyer Field",
     "latitude": 31.920601,
     "longitude": -102.387001,
-    "elevation": 3004,
-    "hasMetar": false
+    "elevation": 2992,
+    "hasMetar": true
   },
   {
     "icao": "ODX",
@@ -86909,8 +86909,8 @@
     "name": "Evelyn Sharp Field",
     "latitude": 41.62419891357422,
     "longitude": -98.95240020751953,
-    "elevation": 2070,
-    "hasMetar": false
+    "elevation": 2060,
+    "hasMetar": true
   },
   {
     "icao": "OEA",
@@ -86918,8 +86918,8 @@
     "name": "O'Neal Airport",
     "latitude": 38.68521,
     "longitude": -87.543138,
-    "elevation": 414,
-    "hasMetar": false
+    "elevation": 32805,
+    "hasMetar": true
   },
   {
     "icao": "OEB",
@@ -86927,8 +86927,8 @@
     "name": "Branch County Memorial Airport",
     "latitude": 41.933399,
     "longitude": -85.052597,
-    "elevation": 959,
-    "hasMetar": false
+    "elevation": 955,
+    "hasMetar": true
   },
   {
     "icao": "OEL",
@@ -86936,8 +86936,8 @@
     "name": "Oakley Municipal Airport",
     "latitude": 39.109901428222656,
     "longitude": -100.81600189208984,
-    "elevation": 3045,
-    "hasMetar": false
+    "elevation": 3031,
+    "hasMetar": true
   },
   {
     "icao": "KOEO",
@@ -86973,7 +86973,7 @@
     "latitude": 37.709,
     "longitude": -77.436699,
     "elevation": 207,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KOGA",
@@ -87008,8 +87008,8 @@
     "name": "Ontonagon County Schuster Field",
     "latitude": 46.845501,
     "longitude": -89.367104,
-    "elevation": 669,
-    "hasMetar": false
+    "elevation": 666,
+    "hasMetar": true
   },
   {
     "icao": "KOGS",
@@ -87035,8 +87035,8 @@
     "name": "Oberlin Municipal Airport",
     "latitude": 39.833900451660156,
     "longitude": -100.53900146484375,
-    "elevation": 2703,
-    "hasMetar": false
+    "elevation": 2657,
+    "hasMetar": true
   },
   {
     "icao": "OJA",
@@ -87044,8 +87044,8 @@
     "name": "Thomas P Stafford Airport",
     "latitude": 35.5448,
     "longitude": -98.668503,
-    "elevation": 1605,
-    "hasMetar": false
+    "elevation": 1608,
+    "hasMetar": true
   },
   {
     "icao": "KOJC",
@@ -87125,8 +87125,8 @@
     "name": "Kaolin Field",
     "latitude": 32.96670150756836,
     "longitude": -82.83820343017578,
-    "elevation": 438,
-    "hasMetar": false
+    "elevation": 420,
+    "hasMetar": true
   },
   {
     "icao": "KOLD",
@@ -87161,8 +87161,8 @@
     "name": "Solon Springs Municipal Airport",
     "latitude": 46.3148,
     "longitude": -91.816399,
-    "elevation": 1102,
-    "hasMetar": false
+    "elevation": 1096,
+    "hasMetar": true
   },
   {
     "icao": "KOLM",
@@ -87216,7 +87216,7 @@
     "latitude": 42.680889,
     "longitude": -91.97372,
     "elevation": 1076,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KOMA",
@@ -87233,8 +87233,8 @@
     "name": "Orange County Airport",
     "latitude": 38.2472,
     "longitude": -78.045601,
-    "elevation": 465,
-    "hasMetar": false
+    "elevation": 446,
+    "hasMetar": true
   },
   {
     "icao": "KOMK",
@@ -87251,8 +87251,8 @@
     "name": "Ormond Beach Municipal Airport",
     "latitude": 29.300600051879883,
     "longitude": -81.11360168457031,
-    "elevation": 29,
-    "hasMetar": false
+    "elevation": 23,
+    "hasMetar": true
   },
   {
     "icao": "KONA",
@@ -87266,7 +87266,7 @@
   {
     "icao": "KONL",
     "iata": "ONL",
-    "name": "O'Neill Municipal Airport–John L Baker Field",
+    "name": "O'Neill Municipal Airport\u2013John L Baker Field",
     "latitude": 42.468916,
     "longitude": -98.686989,
     "elevation": 2031,
@@ -87314,8 +87314,8 @@
     "name": "Currituck County Regional Airport",
     "latitude": 36.398899,
     "longitude": -76.016296,
-    "elevation": 18,
-    "hasMetar": false
+    "elevation": 13,
+    "hasMetar": true
   },
   {
     "icao": "KONY",
@@ -87332,8 +87332,8 @@
     "name": "Grosse Ile Municipal Airport",
     "latitude": 42.099098,
     "longitude": -83.161499,
-    "elevation": 591,
-    "hasMetar": false
+    "elevation": 587,
+    "hasMetar": true
   },
   {
     "icao": "KOOA",
@@ -87368,8 +87368,8 @@
     "name": "Thomaston Upson County Airport",
     "latitude": 32.95460129,
     "longitude": -84.26319885,
-    "elevation": 798,
-    "hasMetar": false
+    "elevation": 791,
+    "hasMetar": true
   },
   {
     "icao": "OQN",
@@ -87377,8 +87377,8 @@
     "name": "Brandywine Regional Airport",
     "latitude": 39.990101,
     "longitude": -75.581902,
-    "elevation": 466,
-    "hasMetar": false
+    "elevation": 463,
+    "hasMetar": true
   },
   {
     "icao": "KOQU",
@@ -87395,8 +87395,8 @@
     "name": "Maquoketa Municipal Airport",
     "latitude": 42.050703,
     "longitude": -90.739217,
-    "elevation": 769,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "ORB",
@@ -87404,8 +87404,8 @@
     "name": "Orr Regional Airport",
     "latitude": 48.0159,
     "longitude": -92.856102,
-    "elevation": 1311,
-    "hasMetar": false
+    "elevation": 1335,
+    "hasMetar": true
   },
   {
     "icao": "KORD",
@@ -87422,8 +87422,8 @@
     "name": "Orange Municipal Airport",
     "latitude": 42.570098877,
     "longitude": -72.2885971069,
-    "elevation": 555,
-    "hasMetar": false
+    "elevation": 541,
+    "hasMetar": true
   },
   {
     "icao": "KORF",
@@ -87440,8 +87440,8 @@
     "name": "Orange County Airport",
     "latitude": 30.069201,
     "longitude": -93.800903,
-    "elevation": 13,
-    "hasMetar": false
+    "elevation": 7,
+    "hasMetar": true
   },
   {
     "icao": "KORH",
@@ -87459,7 +87459,7 @@
     "latitude": 34.83309937,
     "longitude": -92.25409698,
     "elevation": 545,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KORL",
@@ -87575,8 +87575,8 @@
     "name": "Olivia Regional Airport",
     "latitude": 44.778599,
     "longitude": -95.032799,
-    "elevation": 1076,
-    "hasMetar": false
+    "elevation": 1079,
+    "hasMetar": true
   },
   {
     "icao": "OVO",
@@ -87584,8 +87584,8 @@
     "name": "North Vernon Airport",
     "latitude": 39.045601,
     "longitude": -85.605301,
-    "elevation": 757,
-    "hasMetar": false
+    "elevation": 758,
+    "hasMetar": true
   },
   {
     "icao": "OVS",
@@ -87594,7 +87594,7 @@
     "latitude": 43.160198,
     "longitude": -90.675499,
     "elevation": 673,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KOWA",
@@ -87629,8 +87629,8 @@
     "name": "Ottawa Municipal Airport",
     "latitude": 38.5387,
     "longitude": -95.252998,
-    "elevation": 966,
-    "hasMetar": false
+    "elevation": 958,
+    "hasMetar": true
   },
   {
     "icao": "KOWK",
@@ -87647,8 +87647,8 @@
     "name": "William R. Pogue Municipal Airport",
     "latitude": 36.175301,
     "longitude": -96.151802,
-    "elevation": 892,
-    "hasMetar": false
+    "elevation": 876,
+    "hasMetar": true
   },
   {
     "icao": "OWX",
@@ -87656,8 +87656,8 @@
     "name": "Putnam County Airport",
     "latitude": 41.035599,
     "longitude": -83.982002,
-    "elevation": 764,
-    "hasMetar": false
+    "elevation": 761,
+    "hasMetar": true
   },
   {
     "icao": "KOXB",
@@ -87692,8 +87692,8 @@
     "name": "Starke County Airport",
     "latitude": 41.330098,
     "longitude": -86.662302,
-    "elevation": 685,
-    "hasMetar": false
+    "elevation": 682,
+    "hasMetar": true
   },
   {
     "icao": "KOXR",
@@ -87710,8 +87710,8 @@
     "name": "Knoxville Municipal Airport",
     "latitude": 41.298901,
     "longitude": -93.1138,
-    "elevation": 928,
-    "hasMetar": false
+    "elevation": 919,
+    "hasMetar": true
   },
   {
     "icao": "KOY",
@@ -87755,8 +87755,8 @@
     "name": "Livingston County Spencer J. Hardy Airport",
     "latitude": 42.62919998,
     "longitude": -83.98210144,
-    "elevation": 962,
-    "hasMetar": false
+    "elevation": 945,
+    "hasMetar": true
   },
   {
     "icao": "P01",
@@ -87953,8 +87953,8 @@
     "name": "Price County Airport",
     "latitude": 45.709,
     "longitude": -90.402496,
-    "elevation": 1497,
-    "hasMetar": false
+    "elevation": 1460,
+    "hasMetar": true
   },
   {
     "icao": "KPBI",
@@ -87980,8 +87980,8 @@
     "name": "Plant City Municipal Airport",
     "latitude": 28.0002,
     "longitude": -82.1642,
-    "elevation": 153,
-    "hasMetar": false
+    "elevation": 141,
+    "hasMetar": true
   },
   {
     "icao": "PCW",
@@ -87989,8 +87989,8 @@
     "name": "Erie-Ottawa International Airport",
     "latitude": 41.515647,
     "longitude": -82.868328,
-    "elevation": 590,
-    "hasMetar": false
+    "elevation": 587,
+    "hasMetar": true
   },
   {
     "icao": "PCZ",
@@ -87998,8 +87998,8 @@
     "name": "Waupaca Municipal Airport",
     "latitude": 44.333302,
     "longitude": -89.019798,
-    "elevation": 840,
-    "hasMetar": false
+    "elevation": 814,
+    "hasMetar": true
   },
   {
     "icao": "KPDC",
@@ -88043,8 +88043,8 @@
     "name": "Pella Municipal Airport",
     "latitude": 41.40010070800781,
     "longitude": -92.9458999633789,
-    "elevation": 885,
-    "hasMetar": false
+    "elevation": 866,
+    "hasMetar": true
   },
   {
     "icao": "PEO",
@@ -88052,8 +88052,8 @@
     "name": "Penn Yan Airport",
     "latitude": 42.6371,
     "longitude": -77.052902,
-    "elevation": 990,
-    "hasMetar": false
+    "elevation": 879,
+    "hasMetar": true
   },
   {
     "icao": "KPEQ",
@@ -88070,8 +88070,8 @@
     "name": "Paynesville Municipal Airport",
     "latitude": 45.372061,
     "longitude": -94.744742,
-    "elevation": 1180,
-    "hasMetar": false
+    "elevation": 1178,
+    "hasMetar": true
   },
   {
     "icao": "PEZ",
@@ -88079,8 +88079,8 @@
     "name": "Pleasanton Municipal Airport",
     "latitude": 28.954200744628906,
     "longitude": -98.5199966430664,
-    "elevation": 430,
-    "hasMetar": false
+    "elevation": 413,
+    "hasMetar": true
   },
   {
     "icao": "KPFC",
@@ -88151,8 +88151,8 @@
     "name": "Phillipsburg Municipal Airport",
     "latitude": 39.735802,
     "longitude": -99.317101,
-    "elevation": 1907,
-    "hasMetar": false
+    "elevation": 1900,
+    "hasMetar": true
   },
   {
     "icao": "KPHH",
@@ -88259,8 +88259,8 @@
     "name": "Port Isabel Cameron County Airport",
     "latitude": 26.166201,
     "longitude": -97.345901,
-    "elevation": 19,
-    "hasMetar": false
+    "elevation": 16,
+    "hasMetar": true
   },
   {
     "icao": "KPIM",
@@ -88295,8 +88295,8 @@
     "name": "Zelienople Municipal Airport",
     "latitude": 40.801601,
     "longitude": -80.160698,
-    "elevation": 898,
-    "hasMetar": false
+    "elevation": 896,
+    "hasMetar": true
   },
   {
     "icao": "PJY",
@@ -88305,7 +88305,7 @@
     "latitude": 37.977901,
     "longitude": -89.360497,
     "elevation": 400,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KPKB",
@@ -88340,8 +88340,8 @@
     "name": "Calhoun County Airport",
     "latitude": 28.653999,
     "longitude": -96.681297,
-    "elevation": 32,
-    "hasMetar": false
+    "elevation": 26,
+    "hasMetar": true
   },
   {
     "icao": "PLD",
@@ -88350,7 +88350,7 @@
     "latitude": 40.450802,
     "longitude": -84.990097,
     "elevation": 925,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KPLK",
@@ -88386,7 +88386,7 @@
     "latitude": 47.103901,
     "longitude": -122.287003,
     "elevation": 538,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KPMB",
@@ -88430,8 +88430,8 @@
     "name": "Panola County Airport",
     "latitude": 34.36349869,
     "longitude": -89.89260101,
-    "elevation": 221,
-    "hasMetar": false
+    "elevation": 220,
+    "hasMetar": true
   },
   {
     "icao": "PMV",
@@ -88439,8 +88439,8 @@
     "name": "Plattsmouth Municipal Airport",
     "latitude": 40.947882,
     "longitude": -95.917254,
-    "elevation": 1204,
-    "hasMetar": false
+    "elevation": 1198,
+    "hasMetar": true
   },
   {
     "icao": "PMZ",
@@ -88448,8 +88448,8 @@
     "name": "Plymouth Municipal Airport",
     "latitude": 35.808399,
     "longitude": -76.7593,
-    "elevation": 39,
-    "hasMetar": false
+    "elevation": 36,
+    "hasMetar": true
   },
   {
     "icao": "KPNA",
@@ -88484,8 +88484,8 @@
     "name": "Princeton Municipal Airport",
     "latitude": 45.559898,
     "longitude": -93.6082,
-    "elevation": 980,
-    "hasMetar": false
+    "elevation": 978,
+    "hasMetar": true
   },
   {
     "icao": "KPNN",
@@ -88511,8 +88511,8 @@
     "name": "Pontiac Municipal Airport",
     "latitude": 40.924255,
     "longitude": -88.62447,
-    "elevation": 666,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "KPOB",
@@ -88574,8 +88574,8 @@
     "name": "Portage County Regional Airport",
     "latitude": 41.210201,
     "longitude": -81.251602,
-    "elevation": 1197,
-    "hasMetar": false
+    "elevation": 1191,
+    "hasMetar": true
   },
   {
     "icao": "KPOY",
@@ -88619,8 +88619,8 @@
     "name": "Pittsfield Penstone Municipal Airport",
     "latitude": 39.638901,
     "longitude": -90.778397,
-    "elevation": 710,
-    "hasMetar": false
+    "elevation": 705,
+    "hasMetar": true
   },
   {
     "icao": "KPQI",
@@ -88647,7 +88647,7 @@
     "latitude": 43.983299,
     "longitude": -96.300301,
     "elevation": 1736,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KPR",
@@ -88682,8 +88682,8 @@
     "name": "Edgar County Airport",
     "latitude": 39.700199,
     "longitude": -87.669601,
-    "elevation": 654,
-    "hasMetar": false
+    "elevation": 646,
+    "hasMetar": true
   },
   {
     "icao": "PRN",
@@ -88691,8 +88691,8 @@
     "name": "Mac Crenshaw Memorial Airport",
     "latitude": 31.845699,
     "longitude": -86.610703,
-    "elevation": 451,
-    "hasMetar": false
+    "elevation": 449,
+    "hasMetar": true
   },
   {
     "icao": "KPRO",
@@ -88709,8 +88709,8 @@
     "name": "Presidio Lely International Airport",
     "latitude": 29.634212,
     "longitude": -104.361493,
-    "elevation": 0,
-    "hasMetar": false
+    "elevation": 2920,
+    "hasMetar": true
   },
   {
     "icao": "KPRX",
@@ -88727,8 +88727,8 @@
     "name": "Portales Municipal Airport",
     "latitude": 34.1455,
     "longitude": -103.410004,
-    "elevation": 4078,
-    "hasMetar": false
+    "elevation": 13379,
+    "hasMetar": true
   },
   {
     "icao": "KPSB",
@@ -88826,8 +88826,8 @@
     "name": "Potsdam Municipal Airport Damon Field",
     "latitude": 44.67657,
     "longitude": -74.948583,
-    "elevation": 474,
-    "hasMetar": false
+    "elevation": 472,
+    "hasMetar": true
   },
   {
     "icao": "KPTK",
@@ -88925,8 +88925,8 @@
     "name": "Platteville Municipal Airport",
     "latitude": 42.6894,
     "longitude": -90.444397,
-    "elevation": 1025,
-    "hasMetar": false
+    "elevation": 1020,
+    "hasMetar": true
   },
   {
     "icao": "KPVC",
@@ -88952,8 +88952,8 @@
     "name": "Beech River Regional Airport",
     "latitude": 35.656399,
     "longitude": -88.195396,
-    "elevation": 488,
-    "hasMetar": false
+    "elevation": 479,
+    "hasMetar": true
   },
   {
     "icao": "KPVF",
@@ -88979,8 +88979,8 @@
     "name": "Pauls Valley Municipal Airport",
     "latitude": 34.71110153,
     "longitude": -97.22319794,
-    "elevation": 971,
-    "hasMetar": false
+    "elevation": 942,
+    "hasMetar": true
   },
   {
     "icao": "KPVU",
@@ -89015,8 +89015,8 @@
     "name": "Pine River Regional Airport",
     "latitude": 46.72480010986328,
     "longitude": -94.38169860839844,
-    "elevation": 1295,
-    "hasMetar": false
+    "elevation": 1293,
+    "hasMetar": true
   },
   {
     "icao": "KPWD",
@@ -89033,8 +89033,8 @@
     "name": "McGregor Executive Airport",
     "latitude": 31.48489952,
     "longitude": -97.3164978,
-    "elevation": 592,
-    "hasMetar": false
+    "elevation": 584,
+    "hasMetar": true
   },
   {
     "icao": "PWK",
@@ -89042,8 +89042,8 @@
     "name": "Chicago Executive Airport",
     "latitude": 42.114222,
     "longitude": -87.901494,
-    "elevation": 647,
-    "hasMetar": false
+    "elevation": 636,
+    "hasMetar": true
   },
   {
     "icao": "KPWM",
@@ -89069,8 +89069,8 @@
     "name": "Perry Houston County Airport",
     "latitude": 32.510601,
     "longitude": -83.767303,
-    "elevation": 418,
-    "hasMetar": false
+    "elevation": 413,
+    "hasMetar": true
   },
   {
     "icao": "KPY",
@@ -89087,8 +89087,8 @@
     "name": "Pageland Airport",
     "latitude": 34.7421,
     "longitude": -80.3452,
-    "elevation": 575,
-    "hasMetar": false
+    "elevation": 574,
+    "hasMetar": true
   },
   {
     "icao": "KPYM",
@@ -89105,8 +89105,8 @@
     "name": "Piedmont Municipal Airport",
     "latitude": 37.12670135498047,
     "longitude": -90.71289825439453,
-    "elevation": 467,
-    "hasMetar": false
+    "elevation": 1532,
+    "hasMetar": true
   },
   {
     "icao": "PYP",
@@ -89123,8 +89123,8 @@
     "name": "Perryton Ochiltree County Airport",
     "latitude": 36.412899017333984,
     "longitude": -100.75199890136719,
-    "elevation": 2918,
-    "hasMetar": false
+    "elevation": 2920,
+    "hasMetar": true
   },
   {
     "icao": "PZQ",
@@ -89132,8 +89132,8 @@
     "name": "Presque Isle County Airport",
     "latitude": 45.407101,
     "longitude": -83.812897,
-    "elevation": 670,
-    "hasMetar": false
+    "elevation": 653,
+    "hasMetar": true
   },
   {
     "icao": "KQA",
@@ -89195,8 +89195,8 @@
     "name": "Mustang Beach Airport",
     "latitude": 27.8118,
     "longitude": -97.088799,
-    "elevation": 5,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "RAW",
@@ -89204,8 +89204,8 @@
     "name": "Warsaw Municipal Airport",
     "latitude": 38.346901,
     "longitude": -93.345398,
-    "elevation": 936,
-    "hasMetar": false
+    "elevation": 935,
+    "hasMetar": true
   },
   {
     "icao": "KRBD",
@@ -89223,7 +89223,7 @@
     "latitude": 42.569698,
     "longitude": -99.568398,
     "elevation": 2349,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KRBG",
@@ -89259,7 +89259,7 @@
     "latitude": 27.778103,
     "longitude": -97.690098,
     "elevation": 79,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KRBW",
@@ -89294,8 +89294,8 @@
     "name": "Skyhaven Airport",
     "latitude": 38.784199,
     "longitude": -93.802902,
-    "elevation": 798,
-    "hasMetar": false
+    "elevation": 794,
+    "hasMetar": true
   },
   {
     "icao": "RCP",
@@ -89303,8 +89303,8 @@
     "name": "Rooks County Regional Airport",
     "latitude": 39.346592,
     "longitude": -99.304649,
-    "elevation": 1998,
-    "hasMetar": false
+    "elevation": 6555,
+    "hasMetar": true
   },
   {
     "icao": "KRCR",
@@ -89330,8 +89330,8 @@
     "name": "Rusk County Airport",
     "latitude": 45.496799,
     "longitude": -91.000504,
-    "elevation": 1238,
-    "hasMetar": false
+    "elevation": 1224,
+    "hasMetar": true
   },
   {
     "icao": "RCZ",
@@ -89339,8 +89339,8 @@
     "name": "Richmond County Airport",
     "latitude": 34.8913,
     "longitude": -79.759598,
-    "elevation": 358,
-    "hasMetar": false
+    "elevation": 361,
+    "hasMetar": true
   },
   {
     "icao": "KRDD",
@@ -89366,8 +89366,8 @@
     "name": "Red Oak Municipal Airport",
     "latitude": 41.010502,
     "longitude": -95.259903,
-    "elevation": 1045,
-    "hasMetar": false
+    "elevation": 1040,
+    "hasMetar": true
   },
   {
     "icao": "KRDM",
@@ -89402,8 +89402,8 @@
     "name": "Red Lodge Airport",
     "latitude": 45.184579,
     "longitude": -109.257746,
-    "elevation": 5763,
-    "hasMetar": false
+    "elevation": 5745,
+    "hasMetar": true
   },
   {
     "icao": "REI",
@@ -89447,8 +89447,8 @@
     "name": "Rusk County Airport",
     "latitude": 32.141701,
     "longitude": -94.8517,
-    "elevation": 442,
-    "hasMetar": false
+    "elevation": 436,
+    "hasMetar": true
   },
   {
     "icao": "RGK",
@@ -89456,8 +89456,8 @@
     "name": "Red Wing Regional Airport",
     "latitude": 44.589401,
     "longitude": -92.485001,
-    "elevation": 778,
-    "hasMetar": false
+    "elevation": 781,
+    "hasMetar": true
   },
   {
     "icao": "KRHI",
@@ -89474,8 +89474,8 @@
     "name": "Western Carolina Regional Airport",
     "latitude": 35.195202,
     "longitude": -83.862999,
-    "elevation": 1697,
-    "hasMetar": false
+    "elevation": 1690,
+    "hasMetar": true
   },
   {
     "icao": "KRHV",
@@ -89663,8 +89663,8 @@
     "name": "Brooks Field",
     "latitude": 42.251202,
     "longitude": -84.955498,
-    "elevation": 941,
-    "hasMetar": false
+    "elevation": 935,
+    "hasMetar": true
   },
   {
     "icao": "KRNC",
@@ -89699,8 +89699,8 @@
     "name": "Ramona Airport",
     "latitude": 33.0392,
     "longitude": -116.915001,
-    "elevation": 1395,
-    "hasMetar": false
+    "elevation": 1388,
+    "hasMetar": true
   },
   {
     "icao": "KRNO",
@@ -89717,8 +89717,8 @@
     "name": "Owosso Community Airport",
     "latitude": 42.993000030518,
     "longitude": -84.138900756836,
-    "elevation": 736,
-    "hasMetar": false
+    "elevation": 735,
+    "hasMetar": true
   },
   {
     "icao": "KRNT",
@@ -89735,13 +89735,13 @@
     "name": "Cleveland Municipal Airport",
     "latitude": 33.761101,
     "longitude": -90.757896,
-    "elevation": 139,
-    "hasMetar": false
+    "elevation": 138,
+    "hasMetar": true
   },
   {
     "icao": "KROA",
     "iata": "ROA",
-    "name": "Roanoke–Blacksburg Regional Airport",
+    "name": "Roanoke\u2013Blacksburg Regional Airport",
     "latitude": 37.3255,
     "longitude": -79.975403,
     "elevation": 1175,
@@ -89771,8 +89771,8 @@
     "name": "Rush City Regional Airport",
     "latitude": 45.698002,
     "longitude": -92.953003,
-    "elevation": 926,
-    "hasMetar": false
+    "elevation": 925,
+    "hasMetar": true
   },
   {
     "icao": "KROW",
@@ -89798,8 +89798,8 @@
     "name": "Belleville Municipal Airport",
     "latitude": 39.817902,
     "longitude": -97.659599,
-    "elevation": 1537,
-    "hasMetar": false
+    "elevation": 1535,
+    "hasMetar": true
   },
   {
     "icao": "KRPD",
@@ -89816,8 +89816,8 @@
     "name": "Graham Municipal Airport",
     "latitude": 33.110198974609,
     "longitude": -98.555297851562,
-    "elevation": 1123,
-    "hasMetar": false
+    "elevation": 1119,
+    "hasMetar": true
   },
   {
     "icao": "RPJ",
@@ -89825,8 +89825,8 @@
     "name": "Rochelle Municipal Airport - Koritz Field",
     "latitude": 41.893002,
     "longitude": -89.0783,
-    "elevation": 781,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "KRPX",
@@ -89852,8 +89852,8 @@
     "name": "Window Rock Airport",
     "latitude": 35.652099609375,
     "longitude": -109.06700134277344,
-    "elevation": 6742,
-    "hasMetar": false
+    "elevation": 6745,
+    "hasMetar": true
   },
   {
     "icao": "RQO",
@@ -89861,8 +89861,8 @@
     "name": "El Reno Regional Airport",
     "latitude": 35.472698,
     "longitude": -98.005798,
-    "elevation": 1420,
-    "hasMetar": false
+    "elevation": 1414,
+    "hasMetar": true
   },
   {
     "icao": "KRRL",
@@ -89879,8 +89879,8 @@
     "name": "Rock Rapids Municipal Airport",
     "latitude": 43.45220184326172,
     "longitude": -96.17980194091797,
-    "elevation": 1363,
-    "hasMetar": false
+    "elevation": 1362,
+    "hasMetar": true
   },
   {
     "icao": "KRRT",
@@ -89924,8 +89924,8 @@
     "name": "Robinson Municipal Airport",
     "latitude": 39.015999,
     "longitude": -87.649803,
-    "elevation": 462,
-    "hasMetar": false
+    "elevation": 456,
+    "hasMetar": true
   },
   {
     "icao": "KRSW",
@@ -89951,8 +89951,8 @@
     "name": "Russellville Regional Airport",
     "latitude": 35.259102,
     "longitude": -93.0933,
-    "elevation": 404,
-    "hasMetar": false
+    "elevation": 390,
+    "hasMetar": true
   },
   {
     "icao": "RUG",
@@ -89960,8 +89960,8 @@
     "name": "Rugby Municipal Airport",
     "latitude": 48.3904,
     "longitude": -100.024002,
-    "elevation": 1548,
-    "hasMetar": false
+    "elevation": 1539,
+    "hasMetar": true
   },
   {
     "icao": "KRUQ",
@@ -89987,8 +89987,8 @@
     "name": "Swinton Smith Field at Reidsville Municipal Airport",
     "latitude": 32.0595,
     "longitude": -82.153777,
-    "elevation": 195,
-    "hasMetar": false
+    "elevation": 197,
+    "hasMetar": true
   },
   {
     "icao": "KRVL",
@@ -90005,8 +90005,8 @@
     "name": "Hawkins County Airport",
     "latitude": 36.4576,
     "longitude": -82.885002,
-    "elevation": 1255,
-    "hasMetar": false
+    "elevation": 1253,
+    "hasMetar": true
   },
   {
     "icao": "KRVS",
@@ -90050,8 +90050,8 @@
     "name": "Arens Field",
     "latitude": 41.092209,
     "longitude": -86.613357,
-    "elevation": 711,
-    "hasMetar": false
+    "elevation": 709,
+    "hasMetar": true
   },
   {
     "icao": "RWV",
@@ -90059,8 +90059,8 @@
     "name": "Caldwell Municipal Airport",
     "latitude": 30.515499,
     "longitude": -96.704102,
-    "elevation": 391,
-    "hasMetar": false
+    "elevation": 381,
+    "hasMetar": true
   },
   {
     "icao": "KRXE",
@@ -90077,8 +90077,8 @@
     "name": "Ray S Miller Army Air Field",
     "latitude": 46.091202,
     "longitude": -94.360497,
-    "elevation": 1150,
-    "hasMetar": false
+    "elevation": 1129,
+    "hasMetar": true
   },
   {
     "icao": "RYN",
@@ -90086,8 +90086,8 @@
     "name": "Ryan Field",
     "latitude": 32.1422004699707,
     "longitude": -111.17500305175781,
-    "elevation": 2417,
-    "hasMetar": false
+    "elevation": 2398,
+    "hasMetar": true
   },
   {
     "icao": "RYV",
@@ -90095,8 +90095,8 @@
     "name": "Watertown Municipal Airport",
     "latitude": 43.169601,
     "longitude": -88.723198,
-    "elevation": 833,
-    "hasMetar": false
+    "elevation": 817,
+    "hasMetar": true
   },
   {
     "icao": "RYW",
@@ -90104,8 +90104,8 @@
     "name": "Lago Vista Texas Rusty Allen Airport",
     "latitude": 30.4986,
     "longitude": -97.969498,
-    "elevation": 1231,
-    "hasMetar": false
+    "elevation": 1214,
+    "hasMetar": true
   },
   {
     "icao": "RYY",
@@ -90113,8 +90113,8 @@
     "name": "Cobb County International Airport-McCollum Field",
     "latitude": 34.01316,
     "longitude": -84.59721,
-    "elevation": 1040,
-    "hasMetar": false
+    "elevation": 1004,
+    "hasMetar": true
   },
   {
     "icao": "KRZL",
@@ -90131,8 +90131,8 @@
     "name": "Burnett County Airport",
     "latitude": 45.822701,
     "longitude": -92.372498,
-    "elevation": 989,
-    "hasMetar": false
+    "elevation": 988,
+    "hasMetar": true
   },
   {
     "icao": "RZR",
@@ -90140,8 +90140,8 @@
     "name": "Cleveland Regional Jetport",
     "latitude": 35.211497,
     "longitude": -84.799769,
-    "elevation": 860,
-    "hasMetar": false
+    "elevation": 850,
+    "hasMetar": true
   },
   {
     "icao": "RZT",
@@ -90149,8 +90149,8 @@
     "name": "Ross County Airport",
     "latitude": 39.440399,
     "longitude": -83.023102,
-    "elevation": 725,
-    "hasMetar": false
+    "elevation": 712,
+    "hasMetar": true
   },
   {
     "icao": "S01",
@@ -90392,8 +90392,8 @@
     "name": "Nampa Municipal Airport",
     "latitude": 43.581299,
     "longitude": -116.523003,
-    "elevation": 2537,
-    "hasMetar": false
+    "elevation": 2536,
+    "hasMetar": true
   },
   {
     "icao": "S69",
@@ -90617,8 +90617,8 @@
     "name": "Staples Municipal Airport",
     "latitude": 46.380901,
     "longitude": -94.806602,
-    "elevation": 1287,
-    "hasMetar": false
+    "elevation": 1283,
+    "hasMetar": true
   },
   {
     "icao": "KSBA",
@@ -90662,8 +90662,8 @@
     "name": "Emanuel County Airport",
     "latitude": 32.6091,
     "longitude": -82.369904,
-    "elevation": 327,
-    "hasMetar": false
+    "elevation": 322,
+    "hasMetar": true
   },
   {
     "icao": "KSBP",
@@ -90689,8 +90689,8 @@
     "name": "Blue Earth Municipal Airport",
     "latitude": 43.595299,
     "longitude": -94.092796,
-    "elevation": 1107,
-    "hasMetar": false
+    "elevation": 1106,
+    "hasMetar": true
   },
   {
     "icao": "KSBX",
@@ -90725,8 +90725,8 @@
     "name": "Merkel Field Sylacauga Municipal Airport",
     "latitude": 33.171799,
     "longitude": -86.305496,
-    "elevation": 569,
-    "hasMetar": false
+    "elevation": 538,
+    "hasMetar": true
   },
   {
     "icao": "KSCH",
@@ -90752,8 +90752,8 @@
     "name": "Scott Municipal Airport",
     "latitude": 36.455505,
     "longitude": -84.586008,
-    "elevation": 1545,
-    "hasMetar": false
+    "elevation": 1516,
+    "hasMetar": true
   },
   {
     "icao": "SDA",
@@ -90761,8 +90761,8 @@
     "name": "Shenandoah Municipal Airport",
     "latitude": 40.7515983581543,
     "longitude": -95.4136962890625,
-    "elevation": 971,
-    "hasMetar": false
+    "elevation": 961,
+    "hasMetar": true
   },
   {
     "icao": "SDC",
@@ -90770,8 +90770,8 @@
     "name": "Williamson Sodus Airport",
     "latitude": 43.234573,
     "longitude": -77.119403,
-    "elevation": 424,
-    "hasMetar": false
+    "elevation": 417,
+    "hasMetar": true
   },
   {
     "icao": "KSDF",
@@ -90812,7 +90812,7 @@
   {
     "icao": "KSEA",
     "iata": "SEA",
-    "name": "Seattle–Tacoma International Airport",
+    "name": "Seattle\u2013Tacoma International Airport",
     "latitude": 47.447943,
     "longitude": -122.310276,
     "elevation": 433,
@@ -90870,7 +90870,7 @@
     "latitude": 29.564499,
     "longitude": -97.902517,
     "elevation": 525,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KSER",
@@ -90887,8 +90887,8 @@
     "name": "St Charles County Regional Airport/Smartt Field",
     "latitude": 38.929699,
     "longitude": -90.43,
-    "elevation": 437,
-    "hasMetar": false
+    "elevation": 436,
+    "hasMetar": true
   },
   {
     "icao": "KSEZ",
@@ -90941,8 +90941,8 @@
     "name": "Suffolk Executive Airport",
     "latitude": 36.6824,
     "longitude": -76.601898,
-    "elevation": 72,
-    "hasMetar": false
+    "elevation": 62,
+    "hasMetar": true
   },
   {
     "icao": "SFY",
@@ -90950,8 +90950,8 @@
     "name": "Tri Township Airport",
     "latitude": 42.045799,
     "longitude": -90.107903,
-    "elevation": 616,
-    "hasMetar": false
+    "elevation": 617,
+    "hasMetar": true
   },
   {
     "icao": "KSFZ",
@@ -91004,8 +91004,8 @@
     "name": "South St Paul Municipal Airport/Richard E Fleming Field",
     "latitude": 44.857101,
     "longitude": -93.032898,
-    "elevation": 821,
-    "hasMetar": false
+    "elevation": 820,
+    "hasMetar": true
   },
   {
     "icao": "KSGT",
@@ -91040,8 +91040,8 @@
     "name": "Sheldon Regional Airport",
     "latitude": 43.208401,
     "longitude": -95.833396,
-    "elevation": 1419,
-    "hasMetar": false
+    "elevation": 1411,
+    "hasMetar": true
   },
   {
     "icao": "KSHN",
@@ -91076,8 +91076,8 @@
     "name": "Rockingham County NC Shiloh Airport",
     "latitude": 36.437199,
     "longitude": -79.850998,
-    "elevation": 694,
-    "hasMetar": false
+    "elevation": 676,
+    "hasMetar": true
   },
   {
     "icao": "KSIK",
@@ -91139,8 +91139,8 @@
     "name": "Beaver Island Airport",
     "latitude": 45.692299,
     "longitude": -85.566597,
-    "elevation": 669,
-    "hasMetar": false
+    "elevation": 663,
+    "hasMetar": true
   },
   {
     "icao": "KSKA",
@@ -91167,7 +91167,7 @@
     "latitude": 42.37910079956055,
     "longitude": -94.97969818115234,
     "elevation": 1250,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KSKX",
@@ -91220,8 +91220,8 @@
     "name": "Cheboygan County Airport",
     "latitude": 45.653702,
     "longitude": -84.519302,
-    "elevation": 639,
-    "hasMetar": false
+    "elevation": 633,
+    "hasMetar": true
   },
   {
     "icao": "KSLI",
@@ -91253,7 +91253,7 @@
   {
     "icao": "KSLO",
     "iata": "SLO",
-    "name": "Salem–Leckrone Airport",
+    "name": "Salem\u2013Leckrone Airport",
     "latitude": 38.642899,
     "longitude": -88.964203,
     "elevation": 573,
@@ -91319,8 +91319,8 @@
     "name": "Somerset Airport",
     "latitude": 40.625999450683594,
     "longitude": -74.67019653320312,
-    "elevation": 105,
-    "hasMetar": false
+    "elevation": 98,
+    "hasMetar": true
   },
   {
     "icao": "KSMS",
@@ -91355,8 +91355,8 @@
     "name": "Chester Airport",
     "latitude": 41.384177,
     "longitude": -72.506011,
-    "elevation": 416,
-    "hasMetar": false
+    "elevation": 374,
+    "hasMetar": true
   },
   {
     "icao": "SNH",
@@ -91364,8 +91364,8 @@
     "name": "Savannah Hardin County Airport",
     "latitude": 35.1703987121582,
     "longitude": -88.21589660644531,
-    "elevation": 473,
-    "hasMetar": false
+    "elevation": 466,
+    "hasMetar": true
   },
   {
     "icao": "KSNK",
@@ -91409,8 +91409,8 @@
     "name": "Sonora Municipal Airport",
     "latitude": 30.585699081421,
     "longitude": -100.6490020752,
-    "elevation": 2140,
-    "hasMetar": false
+    "elevation": 2146,
+    "hasMetar": true
   },
   {
     "icao": "KSOP",
@@ -91445,8 +91445,8 @@
     "name": "Scappoose Industrial Airpark",
     "latitude": 45.771,
     "longitude": -122.862,
-    "elevation": 58,
-    "hasMetar": false
+    "elevation": 49,
+    "hasMetar": true
   },
   {
     "icao": "KSPF",
@@ -91472,8 +91472,8 @@
     "name": "Springhill Airport",
     "latitude": 32.9833984375,
     "longitude": -93.4092025756836,
-    "elevation": 218,
-    "hasMetar": false
+    "elevation": 217,
+    "hasMetar": true
   },
   {
     "icao": "KSPI",
@@ -91490,8 +91490,8 @@
     "name": "Spanish Fork Municipal Airport/Woodhouse Field",
     "latitude": 40.145027,
     "longitude": -111.667694,
-    "elevation": 4529,
-    "hasMetar": false
+    "elevation": 4531,
+    "hasMetar": true
   },
   {
     "icao": "KSPS",
@@ -91517,8 +91517,8 @@
     "name": "Silver Springs Airport",
     "latitude": 39.40299987792969,
     "longitude": -119.2509994506836,
-    "elevation": 4269,
-    "hasMetar": false
+    "elevation": 14006,
+    "hasMetar": true
   },
   {
     "icao": "KSQI",
@@ -91544,8 +91544,8 @@
     "name": "Upper Cumberland Regional Airport",
     "latitude": 36.055901,
     "longitude": -85.530701,
-    "elevation": 1025,
-    "hasMetar": false
+    "elevation": 994,
+    "hasMetar": true
   },
   {
     "icao": "KSRC",
@@ -91562,8 +91562,8 @@
     "name": "Seminole Municipal Airport",
     "latitude": 35.2747,
     "longitude": -96.675201,
-    "elevation": 1024,
-    "hasMetar": false
+    "elevation": 1004,
+    "hasMetar": true
   },
   {
     "icao": "KSRQ",
@@ -91616,8 +91616,8 @@
     "name": "Shell Lake Municipal Airport",
     "latitude": 45.7314,
     "longitude": -91.9207,
-    "elevation": 1233,
-    "hasMetar": false
+    "elevation": 1230,
+    "hasMetar": true
   },
   {
     "icao": "KSTC",
@@ -91643,8 +91643,8 @@
     "name": "George M Bryan Airport",
     "latitude": 33.43310165,
     "longitude": -88.84860229,
-    "elevation": 333,
-    "hasMetar": false
+    "elevation": 325,
+    "hasMetar": true
   },
   {
     "icao": "KSTJ",
@@ -91733,8 +91733,8 @@
     "name": "Rosebud Sioux Tribal Airport",
     "latitude": 43.2585,
     "longitude": -100.85952,
-    "elevation": 2724,
-    "hasMetar": false
+    "elevation": 2723,
+    "hasMetar": true
   },
   {
     "icao": "KSUS",
@@ -91751,8 +91751,8 @@
     "name": "Cape Fear Regional Jetport / Howie Franklin Field Airport",
     "latitude": 33.929298,
     "longitude": -78.074997,
-    "elevation": 24,
-    "hasMetar": false
+    "elevation": 20,
+    "hasMetar": true
   },
   {
     "icao": "KSUU",
@@ -91787,8 +91787,8 @@
     "name": "Saline County Regional Airport",
     "latitude": 34.590599,
     "longitude": -92.479401,
-    "elevation": 390,
-    "hasMetar": false
+    "elevation": 374,
+    "hasMetar": true
   },
   {
     "icao": "KSVC",
@@ -91842,7 +91842,7 @@
     "latitude": 33.624199,
     "longitude": -96.586098,
     "elevation": 745,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KSWO",
@@ -91860,7 +91860,7 @@
     "latitude": 40.86470032,
     "longitude": -97.10919952,
     "elevation": 1506,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KSWW",
@@ -91877,8 +91877,8 @@
     "name": "Sioux County Regional Airport",
     "latitude": 42.9858275,
     "longitude": -96.1614,
-    "elevation": 1409,
-    "hasMetar": false
+    "elevation": 1411,
+    "hasMetar": true
   },
   {
     "icao": "SXL",
@@ -91886,8 +91886,8 @@
     "name": "Summersville Airport",
     "latitude": 38.231602,
     "longitude": -80.870796,
-    "elevation": 1820,
-    "hasMetar": false
+    "elevation": 1821,
+    "hasMetar": true
   },
   {
     "icao": "SYF",
@@ -91895,8 +91895,8 @@
     "name": "Cheyenne County Municipal Airport",
     "latitude": 39.76110077,
     "longitude": -101.7959976,
-    "elevation": 3413,
-    "hasMetar": false
+    "elevation": 3415,
+    "hasMetar": true
   },
   {
     "icao": "KSYI",
@@ -91967,8 +91967,8 @@
     "name": "Sandpoint Airport",
     "latitude": 48.299499511719,
     "longitude": -116.55999755859,
-    "elevation": 2131,
-    "hasMetar": false
+    "elevation": 2129,
+    "hasMetar": true
   },
   {
     "icao": "SZY",
@@ -91976,8 +91976,8 @@
     "name": "Robert Sibley Airport",
     "latitude": 35.20289993286133,
     "longitude": -88.49839782714844,
-    "elevation": 610,
-    "hasMetar": false
+    "elevation": 604,
+    "hasMetar": true
   },
   {
     "icao": "T00",
@@ -92219,8 +92219,8 @@
     "name": "Mid Valley Airport",
     "latitude": 26.177601,
     "longitude": -97.973098,
-    "elevation": 70,
-    "hasMetar": false
+    "elevation": 69,
+    "hasMetar": true
   },
   {
     "icao": "T67",
@@ -92327,8 +92327,8 @@
     "name": "Taunton Municipal King Field",
     "latitude": 41.874401,
     "longitude": -71.016602,
-    "elevation": 43,
-    "hasMetar": false
+    "elevation": 26,
+    "hasMetar": true
   },
   {
     "icao": "TAZ",
@@ -92336,8 +92336,8 @@
     "name": "Taylorville Municipal Airport",
     "latitude": 39.534199,
     "longitude": -89.327797,
-    "elevation": 622,
-    "hasMetar": false
+    "elevation": 617,
+    "hasMetar": true
   },
   {
     "icao": "KTB",
@@ -92408,8 +92408,8 @@
     "name": "Tracy Municipal Airport",
     "latitude": 37.68899917602539,
     "longitude": -121.44200134277344,
-    "elevation": 193,
-    "hasMetar": false
+    "elevation": 167,
+    "hasMetar": true
   },
   {
     "icao": "TDF",
@@ -92417,8 +92417,8 @@
     "name": "Raleigh Regional Airport at Person County",
     "latitude": 36.284901,
     "longitude": -78.9842,
-    "elevation": 609,
-    "hasMetar": false
+    "elevation": 591,
+    "hasMetar": true
   },
   {
     "icao": "KTDO",
@@ -92462,8 +92462,8 @@
     "name": "Perry County Municipal Airport",
     "latitude": 38.0177,
     "longitude": -86.690903,
-    "elevation": 660,
-    "hasMetar": false
+    "elevation": 659,
+    "hasMetar": true
   },
   {
     "icao": "TEW",
@@ -92471,8 +92471,8 @@
     "name": "Mason Jewett Field",
     "latitude": 42.5658,
     "longitude": -84.423203,
-    "elevation": 920,
-    "hasMetar": false
+    "elevation": 922,
+    "hasMetar": true
   },
   {
     "icao": "KTEX",
@@ -92489,8 +92489,8 @@
     "name": "Ingleside Regional Airport",
     "latitude": 27.913,
     "longitude": -97.211502,
-    "elevation": 18,
-    "hasMetar": false
+    "elevation": 16,
+    "hasMetar": true
   },
   {
     "icao": "TGC",
@@ -92498,8 +92498,8 @@
     "name": "Gibson County Airport",
     "latitude": 35.932499,
     "longitude": -88.8489,
-    "elevation": 359,
-    "hasMetar": false
+    "elevation": 358,
+    "hasMetar": true
   },
   {
     "icao": "TGI",
@@ -92507,8 +92507,8 @@
     "name": "Tangier Island Airport",
     "latitude": 37.8251,
     "longitude": -75.997803,
-    "elevation": 5,
-    "hasMetar": false
+    "elevation": 3,
+    "hasMetar": true
   },
   {
     "icao": "KTHA",
@@ -92543,8 +92543,8 @@
     "name": "Thomas County Airport",
     "latitude": 41.962682,
     "longitude": -100.57038,
-    "elevation": 2925,
-    "hasMetar": false
+    "elevation": 2913,
+    "hasMetar": true
   },
   {
     "icao": "KTIK",
@@ -92561,8 +92561,8 @@
     "name": "Rantoul National Aviation Center - Frank Elliot field",
     "latitude": 40.293598,
     "longitude": -88.142403,
-    "elevation": 737,
-    "hasMetar": false
+    "elevation": 735,
+    "hasMetar": true
   },
   {
     "icao": "KTIW",
@@ -92588,8 +92588,8 @@
     "name": "Tracy Municipal Airport",
     "latitude": 44.2491,
     "longitude": -95.6073,
-    "elevation": 1340,
-    "hasMetar": false
+    "elevation": 1339,
+    "hasMetar": true
   },
   {
     "icao": "TKI",
@@ -92597,8 +92597,8 @@
     "name": "McKinney National Airport",
     "latitude": 33.177898,
     "longitude": -96.5905,
-    "elevation": 585,
-    "hasMetar": false
+    "elevation": 568,
+    "hasMetar": true
   },
   {
     "icao": "TKO",
@@ -92606,8 +92606,8 @@
     "name": "Mankato Airport",
     "latitude": 39.804953,
     "longitude": -98.220606,
-    "elevation": 1859,
-    "hasMetar": false
+    "elevation": 1860,
+    "hasMetar": true
   },
   {
     "icao": "TKV",
@@ -92615,8 +92615,8 @@
     "name": "Tomahawk Regional Airport",
     "latitude": 45.469101,
     "longitude": -89.805702,
-    "elevation": 1487,
-    "hasMetar": false
+    "elevation": 1473,
+    "hasMetar": true
   },
   {
     "icao": "KTKX",
@@ -92669,8 +92669,8 @@
     "name": "Houston Executive Airport",
     "latitude": 29.807199,
     "longitude": -95.897903,
-    "elevation": 166,
-    "hasMetar": false
+    "elevation": 161,
+    "hasMetar": true
   },
   {
     "icao": "KTMK",
@@ -92732,8 +92732,8 @@
     "name": "Dodge Center Airport",
     "latitude": 44.018002,
     "longitude": -92.831497,
-    "elevation": 1305,
-    "hasMetar": false
+    "elevation": 1293,
+    "hasMetar": true
   },
   {
     "icao": "KTOC",
@@ -92822,8 +92822,8 @@
     "name": "Tekamah Municipal Airport",
     "latitude": 41.76350021362305,
     "longitude": -96.17790222167969,
-    "elevation": 1027,
-    "hasMetar": false
+    "elevation": 1024,
+    "hasMetar": true
   },
   {
     "icao": "TQH",
@@ -92831,8 +92831,8 @@
     "name": "Tahlequah Municipal Airport",
     "latitude": 35.928902,
     "longitude": -95.004501,
-    "elevation": 874,
-    "hasMetar": false
+    "elevation": 869,
+    "hasMetar": true
   },
   {
     "icao": "TQK",
@@ -92840,8 +92840,8 @@
     "name": "Scott City Municipal Airport",
     "latitude": 38.474300384521484,
     "longitude": -100.88500213623047,
-    "elevation": 2963,
-    "hasMetar": false
+    "elevation": 2972,
+    "hasMetar": true
   },
   {
     "icao": "KTRI",
@@ -92894,8 +92894,8 @@
     "name": "Carroll County-Tolson Airport",
     "latitude": 40.561901,
     "longitude": -81.077499,
-    "elevation": 1163,
-    "hasMetar": false
+    "elevation": 1165,
+    "hasMetar": true
   },
   {
     "icao": "KTSP",
@@ -92912,8 +92912,8 @@
     "name": "Raleigh Executive Jetport",
     "latitude": 35.583698,
     "longitude": -79.1008,
-    "elevation": 246,
-    "hasMetar": false
+    "elevation": 233,
+    "hasMetar": true
   },
   {
     "icao": "KTTD",
@@ -92930,8 +92930,8 @@
     "name": "Custer Airport",
     "latitude": 41.939899,
     "longitude": -83.4347,
-    "elevation": 616,
-    "hasMetar": false
+    "elevation": 610,
+    "hasMetar": true
   },
   {
     "icao": "KTTN",
@@ -92948,8 +92948,8 @@
     "name": "Space Florida Launch and Landing Facility",
     "latitude": 28.615,
     "longitude": -80.694504,
-    "elevation": 10,
-    "hasMetar": false
+    "elevation": 3,
+    "hasMetar": true
   },
   {
     "icao": "KTUL",
@@ -92985,7 +92985,7 @@
     "latitude": 37.13240051269531,
     "longitude": -92.08399963378906,
     "elevation": 1220,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KTVC",
@@ -93020,8 +93020,8 @@
     "name": "Centerville Municipal Airport",
     "latitude": 40.683899,
     "longitude": -92.901001,
-    "elevation": 1023,
-    "hasMetar": false
+    "elevation": 1020,
+    "hasMetar": true
   },
   {
     "icao": "KTVL",
@@ -93038,8 +93038,8 @@
     "name": "Vicksburg Tallulah Regional Airport",
     "latitude": 32.351601,
     "longitude": -91.027702,
-    "elevation": 86,
-    "hasMetar": false
+    "elevation": 82,
+    "hasMetar": true
   },
   {
     "icao": "TVY",
@@ -93047,8 +93047,8 @@
     "name": "Bolinder Field Tooele Valley Airport",
     "latitude": 40.612301,
     "longitude": -112.350998,
-    "elevation": 4322,
-    "hasMetar": false
+    "elevation": 4298,
+    "hasMetar": true
   },
   {
     "icao": "KTWF",
@@ -93065,8 +93065,8 @@
     "name": "Richard B Helgeson Airport",
     "latitude": 47.04919815,
     "longitude": -91.74510193,
-    "elevation": 1073,
-    "hasMetar": false
+    "elevation": 1086,
+    "hasMetar": true
   },
   {
     "icao": "TWT",
@@ -93074,8 +93074,8 @@
     "name": "Sturgis Municipal Airport",
     "latitude": 37.540798,
     "longitude": -87.951797,
-    "elevation": 372,
-    "hasMetar": false
+    "elevation": 371,
+    "hasMetar": true
   },
   {
     "icao": "KTXK",
@@ -93101,8 +93101,8 @@
     "name": "Indianapolis Executive Airport",
     "latitude": 40.030701,
     "longitude": -86.251404,
-    "elevation": 922,
-    "hasMetar": false
+    "elevation": 915,
+    "hasMetar": true
   },
   {
     "icao": "KTYR",
@@ -93128,8 +93128,8 @@
     "name": "Bolton Field",
     "latitude": 39.901199,
     "longitude": -83.136902,
-    "elevation": 905,
-    "hasMetar": false
+    "elevation": 902,
+    "hasMetar": true
   },
   {
     "icao": "TZT",
@@ -93146,8 +93146,8 @@
     "name": "Tompkinsville Monroe County Airport",
     "latitude": 36.729,
     "longitude": -85.652397,
-    "elevation": 1036,
-    "hasMetar": false
+    "elevation": 1037,
+    "hasMetar": true
   },
   {
     "icao": "U00",
@@ -93263,8 +93263,8 @@
     "name": "Dubois Municipal Airport",
     "latitude": 43.548301696799996,
     "longitude": -109.690002441,
-    "elevation": 7291,
-    "hasMetar": false
+    "elevation": 7234,
+    "hasMetar": true
   },
   {
     "icao": "U30",
@@ -93452,8 +93452,8 @@
     "name": "Aurora State Airport",
     "latitude": 45.247100830078125,
     "longitude": -122.7699966430664,
-    "elevation": 200,
-    "hasMetar": false
+    "elevation": 197,
+    "hasMetar": true
   },
   {
     "icao": "UBE",
@@ -93461,8 +93461,8 @@
     "name": "Cumberland Municipal Airport",
     "latitude": 45.505969,
     "longitude": -91.98012,
-    "elevation": 1241,
-    "hasMetar": false
+    "elevation": 1234,
+    "hasMetar": true
   },
   {
     "icao": "KUBS",
@@ -93479,8 +93479,8 @@
     "name": "Cuba Municipal Airport",
     "latitude": 38.06880187988281,
     "longitude": -91.42890167236328,
-    "elevation": 1023,
-    "hasMetar": false
+    "elevation": 1024,
+    "hasMetar": true
   },
   {
     "icao": "UCP",
@@ -93488,8 +93488,8 @@
     "name": "New Castle Municipal Airport",
     "latitude": 41.02529907,
     "longitude": -80.41339874,
-    "elevation": 1070,
-    "hasMetar": false
+    "elevation": 1027,
+    "hasMetar": true
   },
   {
     "icao": "KUCY",
@@ -93515,8 +93515,8 @@
     "name": "Darlington County Airport",
     "latitude": 34.449401,
     "longitude": -79.890098,
-    "elevation": 192,
-    "hasMetar": false
+    "elevation": 187,
+    "hasMetar": true
   },
   {
     "icao": "KUES",
@@ -93578,8 +93578,8 @@
     "name": "Coffey County Airport",
     "latitude": 38.302502,
     "longitude": -95.724998,
-    "elevation": 1174,
-    "hasMetar": false
+    "elevation": 1171,
+    "hasMetar": true
   },
   {
     "icao": "KUKT",
@@ -93605,8 +93605,8 @@
     "name": "Ulysses Airport",
     "latitude": 37.60400009,
     "longitude": -101.3740005,
-    "elevation": 3071,
-    "hasMetar": false
+    "elevation": 3064,
+    "hasMetar": true
   },
   {
     "icao": "UMP",
@@ -93614,8 +93614,8 @@
     "name": "Indianapolis Metropolitan Airport",
     "latitude": 39.9352,
     "longitude": -86.044998,
-    "elevation": 811,
-    "hasMetar": false
+    "elevation": 810,
+    "hasMetar": true
   },
   {
     "icao": "KUNI",
@@ -93632,8 +93632,8 @@
     "name": "West Plains Regional Airport",
     "latitude": 36.878399,
     "longitude": -91.902702,
-    "elevation": 1228,
-    "hasMetar": false
+    "elevation": 1234,
+    "hasMetar": true
   },
   {
     "icao": "KUNU",
@@ -93677,8 +93677,8 @@
     "name": "Fulton County Airport",
     "latitude": 41.6101,
     "longitude": -84.127197,
-    "elevation": 779,
-    "hasMetar": false
+    "elevation": 778,
+    "hasMetar": true
   },
   {
     "icao": "KUTA",
@@ -93713,8 +93713,8 @@
     "name": "Sullivan Regional Airport",
     "latitude": 38.233501,
     "longitude": -91.164299,
-    "elevation": 933,
-    "hasMetar": false
+    "elevation": 932,
+    "hasMetar": true
   },
   {
     "icao": "KUVA",
@@ -93731,8 +93731,8 @@
     "name": "New Castle-Henry County Municipal Airport",
     "latitude": 39.8759,
     "longitude": -85.3265,
-    "elevation": 1088,
-    "hasMetar": false
+    "elevation": 1089,
+    "hasMetar": true
   },
   {
     "icao": "UXL",
@@ -93740,8 +93740,8 @@
     "name": "Southland Field",
     "latitude": 30.131399,
     "longitude": -93.376099,
-    "elevation": 10,
-    "hasMetar": false
+    "elevation": 7,
+    "hasMetar": true
   },
   {
     "icao": "UYF",
@@ -93749,8 +93749,8 @@
     "name": "Madison County Airport",
     "latitude": 39.932701,
     "longitude": -83.461998,
-    "elevation": 1082,
-    "hasMetar": false
+    "elevation": 1070,
+    "hasMetar": true
   },
   {
     "icao": "KUZA",
@@ -93803,8 +93803,8 @@
     "name": "Nut Tree Airport",
     "latitude": 38.376801,
     "longitude": -121.961998,
-    "elevation": 117,
-    "hasMetar": false
+    "elevation": 98,
+    "hasMetar": true
   },
   {
     "icao": "KVCT",
@@ -93830,8 +93830,8 @@
     "name": "Tampa Executive Airport",
     "latitude": 28.013999939,
     "longitude": -82.3452987671,
-    "elevation": 22,
-    "hasMetar": false
+    "elevation": 16,
+    "hasMetar": true
   },
   {
     "icao": "KVDI",
@@ -93857,8 +93857,8 @@
     "name": "Jesse Viertel Memorial Airport",
     "latitude": 38.946701,
     "longitude": -92.682701,
-    "elevation": 715,
-    "hasMetar": false
+    "elevation": 686,
+    "hasMetar": true
   },
   {
     "icao": "VES",
@@ -93866,8 +93866,8 @@
     "name": "Darke County Airport",
     "latitude": 40.204399,
     "longitude": -84.531898,
-    "elevation": 1007,
-    "hasMetar": false
+    "elevation": 1010,
+    "hasMetar": true
   },
   {
     "icao": "VGC",
@@ -93875,8 +93875,8 @@
     "name": "Hamilton Municipal Airport",
     "latitude": 42.8438,
     "longitude": -75.561401,
-    "elevation": 1137,
-    "hasMetar": false
+    "elevation": 1135,
+    "hasMetar": true
   },
   {
     "icao": "KVGT",
@@ -93912,7 +93912,7 @@
     "latitude": 44.558102,
     "longitude": -90.512199,
     "elevation": 1237,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KVIS",
@@ -93965,8 +93965,8 @@
     "name": "Oakland Troy Airport",
     "latitude": 42.5429,
     "longitude": -83.177902,
-    "elevation": 727,
-    "hasMetar": false
+    "elevation": 702,
+    "hasMetar": true
   },
   {
     "icao": "VMR",
@@ -93974,8 +93974,8 @@
     "name": "Harold Davidson Field",
     "latitude": 42.76530075,
     "longitude": -96.93430328,
-    "elevation": 1146,
-    "hasMetar": false
+    "elevation": 1145,
+    "hasMetar": true
   },
   {
     "icao": "KVNC",
@@ -93992,8 +93992,8 @@
     "name": "Van Wert County Airport",
     "latitude": 40.8647,
     "longitude": -84.609398,
-    "elevation": 785,
-    "hasMetar": false
+    "elevation": 781,
+    "hasMetar": true
   },
   {
     "icao": "KVNY",
@@ -94019,8 +94019,8 @@
     "name": "Cartersville Airport",
     "latitude": 34.1231,
     "longitude": -84.848701,
-    "elevation": 759,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "KVPS",
@@ -94073,8 +94073,8 @@
     "name": "Newark Heath Airport",
     "latitude": 40.024700164799995,
     "longitude": -82.46179962160001,
-    "elevation": 884,
-    "hasMetar": false
+    "elevation": 879,
+    "hasMetar": true
   },
   {
     "icao": "VTI",
@@ -94082,8 +94082,8 @@
     "name": "Vinton Veterans Memorial Airpark",
     "latitude": 42.218221,
     "longitude": -92.025905,
-    "elevation": 842,
-    "hasMetar": false
+    "elevation": 840,
+    "hasMetar": true
   },
   {
     "icao": "KVTN",
@@ -94100,8 +94100,8 @@
     "name": "Stanly County Airport",
     "latitude": 35.416698455811,
     "longitude": -80.150802612305,
-    "elevation": 609,
-    "hasMetar": false
+    "elevation": 571,
+    "hasMetar": true
   },
   {
     "icao": "VUO",
@@ -94109,8 +94109,8 @@
     "name": "Pearson Field",
     "latitude": 45.620499,
     "longitude": -122.655998,
-    "elevation": 25,
-    "hasMetar": false
+    "elevation": 23,
+    "hasMetar": true
   },
   {
     "icao": "VVS",
@@ -94118,8 +94118,8 @@
     "name": "Joseph A. Hardy Connellsville Airport",
     "latitude": 39.960872,
     "longitude": -79.657745,
-    "elevation": 1267,
-    "hasMetar": false
+    "elevation": 1266,
+    "hasMetar": true
   },
   {
     "icao": "VVV",
@@ -94127,8 +94127,8 @@
     "name": "Ortonville Municipal Airport/Martinson Field",
     "latitude": 45.305698,
     "longitude": -96.4244,
-    "elevation": 1100,
-    "hasMetar": false
+    "elevation": 1096,
+    "hasMetar": true
   },
   {
     "icao": "VWU",
@@ -94136,8 +94136,8 @@
     "name": "Waskish Municipal Airport",
     "latitude": 48.15409851074219,
     "longitude": -94.51689910888672,
-    "elevation": 1181,
-    "hasMetar": false
+    "elevation": 1178,
+    "hasMetar": true
   },
   {
     "icao": "KVYS",
@@ -94217,8 +94217,8 @@
     "name": "Williamsburg Whitley County Airport",
     "latitude": 36.7949981689,
     "longitude": -84.1995010376,
-    "elevation": 1178,
-    "hasMetar": false
+    "elevation": 1165,
+    "hasMetar": true
   },
   {
     "icao": "W40",
@@ -94253,8 +94253,8 @@
     "name": "Luray Caverns Airport",
     "latitude": 38.667099,
     "longitude": -78.500603,
-    "elevation": 902,
-    "hasMetar": false
+    "elevation": 896,
+    "hasMetar": true
   },
   {
     "icao": "W63",
@@ -94721,8 +94721,8 @@
     "name": "Bridgeport Municipal Airport",
     "latitude": 33.175301,
     "longitude": -97.8284,
-    "elevation": 852,
-    "hasMetar": false
+    "elevation": 840,
+    "hasMetar": true
   },
   {
     "icao": "FIN",
@@ -94731,7 +94731,7 @@
     "latitude": 29.4674,
     "longitude": -81.206299,
     "elevation": 33,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "XLL",
@@ -94739,8 +94739,8 @@
     "name": "Allentown Queen City Municipal Airport",
     "latitude": 40.570105,
     "longitude": -75.486763,
-    "elevation": 399,
-    "hasMetar": false
+    "elevation": 387,
+    "hasMetar": true
   },
   {
     "icao": "KXMR",
@@ -94766,8 +94766,8 @@
     "name": "Andrew Othole Memorial Airport",
     "latitude": 35.060675,
     "longitude": -108.9376,
-    "elevation": 6370,
-    "hasMetar": false
+    "elevation": 20899,
+    "hasMetar": true
   },
   {
     "icao": "XNO",
@@ -94775,8 +94775,8 @@
     "name": "North Air Force Auxillary Airfield",
     "latitude": 33.609355,
     "longitude": -81.08328,
-    "elevation": 321,
-    "hasMetar": false
+    "elevation": 308,
+    "hasMetar": true
   },
   {
     "icao": "XSA",
@@ -94785,7 +94785,7 @@
     "latitude": 37.8596,
     "longitude": -76.894096,
     "elevation": 135,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KXTA",
@@ -94802,8 +94802,8 @@
     "name": "Longville Municipal Airport",
     "latitude": 46.9902,
     "longitude": -94.204002,
-    "elevation": 1334,
-    "hasMetar": false
+    "elevation": 1335,
+    "hasMetar": true
   },
   {
     "icao": "KXWA",
@@ -95081,8 +95081,8 @@
     "name": "Elkin Municipal Airport",
     "latitude": 36.279998779296875,
     "longitude": -80.78610229492188,
-    "elevation": 1068,
-    "hasMetar": false
+    "elevation": 1066,
+    "hasMetar": true
   },
   {
     "icao": "ZER",
@@ -95090,8 +95090,8 @@
     "name": "Schuylkill County Joe Zerbey Airport",
     "latitude": 40.706501,
     "longitude": -76.3731,
-    "elevation": 1729,
-    "hasMetar": false
+    "elevation": 1699,
+    "hasMetar": true
   },
   {
     "icao": "KZPH",
@@ -96260,8 +96260,8 @@
     "name": "Lamoni Municipal Airport",
     "latitude": 40.633301,
     "longitude": -93.902199,
-    "elevation": 1131,
-    "hasMetar": false
+    "elevation": 1132,
+    "hasMetar": true
   },
   {
     "icao": "M00",
@@ -96395,8 +96395,8 @@
     "name": "Morehead-Rowan County Clyde A. Thomas Regional Airport",
     "latitude": 38.215,
     "longitude": -83.587611,
-    "elevation": 1028,
-    "hasMetar": false
+    "elevation": 1007,
+    "hasMetar": true
   },
   {
     "icao": "MA07",
@@ -110153,7 +110153,7 @@
   {
     "icao": "PHKO",
     "iata": "KOA",
-    "name": "Ellison Onizuka Kona International Airport at Keāhole",
+    "name": "Ellison Onizuka Kona International Airport at Ke\u0101hole",
     "latitude": 19.738783,
     "longitude": -156.045603,
     "elevation": 47,
@@ -127526,8 +127526,8 @@
     "name": "Bridgewater Air Park",
     "latitude": 38.366699,
     "longitude": -78.960297,
-    "elevation": 1165,
-    "hasMetar": false
+    "elevation": 1188,
+    "hasMetar": true
   },
   {
     "icao": "VG01",
@@ -127850,8 +127850,8 @@
     "name": "Potomac Airfield",
     "latitude": 38.74760056,
     "longitude": -76.9571991,
-    "elevation": 118,
-    "hasMetar": false
+    "elevation": 108,
+    "hasMetar": true
   },
   {
     "icao": "VT01",
