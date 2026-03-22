@@ -94,7 +94,15 @@ class WeatherViewModel: ObservableObject {
             }
             await loadAdvisory(airport: airport)
         } else {
-            await loadMETAR(icao: airport.icao)
+            // For 3-letter FAA codes, use K-prefix for NOAA lookup (CMA → KCMA)
+            let icaoForFetch: String
+            let upper = airport.icao.uppercased()
+            if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
+                icaoForFetch = "K\(upper)"
+            } else {
+                icaoForFetch = airport.icao
+            }
+            await loadMETAR(icao: icaoForFetch)
             if noWeatherReporting || (metar == nil && error != nil) {
                 isMetarFallback = true
                 error = nil
