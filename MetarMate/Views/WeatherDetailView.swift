@@ -228,25 +228,13 @@ struct WeatherDetailView: View {
 
     @ViewBuilder
     private var asosBoostView: some View {
-        if vm.hasBoostData, let obs = vm.synopticLatest {
-            asosBoostResult(obs)
-        } else if vm.isSynopticLoading {
-            HStack(spacing: 6) {
-                ProgressView()
-                    .scaleEffect(0.7)
-                Text("Fetching ASOS data…")
-                    .font(.caption2)
-                    .foregroundColor(.cyan)
-            }
-            .padding(.vertical, 4)
-        } else if let error = vm.synopticError {
-            Text(error)
-                .font(.caption2)
-                .foregroundColor(.orange)
-                .padding(.vertical, 2)
-        } else if vm.metar != nil {
-            asosBoostButton
-        }
+        // ASOS Boost gated — Synoptic Data license inactive
+        // Re-enable when commercial API access is restored:
+        // if vm.hasBoostData, let obs = vm.synopticLatest {
+        //     asosBoostResult(obs)
+        // } else if vm.isSynopticLoading { ... }
+        // } else if vm.metar != nil { asosBoostButton }
+        EmptyView()
     }
 
     private var asosBoostButton: some View {
