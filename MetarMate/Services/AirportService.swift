@@ -70,9 +70,18 @@ class AirportService {
         .prefix(limit)
         .map { $0 }
 
-        // Also include any cached live-resolved airports matching the query
-        let cached = liveResolvedCache.values.filter {
-            $0.icao.contains(q) || $0.name.uppercased().contains(q)
+        // Also include any cached live-resolved airports matching the query,
+        // but skip if a K-prefix variant already exists in local results (e.g. KCMA when CMA is local)
+        let localIcaos = Set(localResults.map { $0.icao.uppercased() })
+        let cached = liveResolvedCache.values.filter { cachedAirport in
+            let cid = cachedAirport.icao.uppercased()
+            let matchesQuery = cid.contains(q) || cachedAirport.name.uppercased().contains(q)
+            guard matchesQuery else { return false }
+            // Skip if the non-K version is already in local results (KCMA skipped if CMA is local)
+            if cid.hasPrefix("K"), cid.count == 4, localIcaos.contains(String(cid.dropFirst())) { return false }
+            // Skip if it's the exact same icao as a local result
+            if localIcaos.contains(cid) { return false }
+            return true
         }
 
         let combined = Array(localResults) + cached
