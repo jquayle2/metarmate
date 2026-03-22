@@ -2047,12 +2047,19 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Conditions")
 
-            // Wind
-            let windDir = wx.windDirectionDeg.map { String(format: "%03d°", $0) } ?? "Variable"
-            let gustStr = wx.windGustKtRounded.map { " G\($0) kt" } ?? ""
-            conditionRow("wind", "Wind",
-                         "\(windDir)  \(wx.windSpeedKtRounded) kt\(gustStr)",
-                         color: advisoryWindColor(wx))
+            // Wind — apply METAR conventions to model data:
+            // direction rounded to nearest 10°, calm below 3 kt, gusts only when ≥10 kt above sustained
+            let advisoryWindText: String = {
+                let spd = wx.windSpeedKtRounded
+                if spd < 3 { return "Calm" }
+                let dir = wx.windDirectionDeg.map { String(format: "%03d°", (($0 + 5) / 10) * 10 % 360 == 0 ? 360 : (($0 + 5) / 10) * 10 % 360) } ?? "Variable"
+                var text = "\(dir)  \(spd) kt"
+                if let gust = wx.windGustKtRounded, gust - spd >= 10 {
+                    text += " G\(gust) kt"
+                }
+                return text
+            }()
+            conditionRow("wind", "Wind", advisoryWindText, color: advisoryWindColor(wx))
 
             // Visibility — round to whole number for advisory estimates
             if let vis = wx.visibilityMiles {
@@ -2462,8 +2469,14 @@ struct WeatherDetailView: View {
         let cat = hour.estimatedFlightCategory
         let timeFmt = DateFormatter()
         let _ = { timeFmt.dateFormat = "h:mm a"; timeFmt.timeZone = .current }()
-        let gStr = hour.windGustKtRounded.map { " G\($0) kt" } ?? ""
-        let windDir = hour.windDirectionDeg.map { String(format: "%03d°", $0) } ?? "Variable"
+        let fcstWindText: String = {
+            let spd = hour.windSpeedKtRounded
+            if spd < 3 { return "Calm" }
+            let dir = hour.windDirectionDeg.map { String(format: "%03d°", (($0 + 5) / 10) * 10 % 360 == 0 ? 360 : (($0 + 5) / 10) * 10 % 360) } ?? "Variable"
+            var t = "\(dir)  \(spd) kt"
+            if let gust = hour.windGustKtRounded, gust - spd >= 10 { t += " G\(gust) kt" }
+            return t
+        }()
         let visStr = hour.visibilityMiles.map { $0 >= 10 ? "~10+ SM" : "~\(Int($0.rounded())) SM" } ?? "—"
 
         return HStack(spacing: 14) {
@@ -2488,7 +2501,7 @@ struct WeatherDetailView: View {
             // Conditions grid
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 16) {
-                    Label("\(windDir)  \(hour.windSpeedKtRounded) kt\(gStr)", systemImage: "wind")
+                    Label(fcstWindText, systemImage: "wind")
                         .font(.subheadline)
                         .foregroundColor(.primary)
                 }
