@@ -70236,22 +70236,22 @@
     "hasMetar": true
   },
   {
-    "icao": "AHC",
+    "icao": "KAHC",
     "iata": "AHC",
-    "name": "Amedee Army Air Field",
+    "name": "Herlong, CA, US",
     "latitude": 40.26620102,
     "longitude": -120.1529999,
-    "elevation": 4012,
-    "hasMetar": false
+    "elevation": 13163,
+    "hasMetar": true
   },
   {
-    "icao": "AHH",
+    "icao": "KAHH",
     "iata": "AHH",
-    "name": "Amery Municipal Airport",
+    "name": "Amery Muni, WI, US",
     "latitude": 45.2811012268,
     "longitude": -92.37539672850001,
-    "elevation": 1088,
-    "hasMetar": false
+    "elevation": 1060,
+    "hasMetar": true
   },
   {
     "icao": "KAHN",
@@ -70335,13 +70335,13 @@
     "hasMetar": true
   },
   {
-    "icao": "AIV",
+    "icao": "KAIV",
     "iata": "AIV",
-    "name": "George Downer Airport",
+    "name": "Aliceville/Downer Arpt, AL, US",
     "latitude": 33.106499,
     "longitude": -88.1978,
-    "elevation": 150,
-    "hasMetar": false
+    "elevation": 151,
+    "hasMetar": true
   },
   {
     "icao": "KAIZ",
@@ -70587,13 +70587,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ANP",
+    "icao": "KANP",
     "iata": "ANP",
-    "name": "Lee Airport",
+    "name": "Annapolis/Lee Arpt, MD, US",
     "latitude": 38.942902,
     "longitude": -76.568398,
-    "elevation": 34,
-    "hasMetar": false
+    "elevation": 33,
+    "hasMetar": true
   },
   {
     "icao": "KANQ",
@@ -70614,13 +70614,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ANY",
+    "icao": "KANY",
     "iata": "ANY",
-    "name": "Anthony Municipal Airport",
+    "name": "Anthony Muni, KS, US",
     "latitude": 37.158501,
     "longitude": -98.079597,
-    "elevation": 1340,
-    "hasMetar": false
+    "elevation": 1339,
+    "hasMetar": true
   },
   {
     "icao": "KAOC",
@@ -70713,13 +70713,13 @@
     "hasMetar": true
   },
   {
-    "icao": "APT",
+    "icao": "KAPT",
     "iata": "APT",
-    "name": "Marion County Airport - Brown Field",
+    "name": "Jasper/Marion Cnty, TN, US",
     "latitude": 35.060699,
     "longitude": -85.585297,
-    "elevation": 641,
-    "hasMetar": false
+    "elevation": 640,
+    "hasMetar": true
   },
   {
     "icao": "KAPV",
@@ -70947,13 +70947,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ASY",
+    "icao": "KASY",
     "iata": "ASY",
-    "name": "Ashley Municipal Airport",
+    "name": "Ashley Muni, ND, US",
     "latitude": 46.0238990784,
     "longitude": -99.3526000977,
-    "elevation": 2032,
-    "hasMetar": false
+    "elevation": 2031,
+    "hasMetar": true
   },
   {
     "icao": "KATA",
@@ -71091,13 +71091,13 @@
     "hasMetar": true
   },
   {
-    "icao": "AVO",
+    "icao": "KAVO",
     "iata": "AVO",
-    "name": "Avon Park Executive Airport",
+    "name": "Avon Park Exec, FL, US",
     "latitude": 27.59119987,
     "longitude": -81.52780151,
-    "elevation": 160,
-    "hasMetar": false
+    "elevation": 154,
+    "hasMetar": true
   },
   {
     "icao": "KAVP",
@@ -71631,13 +71631,13 @@
     "hasMetar": true
   },
   {
-    "icao": "BFR",
+    "icao": "KBFR",
     "iata": "BFR",
-    "name": "Virgil I Grissom Municipal Airport",
+    "name": "Bedford/Grissom Arpt, IN, US",
     "latitude": 38.84000015,
     "longitude": -86.44539642,
-    "elevation": 727,
-    "hasMetar": false
+    "elevation": 732,
+    "hasMetar": true
   },
   {
     "icao": "KBGD",
@@ -72036,13 +72036,13 @@
     "hasMetar": true
   },
   {
-    "icao": "BNG",
+    "icao": "KBNG",
     "iata": "BNG",
-    "name": "Banning Municipal Airport",
+    "name": "Banning Muni, CA, US",
     "latitude": 33.922548,
     "longitude": -116.850672,
-    "elevation": 2219,
-    "hasMetar": false
+    "elevation": 2221,
+    "hasMetar": true
   },
   {
     "icao": "KBNL",
@@ -72225,13 +72225,13 @@
     "hasMetar": true
   },
   {
-    "icao": "BTF",
+    "icao": "KBTF",
     "iata": "BTF",
-    "name": "Skypark Airport",
+    "name": "Bountiful/Skypath Arpt, UT, US",
     "latitude": 40.8694000244,
     "longitude": -111.927001953,
-    "elevation": 4234,
-    "hasMetar": false
+    "elevation": 4236,
+    "hasMetar": true
   },
   {
     "icao": "KBTL",
@@ -72288,22 +72288,22 @@
     "hasMetar": true
   },
   {
-    "icao": "BTY",
+    "icao": "KBTY",
     "iata": "BTY",
-    "name": "Beatty Airport",
+    "name": "Beatty Arpt, NV, US",
     "latitude": 36.8610992432,
     "longitude": -116.787002563,
-    "elevation": 3170,
-    "hasMetar": false
+    "elevation": 3169,
+    "hasMetar": true
   },
   {
-    "icao": "BUB",
+    "icao": "KBUB",
     "iata": "BUB",
-    "name": "Cram Field",
+    "name": "Burwell/Cram Fld, NE, US",
     "latitude": 41.776699066199996,
     "longitude": -99.14969635010002,
-    "elevation": 2182,
-    "hasMetar": false
+    "elevation": 2178,
+    "hasMetar": true
   },
   {
     "icao": "KBUF",
@@ -72315,13 +72315,13 @@
     "hasMetar": true
   },
   {
-    "icao": "BUM",
+    "icao": "KBUM",
     "iata": "BUM",
-    "name": "Butler Memorial Airport",
+    "name": "Butler Mem Arpt, MO, US",
     "latitude": 38.2897987366,
     "longitude": -94.3401031494,
     "elevation": 892,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KBUR",
@@ -72405,13 +72405,13 @@
     "hasMetar": true
   },
   {
-    "icao": "BWC",
+    "icao": "KBWC",
     "iata": "BWC",
-    "name": "Brawley Municipal Airport",
+    "name": "Brawley Muni, CA, US",
     "latitude": 32.99290085,
     "longitude": -115.5169983,
     "elevation": -128,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KBWD",
@@ -73008,13 +73008,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CDK",
+    "icao": "KCDK",
     "iata": "CDK",
-    "name": "George T Lewis Airport",
+    "name": "Cedar Key/Lewis Arpt, FL, US",
     "latitude": 29.134095,
     "longitude": -83.050783,
-    "elevation": 11,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KCDN",
@@ -73053,13 +73053,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CEA",
+    "icao": "KCEA",
     "iata": "CEA",
-    "name": "Cessna Aircraft Field",
+    "name": "Wichita-Cessna, KS, US",
     "latitude": 37.648601532,
     "longitude": -97.2506027222,
     "elevation": 1378,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KCEC",
@@ -73170,13 +73170,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CFT",
+    "icao": "KCFT",
     "iata": "CFT",
-    "name": "Greenlee County Airport",
+    "name": "Clifton-Morenci/Greenlee Cnty, AZ, US",
     "latitude": 32.957039,
     "longitude": -109.211397,
-    "elevation": 3798,
-    "hasMetar": false
+    "elevation": 3753,
+    "hasMetar": true
   },
   {
     "icao": "KCFV",
@@ -73530,13 +73530,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CLR",
+    "icao": "KCLR",
     "iata": "CLR",
-    "name": "Cliff Hatfield Memorial Airport",
+    "name": "Calipatria/Hatfield, CA, US",
     "latitude": 33.131500244099996,
     "longitude": -115.521003723,
-    "elevation": -182,
-    "hasMetar": false
+    "elevation": -180,
+    "hasMetar": true
   },
   {
     "icao": "KCLS",
@@ -73656,13 +73656,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CNH",
+    "icao": "KCNH",
     "iata": "CNH",
-    "name": "Claremont Municipal Airport",
+    "name": "Claremont Muni, NH, US",
     "latitude": 43.3703994751,
     "longitude": -72.36869812009999,
     "elevation": 545,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KCNK",
@@ -73836,13 +73836,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CPM",
+    "icao": "KCPM",
     "iata": "CPM",
-    "name": "Compton Woodley Airport",
+    "name": "Compton/Woodley Arpt, CA, US",
     "latitude": 33.8899993896,
     "longitude": -118.244003296,
-    "elevation": 97,
-    "hasMetar": false
+    "elevation": 82,
+    "hasMetar": true
   },
   {
     "icao": "KCPR",
@@ -73980,13 +73980,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CRT",
+    "icao": "KCRT",
     "iata": "CRT",
-    "name": "Z M Jack Stell Field",
+    "name": "Crossett/Stell Fld, AR, US",
     "latitude": 33.1782989502,
     "longitude": -91.8802032471,
     "elevation": 184,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KCRW",
@@ -74169,13 +74169,13 @@
     "hasMetar": true
   },
   {
-    "icao": "CVK",
+    "icao": "KCVK",
     "iata": "CKK",
-    "name": "Sharp County Regional Airport",
+    "name": "Ash Flat/Sharp Cnty, AR, US",
     "latitude": 36.26490021,
     "longitude": -91.56259918,
-    "elevation": 716,
-    "hasMetar": false
+    "elevation": 715,
+    "hasMetar": true
   },
   {
     "icao": "KCVN",
@@ -74961,13 +74961,13 @@
     "hasMetar": true
   },
   {
-    "icao": "DLC",
+    "icao": "KDLC",
     "iata": "DLL",
-    "name": "Dillon County Airport",
+    "name": "Dillon Cnty, SC, US",
     "latitude": 34.4491004944,
     "longitude": -79.368598938,
-    "elevation": 133,
-    "hasMetar": false
+    "elevation": 131,
+    "hasMetar": true
   },
   {
     "icao": "KDLF",
@@ -76068,13 +76068,13 @@
     "hasMetar": true
   },
   {
-    "icao": "EFW",
+    "icao": "KEFW",
     "iata": "EFW",
-    "name": "Jefferson Municipal Airport",
+    "name": "Jefferson Muni, IA, US",
     "latitude": 42.009866,
     "longitude": -94.341717,
-    "elevation": 1044,
-    "hasMetar": false
+    "elevation": 1043,
+    "hasMetar": true
   },
   {
     "icao": "KEGE",
@@ -76482,13 +76482,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ERR",
+    "icao": "KERR",
     "iata": "ERR",
-    "name": "Errol Airport",
+    "name": "Errol Arpt, NH, US",
     "latitude": 44.7925,
     "longitude": -71.1642,
-    "elevation": 1245,
-    "hasMetar": false
+    "elevation": 1247,
+    "hasMetar": true
   },
   {
     "icao": "KERV",
@@ -76545,13 +76545,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ESW",
+    "icao": "KESW",
     "iata": "ESW",
-    "name": "Easton State Airport",
+    "name": "Easton State Arpt, WA, US",
     "latitude": 47.2541999817,
     "longitude": -121.185997009,
-    "elevation": 2226,
-    "hasMetar": false
+    "elevation": 2224,
+    "hasMetar": true
   },
   {
     "icao": "KETB",
@@ -77265,13 +77265,13 @@
     "hasMetar": true
   },
   {
-    "icao": "FBY",
+    "icao": "KFBY",
     "iata": "FBY",
-    "name": "Fairbury Municipal Airport",
+    "name": "Fairbury Muni, NE, US",
     "latitude": 40.182998657199995,
     "longitude": -97.16929626459999,
-    "elevation": 1479,
-    "hasMetar": false
+    "elevation": 1480,
+    "hasMetar": true
   },
   {
     "icao": "KFCH",
@@ -77310,13 +77310,13 @@
     "hasMetar": true
   },
   {
-    "icao": "FCY",
+    "icao": "KFCY",
     "iata": "FCY",
-    "name": "Forrest City Municipal Airport",
+    "name": "Forrest City/Hutfly Arpt, AR, US",
     "latitude": 34.942001342800005,
     "longitude": -90.7750015259,
     "elevation": 249,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KFDK",
@@ -77598,13 +77598,13 @@
     "hasMetar": true
   },
   {
-    "icao": "FLX",
+    "icao": "KFLX",
     "iata": "FLX",
-    "name": "Fallon Municipal Airport",
+    "name": "Fallon Muni, NV, US",
     "latitude": 39.4990997314,
     "longitude": -118.749000549,
-    "elevation": 3963,
-    "hasMetar": false
+    "elevation": 3967,
+    "hasMetar": true
   },
   {
     "icao": "KFME",
@@ -77886,13 +77886,13 @@
     "hasMetar": true
   },
   {
-    "icao": "FSU",
+    "icao": "KFSU",
     "iata": "FSU",
-    "name": "Fort Sumner Municipal Airport",
+    "name": "Fort Sumner Muni, NM, US",
     "latitude": 34.4833984375,
     "longitude": -104.217002869,
-    "elevation": 4165,
-    "hasMetar": false
+    "elevation": 4163,
+    "hasMetar": true
   },
   {
     "icao": "KFSW",
@@ -78102,13 +78102,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GAB",
+    "icao": "KGAB",
     "iata": "GAB",
-    "name": "Gabbs Airport",
+    "name": "Gabbs Arpt, NV, US",
     "latitude": 38.923173,
     "longitude": -117.9572,
-    "elevation": 4700,
-    "hasMetar": false
+    "elevation": 4698,
+    "hasMetar": true
   },
   {
     "icao": "KGAD",
@@ -78201,13 +78201,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GBR",
+    "icao": "KGBR",
     "iata": "GBR",
-    "name": "Walter J. Koladza Airport",
+    "name": "Great Barrington Arpt, MA, US",
     "latitude": 42.18420029,
     "longitude": -73.40319824,
-    "elevation": 739,
-    "hasMetar": false
+    "elevation": 738,
+    "hasMetar": true
   },
   {
     "icao": "KGCC",
@@ -78291,13 +78291,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GDM",
+    "icao": "KGDM",
     "iata": "GDM",
-    "name": "Gardner Municipal Airport",
+    "name": "Gardner Muni, MA, US",
     "latitude": 42.5499992371,
     "longitude": -72.0160980225,
-    "elevation": 955,
-    "hasMetar": false
+    "elevation": 951,
+    "hasMetar": true
   },
   {
     "icao": "KGDV",
@@ -78309,13 +78309,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GDW",
+    "icao": "KGDW",
     "iata": "GDW",
-    "name": "Gladwin Zettel Memorial Airport",
+    "name": "Gladwin/Zettel Mem, MI, US",
     "latitude": 43.9706001282,
     "longitude": -84.47499847410002,
-    "elevation": 776,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
     "icao": "KGED",
@@ -78381,13 +78381,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GFD",
+    "icao": "KGFD",
     "iata": "GFD",
-    "name": "Pope Field",
+    "name": "Greenfield/Pope Fld, IN, US",
     "latitude": 39.790715,
     "longitude": -85.735019,
-    "elevation": 895,
-    "hasMetar": false
+    "elevation": 896,
+    "hasMetar": true
   },
   {
     "icao": "KGFK",
@@ -78480,13 +78480,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GHM",
+    "icao": "KGHM",
     "iata": "GHM",
-    "name": "Centerville Municipal Airport",
+    "name": "Centerville Muni, TN, US",
     "latitude": 35.8373985291,
     "longitude": -87.44539642330001,
-    "elevation": 768,
-    "hasMetar": false
+    "elevation": 764,
+    "hasMetar": true
   },
   {
     "icao": "KGHW",
@@ -78777,13 +78777,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GQQ",
+    "icao": "KGQQ",
     "iata": "GQQ",
-    "name": "Galion Municipal Airport",
+    "name": "Galion Muni, OH, US",
     "latitude": 40.7533988953,
     "longitude": -82.7238006592,
     "elevation": 1224,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KGRB",
@@ -78921,13 +78921,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GTG",
+    "icao": "KGTG",
     "iata": "GTG",
-    "name": "Grantsburg Municipal Airport",
+    "name": "Grantsburg Muni, WI, US",
     "latitude": 45.7980995178,
     "longitude": -92.6643981934,
-    "elevation": 927,
-    "hasMetar": false
+    "elevation": 932,
+    "hasMetar": true
   },
   {
     "icao": "KGTR",
@@ -79047,13 +79047,13 @@
     "hasMetar": true
   },
   {
-    "icao": "GWS",
+    "icao": "KGWS",
     "iata": "GWS",
-    "name": "Glenwood Springs Municipal Airport",
+    "name": "Glenwood Springs Muni, CO, US",
     "latitude": 39.5083007812,
     "longitude": -107.310997009,
-    "elevation": 5916,
-    "hasMetar": false
+    "elevation": 5915,
+    "hasMetar": true
   },
   {
     "icao": "KGWW",
@@ -79326,13 +79326,13 @@
     "hasMetar": false
   },
   {
-    "icao": "HAB",
+    "icao": "KHAB",
     "iata": "HAB",
-    "name": "Marion County Rankin Fite Airport",
+    "name": "Hamilton/Marion Cnty, AL, US",
     "latitude": 34.11759949,
     "longitude": -87.99819946,
-    "elevation": 436,
-    "hasMetar": false
+    "elevation": 413,
+    "hasMetar": true
   },
   {
     "icao": "KHAE",
@@ -79488,13 +79488,13 @@
     "hasMetar": true
   },
   {
-    "icao": "HEE",
+    "icao": "KHEE",
     "iata": "HEE",
-    "name": "Thompson-Robbins Airport",
+    "name": "West Helena/Thompson-Robbins Arpt, AR, US",
     "latitude": 34.576571,
     "longitude": -90.67616,
-    "elevation": 242,
-    "hasMetar": false
+    "elevation": 243,
+    "hasMetar": true
   },
   {
     "icao": "KHEF",
@@ -79911,13 +79911,13 @@
     "hasMetar": true
   },
   {
-    "icao": "HPY",
+    "icao": "KHPY",
     "iata": "HPY",
-    "name": "Baytown Airport",
+    "name": "Baytown Arpt, TX, US",
     "latitude": 29.786100387599998,
     "longitude": -94.95269775390001,
-    "elevation": 34,
-    "hasMetar": false
+    "elevation": 33,
+    "hasMetar": true
   },
   {
     "icao": "KHQG",
@@ -80145,13 +80145,13 @@
     "hasMetar": true
   },
   {
-    "icao": "HTW",
+    "icao": "KHTW",
     "iata": "HTW",
-    "name": "Lawrence County Airpark",
+    "name": "Chesapeake/Lawrence, OH, US",
     "latitude": 38.419082,
     "longitude": -82.494922,
     "elevation": 568,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KHUA",
@@ -80784,13 +80784,13 @@
     "hasMetar": true
   },
   {
-    "icao": "IDG",
+    "icao": "KIDG",
     "iata": "IDG",
-    "name": "Ida Grove Municipal Airport",
+    "name": "Ida Grove Muni, IA, US",
     "latitude": 42.3326,
     "longitude": -95.444901,
-    "elevation": 1245,
-    "hasMetar": false
+    "elevation": 1243,
+    "hasMetar": true
   },
   {
     "icao": "KIDI",
@@ -81990,13 +81990,13 @@
     "hasMetar": false
   },
   {
-    "icao": "KIC",
+    "icao": "KKIC",
     "iata": "KIC",
-    "name": "Mesa Del Rey Airport",
+    "name": "King City/Mesa Del Ray Arpt, CA, US",
     "latitude": 36.2280006409,
     "longitude": -121.122001648,
-    "elevation": 370,
-    "hasMetar": false
+    "elevation": 374,
+    "hasMetar": true
   },
   {
     "icao": "KKL",
@@ -82008,21 +82008,21 @@
     "hasMetar": false
   },
   {
-    "icao": "KLS",
+    "icao": "KKLS",
     "iata": "KLS",
-    "name": "Southwest Washington Regional Airport",
+    "name": "Kelso/Longview Arpt, WA, US",
     "latitude": 46.11800003049999,
     "longitude": -122.898002625,
-    "elevation": 20,
+    "elevation": 13,
     "hasMetar": true
   },
   {
-    "icao": "KNB",
+    "icao": "KKNB",
     "iata": "KNB",
-    "name": "Kanab Municipal Airport",
+    "name": "Kanab Muni, UT, US",
     "latitude": 37.011101,
     "longitude": -112.530998,
-    "elevation": 4868,
+    "elevation": 4843,
     "hasMetar": true
   },
   {
@@ -82755,13 +82755,13 @@
     "hasMetar": true
   },
   {
-    "icao": "LKP",
+    "icao": "KLKP",
     "iata": "LKP",
-    "name": "Lake Placid Airport",
+    "name": "Lake Placid Arpt, NY, US",
     "latitude": 44.2644996643,
     "longitude": -73.96189880370001,
-    "elevation": 1747,
-    "hasMetar": false
+    "elevation": 1749,
+    "hasMetar": true
   },
   {
     "icao": "KLKR",
@@ -82845,13 +82845,13 @@
     "hasMetar": true
   },
   {
-    "icao": "LMS",
+    "icao": "KLMS",
     "iata": "LMS",
-    "name": "Louisville Winston County Airport",
+    "name": "Louisville/Winston Cnty, MS, US",
     "latitude": 33.1461982727,
     "longitude": -89.0625,
-    "elevation": 575,
-    "hasMetar": false
+    "elevation": 554,
+    "hasMetar": true
   },
   {
     "icao": "KLMT",
@@ -83124,13 +83124,13 @@
     "hasMetar": true
   },
   {
-    "icao": "LSN",
+    "icao": "KLSN",
     "iata": "LSN",
-    "name": "Los Banos Municipal Airport",
+    "name": "Los Banos Muni, CA, US",
     "latitude": 37.06290054,
     "longitude": -120.8690033,
     "elevation": 121,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KLSV",
@@ -83304,13 +83304,13 @@
     "hasMetar": true
   },
   {
-    "icao": "LWL",
+    "icao": "KLWL",
     "iata": "LWL",
-    "name": "Wells Municipal Airport/Harriet Field",
+    "name": "Wells Muni, NV, US",
     "latitude": 41.117099762,
     "longitude": -114.92199707,
-    "elevation": 5772,
-    "hasMetar": false
+    "elevation": 5735,
+    "hasMetar": true
   },
   {
     "icao": "KLWM",
@@ -84006,13 +84006,13 @@
     "hasMetar": false
   },
   {
-    "icao": "MAC",
+    "icao": "KMAC",
     "iata": "MAC",
-    "name": "Macon Downtown Airport",
+    "name": "Macon/Downtown Arpt, GA, US",
     "latitude": 32.82210159,
     "longitude": -83.56199646,
-    "elevation": 437,
-    "hasMetar": false
+    "elevation": 436,
+    "hasMetar": true
   },
   {
     "icao": "KMAE",
@@ -84609,13 +84609,13 @@
     "hasMetar": true
   },
   {
-    "icao": "MIT",
+    "icao": "KMIT",
     "iata": "MIT",
-    "name": "Shafter Airport - Minter Field",
+    "name": "Shafter/Minter Fld, CA, US",
     "latitude": 35.507401,
     "longitude": -119.192002,
-    "elevation": 424,
-    "hasMetar": false
+    "elevation": 417,
+    "hasMetar": true
   },
   {
     "icao": "KMIV",
@@ -84897,13 +84897,13 @@
     "hasMetar": true
   },
   {
-    "icao": "MMS",
+    "icao": "KMMS",
     "iata": "MMS",
-    "name": "Selfs Airport",
+    "name": "Marks/Selfs Arpt, MS, US",
     "latitude": 34.231499,
     "longitude": -90.289597,
-    "elevation": 162,
-    "hasMetar": false
+    "elevation": 161,
+    "hasMetar": true
   },
   {
     "icao": "KMMT",
@@ -85095,22 +85095,22 @@
     "hasMetar": true
   },
   {
-    "icao": "MPI",
+    "icao": "KMPI",
     "iata": "RMY",
-    "name": "Mariposa Yosemite Airport",
+    "name": "Mariposa, CA, US",
     "latitude": 37.5108985901,
     "longitude": -120.040000916,
-    "elevation": 2254,
-    "hasMetar": false
+    "elevation": 7395,
+    "hasMetar": true
   },
   {
-    "icao": "MPJ",
+    "icao": "KMPJ",
     "iata": "MPJ",
-    "name": "Petit Jean Park Airport",
+    "name": "Morrilton/Park Arpt, AR, US",
     "latitude": 35.138901,
     "longitude": -92.909202,
-    "elevation": 923,
-    "hasMetar": false
+    "elevation": 922,
+    "hasMetar": true
   },
   {
     "icao": "KMPO",
@@ -85446,13 +85446,13 @@
     "hasMetar": true
   },
   {
-    "icao": "MVC",
+    "icao": "KMVC",
     "iata": "MVC",
-    "name": "Monroe County Aeroplex Airport",
+    "name": "Monroeville/Monroe Cnty, AL, US",
     "latitude": 31.458,
     "longitude": -87.350996,
-    "elevation": 419,
-    "hasMetar": false
+    "elevation": 420,
+    "hasMetar": true
   },
   {
     "icao": "KMVE",
@@ -85572,13 +85572,13 @@
     "hasMetar": true
   },
   {
-    "icao": "MXA",
+    "icao": "KMXA",
     "iata": "MXA",
-    "name": "Manila Municipal Airport",
+    "name": "Manila Muni, AR, US",
     "latitude": 35.894402,
     "longitude": -90.154602,
-    "elevation": 242,
-    "hasMetar": false
+    "elevation": 243,
+    "hasMetar": true
   },
   {
     "icao": "KMXF",
@@ -85995,13 +85995,13 @@
     "hasMetar": true
   },
   {
-    "icao": "NBJ",
+    "icao": "KNBJ",
     "iata": "NHX",
-    "name": "Naval Outlying Field Barin",
+    "name": "Barin Fld, AL, US",
     "latitude": 30.389099121100003,
     "longitude": -87.63529968259999,
-    "elevation": 54,
-    "hasMetar": false
+    "elevation": 49,
+    "hasMetar": true
   },
   {
     "icao": "KNCA",
@@ -86040,13 +86040,13 @@
     "hasMetar": true
   },
   {
-    "icao": "NEN",
+    "icao": "KNEN",
     "iata": "NEN",
-    "name": "Whitehouse Naval Outlying Field",
+    "name": "Whitehouse Naval, FL, US",
     "latitude": 30.353900909424,
     "longitude": -81.87190246582,
-    "elevation": 99,
-    "hasMetar": false
+    "elevation": 98,
+    "hasMetar": true
   },
   {
     "icao": "KNEW",
@@ -86139,13 +86139,13 @@
     "hasMetar": true
   },
   {
-    "icao": "NGW",
+    "icao": "KNGW",
     "iata": "NGW",
-    "name": "Cabaniss Field Naval Outlying Landing Field",
+    "name": "Corpus Christi/Cabaniss Fld, TX, US",
     "latitude": 27.704426,
     "longitude": -97.440578,
-    "elevation": 30,
-    "hasMetar": false
+    "elevation": 26,
+    "hasMetar": true
   },
   {
     "icao": "KNHK",
@@ -87075,13 +87075,13 @@
     "hasMetar": true
   },
   {
-    "icao": "OKH",
+    "icao": "KOKH",
     "iata": "ODW",
-    "name": "AJ Eisenberg Airport",
+    "name": "Oak Harbor, WA, US",
     "latitude": 48.251499176,
     "longitude": -122.674003601,
-    "elevation": 193,
-    "hasMetar": false
+    "elevation": 633,
+    "hasMetar": true
   },
   {
     "icao": "KOKK",
@@ -87102,13 +87102,13 @@
     "hasMetar": true
   },
   {
-    "icao": "OKS",
+    "icao": "KOKS",
     "iata": "OKS",
-    "name": "Garden County Airport/King Rhiley Field",
+    "name": "Oshkosh/Garden Cnty, NE, US",
     "latitude": 41.401001,
     "longitude": -102.355003,
-    "elevation": 3394,
-    "hasMetar": false
+    "elevation": 3392,
+    "hasMetar": true
   },
   {
     "icao": "KOKV",
@@ -87318,13 +87318,13 @@
     "hasMetar": true
   },
   {
-    "icao": "ONY",
+    "icao": "KONY",
     "iata": "ONY",
-    "name": "Olney Municipal Airport",
+    "name": "Olney Muni, TX, US",
     "latitude": 33.350899,
     "longitude": -98.819199,
-    "elevation": 1275,
-    "hasMetar": false
+    "elevation": 1273,
+    "hasMetar": true
   },
   {
     "icao": "KONZ",
@@ -87516,13 +87516,13 @@
     "hasMetar": true
   },
   {
-    "icao": "OSX",
+    "icao": "KOSX",
     "iata": "OSX",
-    "name": "Kosciusko Attala County Airport",
+    "name": "Kosciusko/Attala Cnty, MS, US",
     "latitude": 33.090302,
     "longitude": -89.542,
-    "elevation": 480,
-    "hasMetar": false
+    "elevation": 495,
+    "hasMetar": true
   },
   {
     "icao": "KOTG",
@@ -87633,13 +87633,13 @@
     "hasMetar": true
   },
   {
-    "icao": "OWK",
+    "icao": "KOWK",
     "iata": "OWK",
-    "name": "Central Maine/Norridgewock Airport",
+    "name": "Norridgewock/Central Maine Arpt, ME, US",
     "latitude": 44.7155,
     "longitude": -69.866501,
-    "elevation": 270,
-    "hasMetar": false
+    "elevation": 269,
+    "hasMetar": true
   },
   {
     "icao": "KOWP",
@@ -88083,13 +88083,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PFC",
+    "icao": "KPFC",
     "iata": "PFC",
-    "name": "Pacific City State Airport",
+    "name": "Pacific City Arpt, OR, US",
     "latitude": 45.199799,
     "longitude": -123.961998,
-    "elevation": 5,
-    "hasMetar": false
+    "elevation": 7,
+    "hasMetar": true
   },
   {
     "icao": "KPGA",
@@ -88110,13 +88110,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PGR",
+    "icao": "KPGR",
     "iata": "PGR",
-    "name": "Kirk Field",
+    "name": "Paragould-Kirk, AR, US",
     "latitude": 36.06290054,
     "longitude": -90.50779724,
-    "elevation": 290,
-    "hasMetar": false
+    "elevation": 32805,
+    "hasMetar": true
   },
   {
     "icao": "KPGV",
@@ -88155,22 +88155,22 @@
     "hasMetar": true
   },
   {
-    "icao": "PHH",
+    "icao": "KPHH",
     "iata": "ADR",
-    "name": "Robert F Swinnie Airport",
+    "name": "Andrews/Swinnie Arpt, SC, US",
     "latitude": 33.4516983032,
     "longitude": -79.5261993408,
     "elevation": 26,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
-    "icao": "PHK",
+    "icao": "KPHK",
     "iata": "PHK",
-    "name": "Palm Beach County Glades Airport",
+    "name": "Pahokee/Palm Beach Cnty, FL, US",
     "latitude": 26.78499985,
     "longitude": -80.69339752,
-    "elevation": 16,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KPHL",
@@ -88326,13 +88326,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PKF",
+    "icao": "KPKF",
     "iata": "PKF",
-    "name": "Park Falls Municipal Airport",
+    "name": "Park Falls Muni, WI, US",
     "latitude": 45.955001831055,
     "longitude": -90.42440032959,
-    "elevation": 1500,
-    "hasMetar": false
+    "elevation": 1539,
+    "hasMetar": true
   },
   {
     "icao": "KPKV",
@@ -88353,13 +88353,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PLK",
+    "icao": "KPLK",
     "iata": "PLK",
-    "name": "M. Graham Clark Downtown Airport",
+    "name": "Branson/Downtown Arpt, MO, US",
     "latitude": 36.62590027,
     "longitude": -93.22889709,
-    "elevation": 940,
-    "hasMetar": false
+    "elevation": 938,
+    "hasMetar": true
   },
   {
     "icao": "KPLN",
@@ -88389,13 +88389,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PMB",
+    "icao": "KPMB",
     "iata": "PMB",
-    "name": "Pembina Municipal Airport",
+    "name": "Pembina Muni, ND, US",
     "latitude": 48.9425010681,
     "longitude": -97.2407989502,
-    "elevation": 795,
-    "hasMetar": false
+    "elevation": 797,
+    "hasMetar": true
   },
   {
     "icao": "KPMD",
@@ -88488,13 +88488,13 @@
     "hasMetar": true
   },
   {
-    "icao": "PNN",
+    "icao": "KPNN",
     "iata": "PNN",
-    "name": "Princeton Municipal Airport",
+    "name": "Princeton Muni, ME, US",
     "latitude": 45.200698852539,
     "longitude": -67.564399719238,
     "elevation": 266,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KPNS",
@@ -88551,13 +88551,13 @@
     "hasMetar": true
   },
   {
-    "icao": "POH",
+    "icao": "KPOH",
     "iata": "POH",
-    "name": "Pocahontas Municipal Airport",
+    "name": "Pocahontas Muni, IA, US",
     "latitude": 42.742802,
     "longitude": -94.647301,
-    "elevation": 1226,
-    "hasMetar": false
+    "elevation": 1224,
+    "hasMetar": true
   },
   {
     "icao": "KPOU",
@@ -89136,13 +89136,13 @@
     "hasMetar": true
   },
   {
-    "icao": "KQA",
+    "icao": "KKQA",
     "iata": null,
-    "name": "Akutan Seaplane Base",
+    "name": "Akutan, AK, US",
     "latitude": 54.13377,
     "longitude": -165.778896,
     "elevation": 0,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "R47",
@@ -89280,13 +89280,13 @@
     "hasMetar": true
   },
   {
-    "icao": "RCK",
+    "icao": "KRCK",
     "iata": "RCK",
-    "name": "H H Coffield Regional Airport",
+    "name": "Rockdale/Coffield Rgnl, TX, US",
     "latitude": 30.6315994263,
     "longitude": -96.9897003174,
-    "elevation": 474,
-    "hasMetar": false
+    "elevation": 472,
+    "hasMetar": true
   },
   {
     "icao": "KRCM",
@@ -89433,13 +89433,13 @@
     "hasMetar": true
   },
   {
-    "icao": "RFG",
+    "icao": "KRFG",
     "iata": "RFG",
-    "name": "Rooke Field",
+    "name": "Refugio/Rooke Fld, TX, US",
     "latitude": 28.2936,
     "longitude": -97.322998,
     "elevation": 56,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KRFI",
@@ -89505,13 +89505,13 @@
     "hasMetar": true
   },
   {
-    "icao": "RIF",
+    "icao": "KRIF",
     "iata": "RIF",
-    "name": "Richfield Municipal Airport",
+    "name": "Richfield Muni, UT, US",
     "latitude": 38.734068,
     "longitude": -112.101603,
-    "elevation": 5301,
-    "hasMetar": false
+    "elevation": 5285,
+    "hasMetar": true
   },
   {
     "icao": "KRIL",
@@ -89523,22 +89523,22 @@
     "hasMetar": true
   },
   {
-    "icao": "RIR",
+    "icao": "KRIR",
     "iata": "RIR",
-    "name": "Flabob Airport",
+    "name": "Riverside/Flabob Arpt, CA, US",
     "latitude": 33.9897,
     "longitude": -117.411003,
-    "elevation": 764,
-    "hasMetar": false
+    "elevation": 768,
+    "hasMetar": true
   },
   {
-    "icao": "RIU",
+    "icao": "KRIU",
     "iata": null,
-    "name": "Rancho Murieta Airport",
+    "name": "Rancho Murieta Arpt, CA, US",
     "latitude": 38.486755,
     "longitude": -121.102822,
-    "elevation": 141,
-    "hasMetar": false
+    "elevation": 148,
+    "hasMetar": true
   },
   {
     "icao": "KRIV",
@@ -90576,13 +90576,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SAS",
+    "icao": "KSAS",
     "iata": "SAS",
-    "name": "Salton Sea Airport",
+    "name": "Salton City Arpt, CA, US",
     "latitude": 33.2414016724,
     "longitude": -115.952003479,
-    "elevation": -84,
-    "hasMetar": false
+    "elevation": -85,
+    "hasMetar": true
   },
   {
     "icao": "KSAT",
@@ -90711,13 +90711,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SCB",
+    "icao": "KSCB",
     "iata": "SCB",
-    "name": "Scribner State Airport",
+    "name": "Scribner Arpt, NE, US",
     "latitude": 41.610298,
     "longitude": -96.629898,
     "elevation": 1325,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KSCD",
@@ -90873,13 +90873,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SER",
+    "icao": "KSER",
     "iata": "SER",
-    "name": "Freeman Municipal Airport",
+    "name": "Seymour/Freeman Muni, IN, US",
     "latitude": 38.923599243164,
     "longitude": -85.907402038574,
-    "elevation": 583,
-    "hasMetar": false
+    "elevation": 574,
+    "hasMetar": true
   },
   {
     "icao": "KSET",
@@ -91089,13 +91089,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SIV",
+    "icao": "KSIV",
     "iata": "SIV",
-    "name": "Sullivan County Airport",
+    "name": "Sullivan Cnty Arpt, IN, US",
     "latitude": 39.1147,
     "longitude": -87.448303,
-    "elevation": 540,
-    "hasMetar": false
+    "elevation": 538,
+    "hasMetar": true
   },
   {
     "icao": "KSIY",
@@ -91701,13 +91701,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SUD",
+    "icao": "KSUD",
     "iata": "SUD",
-    "name": "Stroud Municipal Airport",
+    "name": "Stroud Muni, OK, US",
     "latitude": 35.789600372314,
     "longitude": -96.655700683594,
-    "elevation": 900,
-    "hasMetar": false
+    "elevation": 902,
+    "hasMetar": true
   },
   {
     "icao": "KSUE",
@@ -91926,13 +91926,13 @@
     "hasMetar": true
   },
   {
-    "icao": "SYV",
+    "icao": "KSYV",
     "iata": "SYV",
-    "name": "Sylvester Airport",
+    "name": "Sylvester Arpt, GA, US",
     "latitude": 31.558500289917,
     "longitude": -83.895698547363,
-    "elevation": 403,
-    "hasMetar": false
+    "elevation": 404,
+    "hasMetar": true
   },
   {
     "icao": "KSZL",
@@ -91944,22 +91944,22 @@
     "hasMetar": true
   },
   {
-    "icao": "SZN",
+    "icao": "KSZN",
     "iata": "SZN",
-    "name": "Santa Cruz Island Airport",
+    "name": "Santa Cruz Isl, CA, US",
     "latitude": 34.06007,
     "longitude": -119.915229,
-    "elevation": 50,
-    "hasMetar": false
+    "elevation": 33,
+    "hasMetar": true
   },
   {
-    "icao": "SZP",
+    "icao": "KSZP",
     "iata": "SZP",
-    "name": "Santa Paula Airport",
+    "name": "Santa Paula Arpt, CA, US",
     "latitude": 34.34719849,
     "longitude": -119.060997,
-    "elevation": 243,
-    "hasMetar": false
+    "elevation": 249,
+    "hasMetar": true
   },
   {
     "icao": "KSZT",
@@ -92430,13 +92430,13 @@
     "hasMetar": true
   },
   {
-    "icao": "TDW",
+    "icao": "KTDW",
     "iata": "TDW",
-    "name": "Tradewind Airport",
+    "name": "Amarillo/Tradewind Arpt, TX, US",
     "latitude": 35.1698989868,
     "longitude": -101.825996399,
-    "elevation": 3649,
-    "hasMetar": false
+    "elevation": 3661,
+    "hasMetar": true
   },
   {
     "icao": "KTDZ",
@@ -92637,13 +92637,13 @@
     "hasMetar": true
   },
   {
-    "icao": "TLR",
+    "icao": "KTLR",
     "iata": "TLR",
-    "name": "Mefford Field",
+    "name": "Tulare/Mefford Fld, CA, US",
     "latitude": 36.15629959,
     "longitude": -119.3259964,
-    "elevation": 265,
-    "hasMetar": false
+    "elevation": 266,
+    "hasMetar": true
   },
   {
     "icao": "KTMA",
@@ -92682,22 +92682,22 @@
     "hasMetar": true
   },
   {
-    "icao": "TNP",
+    "icao": "KTNP",
     "iata": "TNP",
-    "name": "Twentynine Palms Airport",
+    "name": "Twentynine Palms Arpt, CA, US",
     "latitude": 34.133901,
     "longitude": -115.947347,
-    "elevation": 1888,
-    "hasMetar": false
+    "elevation": 1831,
+    "hasMetar": true
   },
   {
-    "icao": "TNT",
+    "icao": "KTNT",
     "iata": "TNT",
-    "name": "Dade Collier Training and Transition Airport",
+    "name": "Miami/Dade-Coller Arpt, FL, US",
     "latitude": 25.861788,
     "longitude": -80.89701,
-    "elevation": 13,
-    "hasMetar": false
+    "elevation": 10,
+    "hasMetar": true
   },
   {
     "icao": "KTNU",
@@ -92709,13 +92709,13 @@
     "hasMetar": true
   },
   {
-    "icao": "TNX",
+    "icao": "KTNX",
     "iata": "XSD",
-    "name": "Tonopah Test Range Airport",
+    "name": "Tonopah Test Range, NV, US",
     "latitude": 37.7988014221,
     "longitude": -116.78099823,
-    "elevation": 5549,
-    "hasMetar": false
+    "elevation": 5522,
+    "hasMetar": true
   },
   {
     "icao": "KTOA",
@@ -92880,13 +92880,13 @@
     "hasMetar": true
   },
   {
-    "icao": "TRX",
+    "icao": "KTRX",
     "iata": "TRX",
-    "name": "Trenton Municipal Airport",
+    "name": "Trenton Muni, MO, US",
     "latitude": 40.0835,
     "longitude": -93.590599,
     "elevation": 758,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KTSO",
@@ -93465,13 +93465,13 @@
     "hasMetar": true
   },
   {
-    "icao": "UBS",
+    "icao": "KUBS",
     "iata": "UBS",
-    "name": "Columbus Lowndes County Airport",
+    "name": "Columbus/Lowndes Cnty, MS, US",
     "latitude": 33.4654006958,
     "longitude": -88.3803024292,
-    "elevation": 188,
-    "hasMetar": false
+    "elevation": 187,
+    "hasMetar": true
   },
   {
     "icao": "KUBX",
@@ -93501,13 +93501,13 @@
     "hasMetar": true
   },
   {
-    "icao": "UDD",
+    "icao": "KUDD",
     "iata": "UDD",
-    "name": "Bermuda Dunes Airport",
+    "name": "Palm Springs/Bermuda, CA, US",
     "latitude": 33.748492,
     "longitude": -116.275027,
-    "elevation": 73,
-    "hasMetar": false
+    "elevation": 72,
+    "hasMetar": true
   },
   {
     "icao": "KUDG",
@@ -93654,13 +93654,13 @@
     "hasMetar": true
   },
   {
-    "icao": "UOS",
+    "icao": "KUOS",
     "iata": "UOS",
-    "name": "Franklin County Airport",
+    "name": "Sewanee/Franklin Cnty, TN, US",
     "latitude": 35.204754,
     "longitude": -85.899052,
-    "elevation": 1953,
-    "hasMetar": false
+    "elevation": 1952,
+    "hasMetar": true
   },
   {
     "icao": "KUOX",
@@ -94347,22 +94347,22 @@
     "hasMetar": true
   },
   {
-    "icao": "WAY",
+    "icao": "KWAY",
     "iata": "WAY",
-    "name": "Greene County Airport",
+    "name": "Waynesburg/Green Cnty, PA, US",
     "latitude": 39.90112,
     "longitude": -80.130733,
-    "elevation": 1069,
-    "hasMetar": false
+    "elevation": 1070,
+    "hasMetar": true
   },
   {
-    "icao": "WBW",
+    "icao": "KWBW",
     "iata": "WBW",
-    "name": "Wilkes Barre Wyoming Valley Airport",
+    "name": "Wilkes-Barre/Wyoming Valley Arpt, PA, US",
     "latitude": 41.2971992493,
     "longitude": -75.8511962891,
     "elevation": 545,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KWDG",
@@ -94383,13 +94383,13 @@
     "hasMetar": true
   },
   {
-    "icao": "WEA",
+    "icao": "KWEA",
     "iata": "WEA",
-    "name": "Parker County Airport",
+    "name": "Weatherford-Par, TX, US",
     "latitude": 32.7463,
     "longitude": -97.682404,
-    "elevation": 990,
-    "hasMetar": false
+    "elevation": 991,
+    "hasMetar": true
   },
   {
     "icao": "KWF",
@@ -94437,13 +94437,13 @@
     "hasMetar": true
   },
   {
-    "icao": "WLW",
+    "icao": "KWLW",
     "iata": "WLW",
-    "name": "Willows Glenn County Airport",
+    "name": "Willows/Glenn Cnty, CA, US",
     "latitude": 39.51639938,
     "longitude": -122.2180023,
     "elevation": 141,
-    "hasMetar": false
+    "hasMetar": true
   },
   {
     "icao": "KWMC",
@@ -120069,13 +120069,13 @@
     "hasMetar": false
   },
   {
-    "icao": "HLM",
+    "icao": "KHLM",
     "iata": "HLM",
-    "name": "Park Township Airport",
+    "name": "Holland/Park Arpt, MI, US",
     "latitude": 42.795898,
     "longitude": -86.162003,
-    "elevation": 603,
-    "hasMetar": false
+    "elevation": 604,
+    "hasMetar": true
   },
   {
     "icao": "RSCO",

@@ -82,7 +82,7 @@ class WeatherViewModel: ObservableObject {
         if !airport.hasMetar {
             // Before falling back to advisory, try K-prefix for 3-letter FAA codes (CMA → KCMA)
             let upper = airport.icao.uppercased()
-            if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
+            if upper.count == 3, upper.allSatisfy({ $0.isLetter }) {
                 let kIcao = "K\(upper)"
                 await loadMETAR(icao: kIcao)
                 if metar != nil {
@@ -137,7 +137,7 @@ class WeatherViewModel: ObservableObject {
             if fetchedHistory.isEmpty {
                 // For 3-letter FAA codes (CMA, SNA, etc.), try K-prefix (KCMA, KSNA)
                 let upper = icao.uppercased()
-                if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
+                if upper.count == 3, upper.allSatisfy({ $0.isLetter }) {
                     let kIcao = "K\(upper)"
                     if let retryHistory = try? await weatherService.fetchMetarHistory(for: kIcao, hours: 6),
                        !retryHistory.isEmpty {
