@@ -16,7 +16,9 @@ class StoreManager: ObservableObject {
 
     // MARK: - Published state
     @Published private(set) var products: [Product] = []
-    @Published private(set) var isProUser = false
+    // Set to true for TestFlight/beta testing — remove before App Store release
+    static let testFlightOverride = true
+    @Published private(set) var isProUser = testFlightOverride
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
     @Published private(set) var currentSubscription: Product?
@@ -86,7 +88,7 @@ class StoreManager: ObservableObject {
             }
         }
 
-        isProUser = foundPro
+        isProUser = foundPro || Self.testFlightOverride
         currentSubscription = activeSub
     }
 
