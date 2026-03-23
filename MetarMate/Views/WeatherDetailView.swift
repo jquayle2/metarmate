@@ -9,9 +9,10 @@ struct WeatherDetailView: View {
     @Query private var favorites: [AirportFavorite]
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var prefs = LayoutPreferences.shared
+    @ObservedObject private var store = StoreManager.shared
     @State private var showLayoutSettings = false
     @State private var showNearbyAirports = false
-    @State private var showBoostLimitInfo = false
+    @State private var showProUpgrade = false
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -31,8 +32,10 @@ struct WeatherDetailView: View {
                     errorView(error)
                 } else {
                     headerSection
-                    if vm.hasBoostData, let obs = vm.synopticLatest {
+                    if store.isProUser, vm.hasASOSData, let obs = vm.synopticLatest {
                         decodedASOSSection(obs)
+                    } else if !store.isProUser, vm.metar != nil {
+                        asosProTeaser
                     }
                     if let metar = vm.metar {
                         metarSectionsInOrder(metar)
@@ -71,15 +74,21 @@ struct WeatherDetailView: View {
         .sheet(isPresented: $showNearbyAirports) {
             NearbyAirportsView(referenceAirport: airport)
         }
-        .sheet(isPresented: $showBoostLimitInfo) {
-            boostLimitSheet
+        .sheet(isPresented: $showProUpgrade) {
+            ProUpgradeView()
         }
         .task {
             await vm.load(airport: airport)
+            if store.isProUser && airport.hasMetar {
+                await vm.fetchASOS(icao: airport.icao)
+            }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
                 guard !Task.isCancelled else { break }
                 await vm.load(airport: airport)
+                if store.isProUser && airport.hasMetar {
+                    await vm.fetchASOS(icao: airport.icao)
+                }
             }
         }
         .refreshable {
@@ -217,7 +226,6 @@ struct WeatherDetailView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-            asosBoostView
         }
         .frame(maxWidth: .infinity)
         .padding()
@@ -226,154 +234,35 @@ struct WeatherDetailView: View {
 
     // MARK: - ASOS Boost
 
-    @ViewBuilder
-    private var asosBoostView: some View {
-        // ASOS Boost gated — Synoptic Data license inactive
-        // Re-enable when commercial API access is restored:
-        // if vm.hasBoostData, let obs = vm.synopticLatest {
-        //     asosBoostResult(obs)
-        // } else if vm.isSynopticLoading { ... }
-        // } else if vm.metar != nil { asosBoostButton }
-        EmptyView()
-    }
-
-    private var asosBoostButton: some View {
-        VStack(spacing: 6) {
-            if vm.boostRemaining > 0 {
-                Button {
-                    Task { await vm.activateASOSBoost(icao: airport.icao) }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.caption)
-                        Text("ASOS Boost")
-                            .font(.caption.bold())
-                        Text("(\(vm.boostRemaining) left today)")
-                            .font(.caption2)
-                            .foregroundColor(.cyan.opacity(0.7))
-                    }
-                    .foregroundColor(.cyan)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.cyan.opacity(0.15))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
-                    )
-                }
-            } else {
-                Button {
-                    showBoostLimitInfo = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.caption)
-                        Text("ASOS Boost")
-                            .font(.caption.bold())
-                        Text("(0 left today)")
-                            .font(.caption2)
-                            .foregroundColor(.cyan.opacity(0.5))
-                    }
-                    .foregroundColor(.cyan.opacity(0.4))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.cyan.opacity(0.08))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.cyan.opacity(0.15), lineWidth: 1)
-                    )
-                }
-            }
-        }
-    }
-
-    private var boostLimitSheet: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
+    // MARK: - ASOS Pro teaser (shown to non-Pro users)
+    private var asosProTeaser: some View {
+        Button {
+            showProUpgrade = true
+        } label: {
+            HStack(spacing: 10) {
                 Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 40))
+                    .font(.title3)
                     .foregroundColor(.cyan)
-                    .padding(.top, 20)
-
-                Text("ASOS Boost Limit Reached")
-                    .font(.title3.bold())
-
-                Text("ASOS data comes from a paid weather feed, so usage is currently limited to 25 updates per day. Your count resets at midnight.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Text("Once MetarMate is live on the App Store, additional daily uses will be available as a low-cost in-app option.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Live ASOS Data")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.cyan)
+                    Text("Upgrade to Pro for weather updates between METARs")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.cyan.opacity(0.5))
             }
             .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { showBoostLimitInfo = false }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func asosBoostResult(_ obs: SynopticObservation) -> some View {
-        HStack(spacing: 8) {
-            Button {
-                Task { await vm.activateASOSBoost(icao: airport.icao) }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.caption)
-                    Text("ASOS Active")
-                        .font(.caption.bold())
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 10))
-                }
-                .foregroundColor(.cyan)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.cyan.opacity(0.15))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.cyan.opacity(0.3), lineWidth: 1)
-                )
-            }
-            .disabled(vm.boostRemaining == 0)
-            .opacity(vm.boostRemaining == 0 ? 0.4 : 1)
-
-            Spacer()
-
-            if canOpenXWCalc {
-                Button {
-                    openXWCalc(obs)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.triangle.swap")
-                            .font(.caption)
-                        Text("XW Calc")
-                            .font(.caption.bold())
-                    }
-                    .foregroundColor(.orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.15))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
-                    )
-                }
-            }
+            .background(Color.cyan.opacity(0.08))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.cyan.opacity(0.2), lineWidth: 1)
+            )
         }
     }
 

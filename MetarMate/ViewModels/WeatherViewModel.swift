@@ -25,7 +25,7 @@ class WeatherViewModel: ObservableObject {
     @Published var nearbyReportingAirports: [NearbyReportingAirport] = []
     @Published var advisoryWeather: AdvisoryWeather?  // Open-Meteo data for non-METAR airports
     @Published var isMetarFallback = false  // True when hasMetar station fell back to advisory
-    @Published var synopticLatest: SynopticObservation?  // Most recent 5-min ASOS observation
+    @Published var synopticLatest: SynopticObservation?  // Most recent ASOS observation
     @Published var synopticHistory: [SynopticObservation] = []  // 6-hour ASOS time series
     @Published var isSynopticLoading = false
     @Published var synopticError: String?
@@ -33,39 +33,8 @@ class WeatherViewModel: ObservableObject {
     private let weatherService = WeatherService.shared
     private let synopticService = SynopticService.shared
 
-    // MARK: - ASOS Boost rate limiting
-    private static let boostLimitPerDay = 25
-    private static let boostCountKey = "synoptic_boost_count"
-    private static let boostDateKey = "synoptic_boost_date"
-
-    var boostRemaining: Int {
-        resetBoostIfNewDay()
-        return max(0, Self.boostLimitPerDay - UserDefaults.standard.integer(forKey: Self.boostCountKey))
-    }
-
-    var hasBoostData: Bool { synopticLatest != nil }
-
-    private func resetBoostIfNewDay() {
-        let lastDate = UserDefaults.standard.string(forKey: Self.boostDateKey) ?? ""
-        let today = Self.todayString()
-        if lastDate != today {
-            UserDefaults.standard.set(0, forKey: Self.boostCountKey)
-            UserDefaults.standard.set(today, forKey: Self.boostDateKey)
-        }
-    }
-
-    private func recordBoostUse() {
-        resetBoostIfNewDay()
-        let current = UserDefaults.standard.integer(forKey: Self.boostCountKey)
-        UserDefaults.standard.set(current + 1, forKey: Self.boostCountKey)
-    }
-
-    nonisolated private static func todayString() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f.string(from: Date())
-    }
+    /// Whether ASOS data is available (Pro feature, auto-fetched)
+    var hasASOSData: Bool { synopticLatest != nil }
 
     // MARK: - Load with full Airport (preferred — enables hasMetar routing)
     func load(airport: Airport) async {
@@ -226,21 +195,16 @@ class WeatherViewModel: ObservableObject {
         }
     }
 
-    // MARK: - ASOS Boost (on-demand Synoptic 5-minute data)
-    func activateASOSBoost(icao: String) async {
-        guard boostRemaining > 0 else {
-            synopticError = "Daily ASOS Boost limit reached. Resets at midnight."
-            return
-        }
-
+    // MARK: - ASOS (auto-fetch for Pro users)
+    /// Fetch ASOS data in the background. Called automatically on load for Pro users.
+    func fetchASOS(icao: String) async {
         isSynopticLoading = true
         synopticError = nil
 
         do {
             let series = try await synopticService.fetchTimeSeries(for: icao, recentMinutes: 360)
             synopticHistory = series
-            synopticLatest = series.last  // most recent observation
-            recordBoostUse()
+            synopticLatest = series.last
         } catch {
             synopticError = "ASOS data unavailable for this airport."
             synopticLatest = nil
