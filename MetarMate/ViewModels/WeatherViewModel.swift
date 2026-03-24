@@ -38,6 +38,7 @@ class WeatherViewModel: ObservableObject {
 
     // MARK: - Load with full Airport (preferred — enables hasMetar routing)
     func load(airport: Airport) async {
+        if let last = lastUpdated, Date().timeIntervalSince(last) < 60 { return }
         isLoading = true
         error = nil
         noWeatherReporting = false
