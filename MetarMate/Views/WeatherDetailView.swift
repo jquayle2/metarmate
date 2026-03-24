@@ -93,6 +93,9 @@ struct WeatherDetailView: View {
         }
         .refreshable {
             await vm.load(airport: airport)
+            if store.isProUser && airport.hasMetar {
+                await vm.fetchASOS(icao: airport.icao)
+            }
         }
     }
 
