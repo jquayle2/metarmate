@@ -320,28 +320,115 @@ struct WeatherDetailView: View {
 
     // Wind strip showing last ~60 min of 5-min observations
     private var asosWindStrip: some View {
-        let recentObs = vm.synopticHistory.suffix(12)
-        return VStack(alignment: .leading, spacing: 4) {
-            Text("WIND (last 60 min)")
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(.cyan.opacity(0.6))
+        let recentObs = Array(vm.synopticHistory.suffix(12))
+        let maxWind: Double = recentObs.reduce(0) { current, obs in
+            max(current, obs.windGust ?? obs.windSpeed ?? 0)
+        }
+        let barScale = max(maxWind, 10)
+
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("WIND (last 60 min)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.cyan.opacity(0.6))
+                Spacer()
+                HStack(spacing: 8) {
+                    HStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(Color.cyan.opacity(0.7))
+                            .frame(width: 8, height: 8)
+                        Text("Sust")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                    HStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(Color.orange.opacity(0.5))
+                            .frame(width: 8, height: 8)
+                        Text("Gust")
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
             HStack(spacing: 2) {
-                ForEach(Array(recentObs.enumerated()), id: \.offset) { _, obs in
+                ForEach(Array(recentObs.enumerated()), id: \.offset) { idx, obs in
                     let spd = Int(obs.windSpeed ?? 0)
                     let gust = obs.windGust.map { Int($0) }
-                    VStack(spacing: 1) {
-                        if let g = gust, g > spd {
-                            Text("\(g)")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(g >= 25 ? .red : g >= 15 ? .orange : .cyan)
+                    let hasGust = (gust ?? 0) > spd
+                    let effectiveDir: Int? = obs.windDirection ?? (idx > 0 ? recentObs[idx - 1].windDirection : nil)
+                    let prevDir = idx > 0 ? (recentObs[idx - 1].windDirection ?? (idx > 1 ? recentObs[idx - 2].windDirection : nil)) : nil
+                    let bigShift: Bool = {
+                        guard let d = effectiveDir, let p = prevDir else { return idx == 0 && effectiveDir != nil }
+                        let diff = abs(d - p)
+                        return min(diff, 360 - diff) >= 20
+                    }()
+
+                    VStack(spacing: 2) {
+                        if (idx == 0 || bigShift), let d = effectiveDir, spd > 0 {
+                            Text("\(d)°")
+                                .font(.system(size: 8))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("")
+                                .font(.system(size: 8))
                         }
-                        Text("\(spd)")
-                            .font(.system(size: 13))
-                            .foregroundColor(.cyan.opacity(0.8))
+
+                        if let d = effectiveDir, spd > 0 {
+                            Image(systemName: "location.north.fill")
+                                .font(.system(size: 10))
+                                .rotationEffect(.degrees(Double(d)))
+                                .foregroundColor(.cyan.opacity(min(1.0, 0.3 + Double(spd) / 15.0)))
+                        } else if spd == 0 {
+                            Circle()
+                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                .frame(width: 8, height: 8)
+                        } else {
+                            Image(systemName: "location.north.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.cyan.opacity(0.2))
+                        }
+
+                        if hasGust, let g = gust {
+                            Text("G\(g)")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundColor(g >= 25 ? .red : g >= 15 ? .orange : .orange.opacity(0.8))
+                        } else {
+                            Text("\(spd)")
+                                .font(.system(size: 10))
+                                .foregroundColor(.cyan.opacity(0.8))
+                        }
+
+                        ZStack(alignment: .bottom) {
+                            if hasGust, let g = gust {
+                                let gustH = CGFloat(Double(g) / barScale) * 40
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.orange.opacity(0.25))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 2)
+                                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                                    )
+                                    .frame(height: max(gustH, 2))
+                            }
+                            let spdH = CGFloat(Double(spd) / barScale) * 40
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(spd == 0 ? Color.secondary.opacity(0.2) : Color.cyan.opacity(0.4 + Double(spd) / 25.0))
+                                .frame(height: max(spdH, 2))
+                        }
+                        .frame(height: 40, alignment: .bottom)
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
+
+            HStack {
+                Text("60m ago")
+                Spacer()
+                Text("now")
+            }
+            .font(.system(size: 9))
+            .foregroundColor(.secondary.opacity(0.5))
         }
     }
 
