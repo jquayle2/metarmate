@@ -210,6 +210,10 @@ class WeatherViewModel: ObservableObject {
             synopticHistory = series
             synopticLatest = series.last
             print("[ASOS] synopticLatest set: \(synopticLatest != nil)")
+        } catch is CancellationError {
+            print("[ASOS] Task cancelled, keeping existing data")
+        } catch let error as NSError where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
+            print("[ASOS] URL request cancelled, keeping existing data")
         } catch {
             print("[ASOS] Error: \(error)")
             synopticError = "ASOS data unavailable for this airport."
