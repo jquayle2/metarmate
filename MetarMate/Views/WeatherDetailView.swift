@@ -79,16 +79,10 @@ struct WeatherDetailView: View {
         }
         .task {
             await vm.load(airport: airport)
-            if store.isProUser && airport.hasMetar {
-                await vm.fetchASOS(icao: airport.icao)
-            }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
                 guard !Task.isCancelled else { break }
                 await vm.load(airport: airport)
-                if store.isProUser && airport.hasMetar {
-                    await vm.fetchASOS(icao: airport.icao)
-                }
             }
         }
         .refreshable {
