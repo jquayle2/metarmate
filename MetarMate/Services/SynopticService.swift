@@ -115,7 +115,7 @@ actor SynopticService {
             elevation: Double(station.elevation ?? "0") ?? 0,
             observationTime: date,
             temperature: obs["air_temp_value_1"]?.latestDouble,
-            dewpoint: obs["dew_point_temperature_value_1"]?.latestDouble,
+            dewpoint: obs["dew_point_temperature_value_1"]?.latestDouble ?? obs["dew_point_temperature_value_1d"]?.latestDouble,
             windSpeed: obs["wind_speed_value_1"]?.latestDouble,
             windGust: obs["wind_gust_value_1"]?.latestDouble,
             windDirection: obs["wind_direction_value_1"]?.latestDouble.flatMap { Int($0) },
@@ -124,12 +124,12 @@ actor SynopticService {
             seaLevelPressure: obs["sea_level_pressure_value_1"]?.latestDouble,
             weatherCondition: obs["weather_condition_value_1d"]?.latestString,
             cloudLayers: parseCloudsLatest(obs),
+            skyConfirmedClear: isSkyConfirmedClearLatest(obs),
             isFromSynoptic: true
         )
     }
 
     // MARK: - Parsing (Time Series)
-
     private func parseTimeSeries(station: SynopticStation) throws -> [SynopticObservation] {
         let obs = station.observations
 
@@ -139,7 +139,7 @@ actor SynopticService {
         }
 
         let temps = obs["air_temp_set_1"]?.arrayDoubles
-        let dewpoints = obs["dew_point_temperature_set_1"]?.arrayDoubles
+        let dewpoints = obs["dew_point_temperature_set_1"]?.arrayDoubles ?? obs["dew_point_temperature_set_1d"]?.arrayDoubles
         let windSpeeds = obs["wind_speed_set_1"]?.arrayDoubles
         let windGusts = obs["wind_gust_set_1"]?.arrayDoubles
         let windDirs = obs["wind_direction_set_1"]?.arrayDoubles
@@ -180,6 +180,7 @@ actor SynopticService {
                 seaLevelPressure: sp,
                 weatherCondition: wxStr,
                 cloudLayers: parseCloudAtIndex(obs, index: i),
+                skyConfirmedClear: isSkyConfirmedClearAtIndex(obs, index: i),
                 isFromSynoptic: true
             ))
         }
@@ -188,6 +189,27 @@ actor SynopticService {
     }
 
     // MARK: - Cloud parsing helpers
+
+    private func isSkyConfirmedClearLatest(_ obs: [String: SynopticValue]) -> Bool {
+        if let code = obs["cloud_layer_1_code_value_1"]?.latestDouble {
+            return SynopticCloudLayer.isClearCode(Int(code))
+        }
+        if let code = obs["cloud_layer_1_code_value_1"]?.latestString, code.uppercased().hasPrefix("CLR") || code.uppercased().hasPrefix("SKC") {
+            return true
+        }
+        return false
+    }
+
+    private func isSkyConfirmedClearAtIndex(_ obs: [String: SynopticValue], index: Int) -> Bool {
+        if let nums = obs["cloud_layer_1_code_set_1"]?.arrayDoubles, let num = nums[safe: index] ?? nil {
+            return SynopticCloudLayer.isClearCode(Int(num))
+        }
+        if let codes = obs["cloud_layer_1_code_set_1"]?.arrayStrings, let code = codes[safe: index],
+           code.uppercased().hasPrefix("CLR") || code.uppercased().hasPrefix("SKC") {
+            return true
+        }
+        return false
+    }
 
     private func parseCloudsLatest(_ obs: [String: SynopticValue]) -> [SynopticCloudLayer] {
         var layers: [SynopticCloudLayer] = []
@@ -248,6 +270,7 @@ struct SynopticObservation: Identifiable, Sendable {
     let seaLevelPressure: Double? // mb
     let weatherCondition: String? // e.g. "RA", "SN", "FG"
     let cloudLayers: [SynopticCloudLayer]
+    let skyConfirmedClear: Bool
     let isFromSynoptic: Bool
 
     /// Estimated flight category from visibility and ceiling
@@ -261,7 +284,7 @@ struct SynopticObservation: Identifiable, Sendable {
         if let v = vis, v < 3.0 { return .ifr }
         if let c = ceiling, c < 3000 { return .mvfr }
         if let v = vis, v < 5.0 { return .mvfr }
-        if ceiling == nil && cloudLayers.isEmpty { return .unknown }
+        if ceiling == nil && cloudLayers.isEmpty && !skyConfirmedClear { return .unknown }
         return .vfr
     }
 
@@ -332,6 +355,10 @@ struct SynopticCloudLayer: Sendable {
         }
 
         return SynopticCloudLayer(coverage: coverage, altitude: altHundreds * 100)
+    }
+
+    nonisolated static func isClearCode(_ code: Int) -> Bool {
+        return code > 0 && code % 10 == 1
     }
 }
 

@@ -554,7 +554,7 @@ struct WeatherDetailView: View {
             if !obs.cloudLayers.isEmpty {
                 let layerTexts = obs.cloudLayers.map { "\($0.coverage.rawValue) \($0.altitude) ft" }
                 let worstColor = obs.cloudLayers.map { synopticCloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
-                conditionRow("cloud.fill", "Clouds", layerTexts.joined(separator: ", "), color: worstColor)
+                conditionRow("cloud.fill", "Clouds", layerTexts.joined(separator: "\n"), color: worstColor)
             }
 
             if let t = obs.temperatureCelsius, let d = obs.dewpointCelsius {
