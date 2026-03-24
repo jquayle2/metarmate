@@ -529,10 +529,14 @@ struct WeatherDetailView: View {
             }
 
             if let spd = obs.windSpeed {
-                let dir = obs.windDirection.map { String(format: "%03d°", $0) } ?? "VRB"
-                let gustText = obs.windGust.map { " gusting \(Int($0)) kt" } ?? ""
-                let wind = Wind(direction: obs.windDirection, speed: Int(spd), gust: obs.windGust.map { Int($0) }, isVariable: obs.windDirection == nil)
-                conditionRow("wind", "Wind", "\(dir) at \(Int(spd)) kt\(gustText)", color: windConditionColor(wind))
+                if Int(spd) == 0 {
+                    conditionRow("wind", "Wind", "Calm", color: .green)
+                } else {
+                    let dir = obs.windDirection.map { String(format: "%03d°", $0) } ?? "VRB"
+                    let gustText = obs.windGust.map { " gusting \(Int($0)) kt" } ?? ""
+                    let wind = Wind(direction: obs.windDirection, speed: Int(spd), gust: obs.windGust.map { Int($0) }, isVariable: obs.windDirection == nil)
+                    conditionRow("wind", "Wind", "\(dir) at \(Int(spd)) kt\(gustText)", color: windConditionColor(wind))
+                }
             }
 
             if let v = obs.visibility {
