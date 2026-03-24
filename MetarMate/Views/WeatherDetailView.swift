@@ -547,8 +547,8 @@ struct WeatherDetailView: View {
 
             if let ceiling = obs.ceilingAGL {
                 let ceilingLayer = obs.cloudLayers.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-                let coverageStr = ceilingLayer.map { $0.coverage.rawValue } ?? "BKN"
-                conditionRow("cloud.fill", "Ceiling", "\(coverageStr) at \(ceiling) ft", color: ceilingConditionColor(ceiling))
+                let coverage = ceilingLayer?.coverage == .overcast ? "Overcast" : "Broken"
+                conditionRow("cloud.fill", "Ceiling", "\(coverage) at \(ceiling.formatted()) ft", color: ceilingConditionColor(ceiling))
             }
 
             if !obs.cloudLayers.isEmpty {
@@ -565,7 +565,7 @@ struct WeatherDetailView: View {
                         ForEach(obs.cloudLayers.indices, id: \.self) { i in
                             let layer = obs.cloudLayers[i]
                             let layerColor = synopticCloudLayerColor(layer)
-                            Text("\(layer.coverage.rawValue) \(layer.altitude) ft")
+                            Text("\(layer.coverage.rawValue) \(layer.altitude.formatted()) ft")
                                 .font(.subheadline)
                                 .foregroundColor(layerColor)
                                 .fontWeight(layerColor == .green || layerColor == .primary ? .regular : .semibold)
