@@ -202,17 +202,22 @@ class WeatherViewModel: ObservableObject {
         isSynopticLoading = true
         synopticError = nil
 
-        do {
-            let series = try await synopticService.fetchTimeSeries(for: icao, recentMinutes: 360)
+        let service = synopticService
+        let result: Result<[SynopticObservation], Error> = await Task {
+            do {
+                let series = try await service.fetchTimeSeries(for: icao, recentMinutes: 360)
+                return .success(series)
+            } catch {
+                return .failure(error)
+            }
+        }.value
+
+        switch result {
+        case .success(let series):
             print("[ASOS] Got \(series.count) observations")
             synopticHistory = series
             synopticLatest = series.last
-            print("[ASOS] synopticLatest set: \(synopticLatest != nil)")
-        } catch is CancellationError {
-            print("[ASOS] Task cancelled, keeping existing data")
-        } catch let error as NSError where error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled {
-            print("[ASOS] URL request cancelled, keeping existing data")
-        } catch {
+        case .failure(let error):
             print("[ASOS] Error: \(error)")
             synopticError = "ASOS data unavailable for this airport."
             synopticLatest = nil
