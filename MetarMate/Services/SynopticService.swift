@@ -256,6 +256,7 @@ struct SynopticObservation: Identifiable, Sendable {
         if let v = vis, v < 3.0 { return .ifr }
         if let c = ceiling, c < 3000 { return .mvfr }
         if let v = vis, v < 5.0 { return .mvfr }
+        if ceiling == nil && cloudLayers.isEmpty { return .unknown }
         return .vfr
     }
 
