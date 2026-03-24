@@ -1145,10 +1145,11 @@ struct WeatherDetailView: View {
         // Use observed trend for the card color/icon — it reflects what's happening NOW.
         // Forecast divergence is called out separately in the summary text.
         let observedOverall = trend.observed.overall
-        let color = observedOverall == .unknown ? trend.overall.color : observedOverall.color
-        let iconDirection = observedOverall == .unknown ? trend.overall : observedOverall
+        let isMixed = trend.headline.hasPrefix("Mixed")
+        let color: Color = isMixed ? .orange : (observedOverall == .unknown ? trend.overall.color : observedOverall.color)
+        let iconDirection = isMixed ? TrendDirection.steady : (observedOverall == .unknown ? trend.overall : observedOverall)
         let roc = trend.observed.rateOfChange
-        let isDeteriorating = observedOverall == .deteriorating
+        let isDeteriorating = observedOverall == .deteriorating && !isMixed
 
         return HStack(spacing: 0) {
             // Left-edge status strip

@@ -399,6 +399,22 @@ struct WeatherTrend: Codable {
     private static func deriveHeadline(observed: ObservedTrend, forecast: ForecastTrend) -> String {
         let roc = observed.rateOfChange
 
+        // Detect mixed conditions — some improving, some deteriorating
+        let trends = [observed.ceiling, observed.visibility, observed.wind]
+        let hasDeterioration = trends.contains(.deteriorating)
+        let hasImprovement = trends.contains(.improving)
+
+        if hasDeterioration && hasImprovement {
+            var parts: [String] = []
+            if observed.ceiling == .improving { parts.append("Ceiling rising") }
+            if observed.visibility == .improving { parts.append("Visibility improving") }
+            if observed.wind == .improving { parts.append("Wind easing") }
+            if observed.ceiling == .deteriorating { parts.append("Ceiling falling") }
+            if observed.visibility == .deteriorating { parts.append("Visibility dropping") }
+            if observed.wind == .deteriorating { parts.append("Wind increasing") }
+            return "Mixed — \(parts.joined(separator: ", "))"
+        }
+
         // Ceiling is the most safety-critical — lead with it if it's moving
         if observed.ceiling == .deteriorating {
             if let delta = roc?.ceilingDeltaFt, abs(delta) > 0 {
