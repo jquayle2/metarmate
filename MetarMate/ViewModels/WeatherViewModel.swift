@@ -198,7 +198,6 @@ class WeatherViewModel: ObservableObject {
     // MARK: - ASOS (auto-fetch for Pro users)
     /// Fetch ASOS data in the background. Called automatically on load for Pro users.
     func fetchASOS(icao: String) async {
-        print("[ASOS] fetchASOS called for \(icao)")
         isSynopticLoading = true
         synopticError = nil
 
@@ -214,11 +213,9 @@ class WeatherViewModel: ObservableObject {
 
         switch result {
         case .success(let series):
-            print("[ASOS] Got \(series.count) observations")
             synopticHistory = series
             synopticLatest = series.last
-        case .failure(let error):
-            print("[ASOS] Error: \(error)")
+        case .failure:
             synopticError = "ASOS data unavailable for this airport."
             synopticLatest = nil
             synopticHistory = []
