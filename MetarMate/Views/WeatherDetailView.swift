@@ -552,9 +552,27 @@ struct WeatherDetailView: View {
             }
 
             if !obs.cloudLayers.isEmpty {
-                let layerTexts = obs.cloudLayers.map { "\($0.coverage.rawValue) \($0.altitude) ft" }
-                let worstColor = obs.cloudLayers.map { synopticCloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
-                conditionRow("cloud.fill", "Clouds", layerTexts.joined(separator: "\n"), color: worstColor)
+                HStack(alignment: .top, spacing: 10) {
+                    let worstColor = obs.cloudLayers.map { synopticCloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
+                    Image(systemName: "cloud.fill")
+                        .foregroundColor(worstColor == .primary ? .secondary : worstColor.opacity(0.8))
+                        .frame(width: 20)
+                    Text("Clouds")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .frame(width: 100, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(obs.cloudLayers.indices, id: \.self) { i in
+                            let layer = obs.cloudLayers[i]
+                            let layerColor = synopticCloudLayerColor(layer)
+                            Text("\(layer.coverage.rawValue) \(layer.altitude) ft")
+                                .font(.subheadline)
+                                .foregroundColor(layerColor)
+                                .fontWeight(layerColor == .green || layerColor == .primary ? .regular : .semibold)
+                        }
+                    }
+                    Spacer()
+                }
             }
 
             if let t = obs.temperatureCelsius, let d = obs.dewpointCelsius {
