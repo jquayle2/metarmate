@@ -37,7 +37,13 @@ actor WeatherService {
         var result: [String: Metar] = [:]
         for raw in raws {
             if let metar = try? MetarParser.parse(raw: raw) {
-                result[metar.stationId] = metar
+                if let existing = result[metar.stationId] {
+                    if metar.observationTime > existing.observationTime {
+                        result[metar.stationId] = metar
+                    }
+                } else {
+                    result[metar.stationId] = metar
+                }
             }
         }
         return result
