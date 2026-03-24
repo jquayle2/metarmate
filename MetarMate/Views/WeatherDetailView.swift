@@ -673,7 +673,7 @@ struct WeatherDetailView: View {
         if gust >= 20 || speed >= 25 || spread >= 15 { return .orange }
         if gust >= 15 || speed >= 20 || spread >= 10 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
         if speed > 0 { return .green }
-        return .primary
+        return .green  // calm is green
     }
 
     // Visibility: flight category colors — VFR green, MVFR blue, IFR red, LIFR magenta
@@ -2117,7 +2117,7 @@ struct WeatherDetailView: View {
         if gust >= 20 || speed >= 25 { return .orange }
         if gust >= 15 || speed >= 20 { return Color(red:1,green:0.6,blue:0) }
         if speed > 0 { return .green }
-        return .primary
+        return .green  // calm is green
     }
 
     private func advisoryCloudColor(_ pct: Int) -> Color {
