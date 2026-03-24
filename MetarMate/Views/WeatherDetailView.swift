@@ -358,21 +358,16 @@ struct WeatherDetailView: View {
                     let gust = obs.windGust.map { Int($0) }
                     let hasGust = (gust ?? 0) > spd
                     let effectiveDir: Int? = obs.windDirection ?? (idx > 0 ? recentObs[idx - 1].windDirection : nil)
-                    let prevDir = idx > 0 ? (recentObs[idx - 1].windDirection ?? (idx > 1 ? recentObs[idx - 2].windDirection : nil)) : nil
-                    let bigShift: Bool = {
-                        guard let d = effectiveDir, let p = prevDir else { return idx == 0 && effectiveDir != nil }
-                        let diff = abs(d - p)
-                        return min(diff, 360 - diff) >= 20
-                    }()
 
                     VStack(spacing: 2) {
-                        if (idx == 0 || bigShift), let d = effectiveDir, spd > 0 {
+                        if let d = effectiveDir, spd > 0 {
                             Text("\(d)°")
                                 .font(.system(size: 8))
                                 .foregroundColor(.secondary)
                         } else {
-                            Text("")
+                            Text("—")
                                 .font(.system(size: 8))
+                                .foregroundColor(.secondary.opacity(0.3))
                         }
 
                         if let d = effectiveDir, spd > 0 {
