@@ -67,6 +67,11 @@ class AirportService {
             ($0.iata?.contains(q) ?? false) ||
             $0.name.uppercased().contains(q)
         }
+        .sorted { a, b in
+            let aScore = searchRelevance(airport: a, query: q)
+            let bScore = searchRelevance(airport: b, query: q)
+            return aScore > bScore
+        }
         .prefix(limit)
         .map { $0 }
 
@@ -86,6 +91,25 @@ class AirportService {
 
         let combined = Array(localResults) + cached
         return Array(combined.prefix(limit))
+    }
+
+    private func searchRelevance(airport: Airport, query: String) -> Int {
+        var score = 0
+        let icao = airport.icao.uppercased()
+        let iata = airport.iata?.uppercased() ?? ""
+        let name = airport.name.uppercased()
+
+        if icao == query || iata == query { score += 100 }
+        else if icao.hasPrefix(query) || iata.hasPrefix(query) { score += 80 }
+        else if icao.contains(query) || iata.contains(query) { score += 60 }
+
+        if name.hasPrefix(query) { score += 50 }
+        else if name.contains(" \(query)") { score += 30 }
+        else if name.contains(query) { score += 20 }
+
+        if airport.hasMetar { score += 10 }
+
+        return score
     }
 
     // MARK: - Live Station Lookup
