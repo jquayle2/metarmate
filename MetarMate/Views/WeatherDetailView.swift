@@ -1210,11 +1210,11 @@ struct WeatherDetailView: View {
     private func prominentDeltaLine(trend: WeatherTrend, roc: RateOfChange?) -> String? {
         guard let roc = roc else { return nil }
 
-        // Ceiling is highest priority
-        if trend.observed.ceiling != .steady, let ceilText = roc.ceilingQuantitativeText {
-            return ceilText
+        // Match the headline priority: ceiling first, then visibility, then wind
+        // If a category is non-steady, show its delta even if text is sparse — don't fall through to a conflicting metric
+        if trend.observed.ceiling != .steady {
+            return roc.ceilingQuantitativeText
         }
-        // Visibility next
         if trend.observed.visibility != .steady, let visText = roc.visibilityQuantitativeText {
             return visText
         }
