@@ -479,7 +479,8 @@ struct WeatherDetailView: View {
             }
         }
 
-        if let asosDir = obs.windDirection, let metarDir = metar.wind.direction {
+        if let asosSpeed = obs.windSpeed, Int(asosSpeed) > 0,
+           let asosDir = obs.windDirection, let metarDir = metar.wind.direction {
             var shift = abs(asosDir - metarDir)
             if shift > 180 { shift = 360 - shift }
             if shift >= 30 {
