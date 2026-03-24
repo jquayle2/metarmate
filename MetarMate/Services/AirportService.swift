@@ -62,10 +62,18 @@ class AirportService {
     func search(query: String, limit: Int = 20) -> [Airport] {
         guard !query.isEmpty else { return [] }
         let q = query.uppercased()
+        let words = q.split(separator: " ").map(String.init)
         let localResults = airports.filter {
-            $0.icao.contains(q) ||
-            ($0.iata?.contains(q) ?? false) ||
-            $0.name.uppercased().contains(q)
+            let name = $0.name.uppercased()
+            let icao = $0.icao.uppercased()
+            let iata = $0.iata?.uppercased() ?? ""
+            if icao.contains(q) || iata.contains(q) || name.contains(q) { return true }
+            if words.count > 1 {
+                return words.allSatisfy { word in
+                    icao.contains(word) || iata.contains(word) || name.contains(word)
+                }
+            }
+            return false
         }
         .sorted { a, b in
             let aScore = searchRelevance(airport: a, query: q)
@@ -106,6 +114,10 @@ class AirportService {
         if name.hasPrefix(query) { score += 50 }
         else if name.contains(" \(query)") { score += 30 }
         else if name.contains(query) { score += 20 }
+        else {
+            let words = query.split(separator: " ").map(String.init)
+            if words.count > 1 && words.allSatisfy({ name.contains($0) }) { score += 25 }
+        }
 
         if airport.hasMetar { score += 10 }
 
