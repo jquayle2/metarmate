@@ -194,6 +194,8 @@ actor SynopticService {
         for key in ["cloud_layer_1_code_value_1", "cloud_layer_2_code_value_1", "cloud_layer_3_code_value_1"] {
             if let code = obs[key]?.latestString, let layer = SynopticCloudLayer.from(code: code) {
                 layers.append(layer)
+            } else if let num = obs[key]?.latestDouble, let layer = SynopticCloudLayer.from(numericCode: Int(num)) {
+                layers.append(layer)
             }
         }
         return layers
@@ -204,6 +206,9 @@ actor SynopticService {
         for key in ["cloud_layer_1_code_set_1", "cloud_layer_2_code_set_1", "cloud_layer_3_code_set_1"] {
             if let codes = obs[key]?.arrayStrings, let code = codes[safe: index],
                let layer = SynopticCloudLayer.from(code: code) {
+                layers.append(layer)
+            } else if let nums = obs[key]?.arrayDoubles, let num = nums[safe: index] ?? nil,
+                      let layer = SynopticCloudLayer.from(numericCode: Int(num)) {
                 layers.append(layer)
             }
         }
@@ -304,6 +309,27 @@ struct SynopticCloudLayer: Sendable {
 
         guard let coverage = CloudCoverage(rawValue: coverageStr),
               let altHundreds = Int(altStr) else { return nil }
+
+        return SynopticCloudLayer(coverage: coverage, altitude: altHundreds * 100)
+    }
+
+    /// Parse Synoptic numeric cloud code (e.g. 64 = OVC at 600ft)
+    /// Last digit = sky condition (1=CLR, 2=SCT, 3=BKN, 4=OVC, 5=VV)
+    /// All digits except last = height in hundreds of feet
+    nonisolated static func from(numericCode: Int) -> SynopticCloudLayer? {
+        guard numericCode > 0 else { return nil }
+        let conditionDigit = numericCode % 10
+        let altHundreds = numericCode / 10
+
+        let coverage: CloudCoverage
+        switch conditionDigit {
+        case 1: return nil  // clear — no layer to report
+        case 2, 6: coverage = .scattered
+        case 3, 7: coverage = .broken
+        case 4, 8: coverage = .overcast
+        case 5, 9: coverage = .verticalVisibility
+        default: return nil
+        }
 
         return SynopticCloudLayer(coverage: coverage, altitude: altHundreds * 100)
     }
