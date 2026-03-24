@@ -29,6 +29,7 @@ class WeatherViewModel: ObservableObject {
     @Published var synopticHistory: [SynopticObservation] = []  // 6-hour ASOS time series
     @Published var isSynopticLoading = false
     @Published var synopticError: String?
+    private var asosActivatedIcao: String?  // Tracks which airport had ASOS activated
 
     private let weatherService = WeatherService.shared
     private let synopticService = SynopticService.shared
@@ -44,8 +45,6 @@ class WeatherViewModel: ObservableObject {
         nearbyReportingAirports = []
         advisoryWeather = nil
         isMetarFallback = false
-        synopticLatest = nil
-        synopticHistory = []
         synopticError = nil
 
         if !airport.hasMetar {
@@ -79,9 +78,11 @@ class WeatherViewModel: ObservableObject {
             }
         }
         isLoading = false
-    }
 
-    // MARK: - Load by ICAO string (legacy path — still works for live-resolved stations)
+        if let asosIcao = asosActivatedIcao {
+            await fetchASOS(icao: asosIcao)
+        }
+    }
     func load(icao: String) async {
         if let airport = AirportService.shared.airport(icao: icao) {
             await load(airport: airport)
@@ -200,6 +201,7 @@ class WeatherViewModel: ObservableObject {
     func fetchASOS(icao: String) async {
         isSynopticLoading = true
         synopticError = nil
+        asosActivatedIcao = icao
 
         do {
             let series = try await synopticService.fetchTimeSeries(for: icao, recentMinutes: 360)
