@@ -26,6 +26,15 @@ struct FlyingWeatherIntent: AppIntent {
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
         NSLog("FlyingWeatherIntent: perform() called, airport entity='\(airport?.id ?? "nil")'")
 
+        // Gate behind Pro
+        let isPro = await MainActor.run { StoreManager.shared.isProUser }
+        if !isPro {
+            return .result(
+                dialog: IntentDialog("Siri shortcuts require MetarMate Pro. Upgrade in the app to enable this feature."),
+                view: snippetView(label: "Pro Required", category: .unknown, detail: "Upgrade to MetarMate Pro")
+            )
+        }
+
         // 1. Resolve airport — from Shortcuts picker, Siri prompt, or nearest
         let resolvedAirport: Airport
 

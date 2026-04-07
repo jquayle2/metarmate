@@ -12,7 +12,8 @@ struct WeatherDetailView: View {
     @ObservedObject private var store = StoreManager.shared
     @State private var showLayoutSettings = false
     @State private var showNearbyAirports = false
-    @State private var showProUpgrade = false
+    @State private var showProUpgrade = false     // ASOS paywall
+    @State private var showProSheet = false       // Pro paywall (favorites/widgets/Siri)
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -61,7 +62,13 @@ struct WeatherDetailView: View {
                         Image(systemName: "slider.horizontal.3")
                             .foregroundColor(.secondary)
                     }
-                    Button(action: toggleFavorite) {
+                    Button {
+                        if store.isProUser {
+                            toggleFavorite()
+                        } else {
+                            showProSheet = true
+                        }
+                    } label: {
                         Image(systemName: isFavorite ? "star.fill" : "star")
                             .foregroundColor(isFavorite ? .yellow : .secondary)
                     }
@@ -75,7 +82,10 @@ struct WeatherDetailView: View {
             NearbyAirportsView(referenceAirport: airport)
         }
         .sheet(isPresented: $showProUpgrade) {
-            ProUpgradeView()
+            ProUpgradeView(mode: .asos)
+        }
+        .sheet(isPresented: $showProSheet) {
+            ProUpgradeView(mode: .pro)
         }
         .task {
             await vm.load(airport: airport)
@@ -274,13 +284,10 @@ struct WeatherDetailView: View {
                 windSpeed: obs.windSpeed ?? 0,
                 windGust: obs.windGust
             ) {
-                print("XW Calc: best runway for \(airport.icao) = \(best.runwayEnd.ident) (hdg \(best.runwayEnd.heading), xw \(best.crosswind), hw \(best.headwind))")
                 let rwyNum = Int(best.runwayEnd.ident.prefix(2)) ?? 0
                 if rwyNum > 0 {
                     params += "&runway=\(rwyNum)"
                 }
-            } else {
-                print("XW Calc: no runway data for \(airport.icao)")
             }
         }
         if let spd = obs.windSpeed {
@@ -292,7 +299,6 @@ struct WeatherDetailView: View {
             params += "&gust=0"
         }
         guard let url = URL(string: params) else { return }
-        print("XW Calc: opening URL = \(url.absoluteString)")
         UIApplication.shared.open(url)
     }
 

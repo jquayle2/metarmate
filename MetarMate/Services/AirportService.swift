@@ -22,19 +22,16 @@ class AirportService {
     // MARK: - Loading
     private func loadAirports() {
         guard let url = Bundle.main.url(forResource: "airports", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
-            print("AirportService: airports.json not found in bundle")
-            return
-        }
+              let data = try? Data(contentsOf: url) else { return }
         do {
             airports = try JSONDecoder().decode([Airport].self, from: data)
             for airport in airports {
                 icaoIndex[airport.icao.uppercased()] = airport
                 if let iata = airport.iata { iataIndex[iata.uppercased()] = airport }
             }
-            print("AirportService: loaded \(airports.count) airports")
+
         } catch {
-            print("AirportService: failed to decode airports.json — \(error)")
+
         }
     }
 

@@ -262,6 +262,25 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 }
 
+/// "Pro required" placeholder shown in home screen widgets for free users
+private struct ProRequiredView: View {
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+            Text("Pro Required")
+                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text("Upgrade in\nMetarMate")
+                .font(.system(size: 9, design: .rounded))
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 // MARK: - Lock Screen Circular Widget (Category Badge)
 // Shows flight category as a colored circle — the most glanceable format.
 
@@ -372,7 +391,9 @@ struct HomeScreenSmallView: View {
     let requestedICAO: String?
 
     var body: some View {
-        if let snap = snapshot {
+        if !WidgetDataManager.loadProStatus() {
+            ProRequiredView()
+        } else if let snap = snapshot {
             HStack(spacing: 0) {
                 // Left-edge category strip
                 RoundedRectangle(cornerRadius: 2)
@@ -540,7 +561,9 @@ struct HomeScreenMediumView: View {
     let requestedICAO: String?
 
     var body: some View {
-        if let snap = snapshot {
+        if !WidgetDataManager.loadProStatus() {
+            ProRequiredView()
+        } else if let snap = snapshot {
             HStack(spacing: 0) {
                 // Left-edge category strip
                 RoundedRectangle(cornerRadius: 2)

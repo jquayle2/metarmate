@@ -10,6 +10,7 @@ nonisolated enum WidgetDataManager {
     static let appGroupID = "group.com.jeffquayle.MetarMate"
     private static let snapshotPrefix = "widget.snapshot."
     private static let configKey = "widget.configs"
+    static let isProKey = "widget.isPro"
 
     private static var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
@@ -82,6 +83,17 @@ nonisolated enum WidgetDataManager {
         guard let defaults = sharedDefaults,
               let data = defaults.data(forKey: configKey) else { return [:] }
         return (try? JSONDecoder().decode([String: WidgetAirportConfig].self, from: data)) ?? [:]
+    }
+
+    // MARK: - Pro status (written by main app, read by widget extension)
+
+    nonisolated static func saveProStatus(_ isPro: Bool) {
+        sharedDefaults?.set(isPro, forKey: isProKey)
+        reloadWidgets()
+    }
+
+    nonisolated static func loadProStatus() -> Bool {
+        sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
     // MARK: - Reload all MetarMate widgets

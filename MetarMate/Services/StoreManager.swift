@@ -68,7 +68,7 @@ class StoreManager: ObservableObject {
             let fetched = try await Product.products(for: Self.allIDs)
             products = fetched.sorted { $0.price < $1.price }
         } catch {
-            print("StoreManager: failed to load products — \(error)")
+            // failed to load products
         }
         isLoading = false
     }
@@ -120,6 +120,7 @@ class StoreManager: ObservableObject {
 
         isProUser = foundPro
         isAsosSubscriber = foundAsos
+        WidgetDataManager.saveProStatus(foundPro)
     }
 
     // MARK: - Transaction listener
