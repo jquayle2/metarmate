@@ -1512,66 +1512,75 @@ struct WeatherDetailView: View {
 
     // MARK: - TAF
     private func tafSection(_ taf: Taf, showRaw: Bool = true) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                sectionHeader("TAF")
-                if taf.validFrom > Date() {
-                    Text("UPCOMING")
-                        .font(.caption2.bold())
-                        .foregroundColor(.orange)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
-                }
-                Spacer()
-                let totalPeriods = taf.forecasts.count
-                if totalPeriods > 3 {
-                    Button {
-                        tafExpanded.toggle()
-                    } label: {
-                        Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+
+            // TAF periods — own card
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    sectionHeader("TAF")
+                    if taf.validFrom > Date() {
+                        Text("UPCOMING")
+                            .font(.caption2.bold())
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
+                    }
+                    Spacer()
+                    let totalPeriods = taf.forecasts.count
+                    if totalPeriods > 3 {
+                        Button {
+                            tafExpanded.toggle()
+                        } label: {
+                            Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+                let tafIsUpcoming = taf.validFrom > Date()
+                let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(3))
+                ForEach(displayedPeriods) { period in
+                    tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
+                }
             }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(cardBackground)
 
+            // Raw TAF — separate card below the periods
             if showRaw {
-                Button {
-                    rawTafExpanded.toggle()
-                } label: {
-                    HStack {
-                        Text("Raw TAF")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Image(systemName: rawTafExpanded ? "chevron.up" : "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { rawTafExpanded.toggle() }
+                    } label: {
+                        HStack {
+                            Text("Raw TAF")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Image(systemName: rawTafExpanded ? "chevron.up" : "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                    }
+                    .buttonStyle(.plain)
+                    if rawTafExpanded {
+                        Divider().padding(.horizontal)
+                        Text(taf.rawText)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .textSelection(.enabled)
+                            .padding()
                     }
                 }
-                .buttonStyle(.plain)
-
-                if rawTafExpanded {
-                    Text(taf.rawText)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.primary)
-                        .textSelection(.enabled)
-                        .padding(.top, 4)
-                }
-
-                Divider()
-            }
-
-            let tafIsUpcoming = taf.validFrom > Date()
-            let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(3))
-            ForEach(displayedPeriods) { period in
-                tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(cardBackground)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(cardBackground)
     }
 
     private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool, isUpcoming: Bool = false) -> some View {
