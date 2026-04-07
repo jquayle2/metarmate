@@ -1318,7 +1318,7 @@ struct WeatherDetailView: View {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { historyExpanded.toggle() }
                     } label: {
-                        Image(systemName: historyExpanded ? "chevron.up" : "chevron.down")
+                        Image(systemName: historyExpanded ? "chevron.down" : "chevron.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -1560,7 +1560,7 @@ struct WeatherDetailView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Image(systemName: rawTafExpanded ? "chevron.up" : "chevron.right")
+                            Image(systemName: rawTafExpanded ? "chevron.down" : "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
