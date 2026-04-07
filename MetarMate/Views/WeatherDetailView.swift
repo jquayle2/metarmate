@@ -1554,6 +1554,8 @@ struct WeatherDetailView: View {
                 tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(cardBackground)
     }

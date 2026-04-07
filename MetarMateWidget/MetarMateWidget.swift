@@ -384,7 +384,9 @@ struct HomeScreenSmallView: View {
                     // Airport ID + category badge
                     HStack(spacing: 5) {
                         Text(snap.icao)
-                            .font(.system(.title3, design: .monospaced, weight: .bold))
+                            .font(.system(.subheadline, design: .monospaced, weight: .bold))
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
                         Text(snap.flightCategory.rawValue)
                             .font(.system(.caption2, design: .rounded, weight: .bold))
                             .foregroundStyle(.white)
