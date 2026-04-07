@@ -1060,6 +1060,7 @@ struct WeatherDetailView: View {
     @State private var showForecastDetail = false
     @State private var historyExpanded = false
     @State private var tafExpanded = false
+    @State private var rawTafExpanded = false
 
     private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1526,7 +1527,7 @@ struct WeatherDetailView: View {
                 let totalPeriods = taf.forecasts.count
                 if totalPeriods > 3 {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { tafExpanded.toggle() }
+                        tafExpanded.toggle()
                     } label: {
                         Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
                             .font(.caption)
@@ -1534,16 +1535,30 @@ struct WeatherDetailView: View {
                     }
                 }
             }
+
             if showRaw {
-                DisclosureGroup("Raw TAF") {
+                Button {
+                    rawTafExpanded.toggle()
+                } label: {
+                    HStack {
+                        Text("Raw TAF")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Image(systemName: rawTafExpanded ? "chevron.up" : "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if rawTafExpanded {
                     Text(taf.rawText)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.primary)
                         .textSelection(.enabled)
                         .padding(.top, 4)
                 }
-                .font(.subheadline)
-                .foregroundColor(.secondary)
 
                 Divider()
             }
@@ -1554,7 +1569,6 @@ struct WeatherDetailView: View {
                 tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(cardBackground)
