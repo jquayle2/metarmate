@@ -4,65 +4,76 @@
   "version" : 1,
   "products" : [
     {
-      "displayPrice" : "3.99",
+      "displayPrice" : "8.99",
       "familyShareable" : false,
       "internalID" : "1001",
       "localizations" : [
         {
-          "description" : "Live ASOS weather data with auto-refresh",
-          "displayName" : "MetarMate Pro Monthly",
+          "description" : "Unlock unlimited favorites, all widgets, and Siri shortcuts",
+          "displayName" : "MetarMate Pro",
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.jeffquayle.MetarMate.pro.monthly",
-      "referenceName" : "MetarMate Pro Monthly",
-      "subscriptionGroupID" : "MetarMatePro",
-      "type" : "RecurringSubscription",
-      "subscription" : {
-        "subscriptionGroupID" : "MetarMatePro",
-        "subscriptionPeriod" : "P1M",
-        "introductoryOffer" : {
-          "paymentMode" : "free",
-          "subscriptionPeriod" : "P1W"
-        }
-      }
+      "productID" : "com.jeffquayle.MetarMate.pro",
+      "referenceName" : "MetarMate Pro",
+      "type" : "NonConsumable"
     },
     {
-      "displayPrice" : "29.99",
+      "displayPrice" : "1.99",
       "familyShareable" : false,
       "internalID" : "1002",
       "localizations" : [
         {
-          "description" : "Live ASOS weather data with auto-refresh — best value",
-          "displayName" : "MetarMate Pro Annual",
+          "description" : "Live ASOS weather updates every few minutes between hourly METARs",
+          "displayName" : "ASOS Updates Monthly",
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.jeffquayle.MetarMate.pro.annual",
-      "referenceName" : "MetarMate Pro Annual",
-      "subscriptionGroupID" : "MetarMatePro",
+      "productID" : "com.jeffquayle.MetarMate.asosupdates.monthly",
+      "referenceName" : "ASOS Updates Monthly",
+      "subscriptionGroupID" : "ASOSUpdates",
       "type" : "RecurringSubscription",
       "subscription" : {
-        "subscriptionGroupID" : "MetarMatePro",
+        "subscriptionGroupID" : "ASOSUpdates",
+        "subscriptionPeriod" : "P1M"
+      }
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "internalID" : "1003",
+      "localizations" : [
+        {
+          "description" : "Live ASOS weather updates every few minutes between hourly METARs — best value",
+          "displayName" : "ASOS Updates Annual",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.jeffquayle.MetarMate.asosupdates.annual",
+      "referenceName" : "ASOS Updates Annual",
+      "subscriptionGroupID" : "ASOSUpdates",
+      "type" : "RecurringSubscription",
+      "subscription" : {
+        "subscriptionGroupID" : "ASOSUpdates",
         "subscriptionPeriod" : "P1Y",
         "introductoryOffer" : {
           "paymentMode" : "free",
-          "subscriptionPeriod" : "P1W"
+          "subscriptionPeriod" : "P7D"
         }
       }
     }
   ],
   "subscriptionGroups" : [
     {
-      "id" : "MetarMatePro",
+      "id" : "ASOSUpdates",
       "localizations" : [
         {
-          "description" : "MetarMate Pro features",
-          "displayName" : "MetarMate Pro",
+          "description" : "5-minute ASOS weather updates",
+          "displayName" : "ASOS Updates",
           "locale" : "en_US"
         }
       ],
-      "name" : "MetarMate Pro"
+      "name" : "ASOSUpdates"
     }
   ]
 }

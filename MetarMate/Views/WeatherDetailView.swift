@@ -32,9 +32,9 @@ struct WeatherDetailView: View {
                     errorView(error)
                 } else {
                     headerSection
-                    if store.isProUser, vm.hasASOSData, let obs = vm.synopticLatest {
+                    if store.isAsosUser, vm.hasASOSData, let obs = vm.synopticLatest {
                         decodedASOSSection(obs)
-                    } else if !store.isProUser, vm.metar != nil {
+                    } else if !store.isAsosUser, vm.metar != nil {
                         asosProTeaser
                     }
                     if let metar = vm.metar {
@@ -226,9 +226,7 @@ struct WeatherDetailView: View {
         .background(cardBackground)
     }
 
-    // MARK: - ASOS Boost
-
-    // MARK: - ASOS Pro teaser (shown to non-Pro users)
+    // MARK: - ASOS teaser (shown when not subscribed and free period expired)
     private var asosProTeaser: some View {
         Button {
             showProUpgrade = true
@@ -238,10 +236,10 @@ struct WeatherDetailView: View {
                     .font(.title3)
                     .foregroundColor(.cyan)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Live ASOS Data")
+                    Text("ASOS Updates")
                         .font(.subheadline.bold())
                         .foregroundColor(.cyan)
-                    Text("Upgrade to Pro for weather updates between METARs")
+                    Text("Subscribe for 5-minute weather updates between METARs")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

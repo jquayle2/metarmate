@@ -77,7 +77,7 @@ class WeatherViewModel: ObservableObject {
                 await loadAdvisory(airport: airport)
             }
 
-            if StoreManager.shared.isProUser {
+            if StoreManager.shared.isAsosUser {
                 await fetchASOS(icao: icaoForFetch)
             }
         }

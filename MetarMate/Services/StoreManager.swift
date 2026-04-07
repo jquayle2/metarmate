@@ -3,25 +3,54 @@ import StoreKit
 import Combine
 
 // MARK: - StoreManager
-// Manages MetarMate Pro subscription via StoreKit 2.
-// Pro unlocks live ASOS data on the airport detail page.
+// Manages MetarMate Pro (one-time) and ASOS Updates (subscription) via StoreKit 2.
 @MainActor
 class StoreManager: ObservableObject {
     static let shared = StoreManager()
 
-    // MARK: - Product IDs (must match App Store Connect)
-    static let proMonthlyID = "com.jeffquayle.MetarMate.pro.monthly"
-    static let proAnnualID  = "com.jeffquayle.MetarMate.pro.annual"
-    private static let productIDs: Set<String> = [proMonthlyID, proAnnualID]
+    // MARK: - Product IDs
+    static let proID              = "com.jeffquayle.MetarMate.pro"
+    static let asosMonthlyID      = "com.jeffquayle.MetarMate.asosupdates.monthly"
+    static let asosAnnualID       = "com.jeffquayle.MetarMate.asosupdates.annual"
+    private static let allIDs: Set<String> = [proID, asosMonthlyID, asosAnnualID]
+
+    // MARK: - First launch tracking (60-day free ASOS window)
+    private static let firstLaunchKey = "metarmate_first_launch_date"
+    static let asosFreeDays: Double = 60
+
+    static var firstLaunchDate: Date {
+        if let stored = UserDefaults.standard.object(forKey: firstLaunchKey) as? Date {
+            return stored
+        }
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: firstLaunchKey)
+        return now
+    }
 
     // MARK: - Published state
     @Published private(set) var products: [Product] = []
-    // Set to true for TestFlight/beta testing — remove before App Store release
-    static let testFlightOverride = true
-    @Published private(set) var isProUser = testFlightOverride
+    @Published private(set) var isProUser = false
+    @Published private(set) var isAsosSubscriber = false
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
-    @Published private(set) var currentSubscription: Product?
+
+    // True if within the 60-day free ASOS launch window
+    var isAsosInFreePeriod: Bool {
+        let elapsed = Date().timeIntervalSince(Self.firstLaunchDate)
+        return elapsed < Self.asosFreeDays * 86400
+    }
+
+    // True if ASOS data should be shown (subscribed OR in free period)
+    var isAsosUser: Bool {
+        isAsosSubscriber || isAsosInFreePeriod
+    }
+
+    // Days remaining in free period (0 if expired)
+    var asosFreeDaysRemaining: Int {
+        let elapsed = Date().timeIntervalSince(Self.firstLaunchDate)
+        let remaining = Self.asosFreeDays * 86400 - elapsed
+        return max(0, Int(remaining / 86400))
+    }
 
     private var updateTask: Task<Void, Never>?
 
@@ -30,15 +59,13 @@ class StoreManager: ObservableObject {
         Task { await checkEntitlements() }
     }
 
-    deinit {
-        updateTask?.cancel()
-    }
+    deinit { updateTask?.cancel() }
 
-    // MARK: - Load products from App Store
+    // MARK: - Load products
     func loadProducts() async {
         isLoading = true
         do {
-            let fetched = try await Product.products(for: Self.productIDs)
+            let fetched = try await Product.products(for: Self.allIDs)
             products = fetched.sorted { $0.price < $1.price }
         } catch {
             print("StoreManager: failed to load products — \(error)")
@@ -77,19 +104,22 @@ class StoreManager: ObservableObject {
     // MARK: - Entitlement check
     func checkEntitlements() async {
         var foundPro = false
-        var activeSub: Product?
+        var foundAsos = false
 
         for await result in Transaction.currentEntitlements {
-            if let transaction = try? checkVerified(result) {
-                if Self.productIDs.contains(transaction.productID) {
-                    foundPro = true
-                    activeSub = products.first(where: { $0.id == transaction.productID })
-                }
+            guard let transaction = try? checkVerified(result) else { continue }
+            switch transaction.productID {
+            case Self.proID:
+                foundPro = true
+            case Self.asosMonthlyID, Self.asosAnnualID:
+                foundAsos = true
+            default:
+                break
             }
         }
 
-        isProUser = foundPro || Self.testFlightOverride
-        currentSubscription = activeSub
+        isProUser = foundPro
+        isAsosSubscriber = foundAsos
     }
 
     // MARK: - Transaction listener
@@ -117,7 +147,6 @@ class StoreManager: ObservableObject {
 // MARK: - Errors
 enum StoreError: LocalizedError {
     case unverifiedTransaction
-
     var errorDescription: String? {
         switch self {
         case .unverifiedTransaction: return "Transaction could not be verified."
