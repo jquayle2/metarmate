@@ -1532,7 +1532,7 @@ struct WeatherDetailView: View {
                         Button {
                             tafExpanded.toggle()
                         } label: {
-                            Image(systemName: tafExpanded ? "chevron.up" : "chevron.down")
+                            Image(systemName: tafExpanded ? "chevron.down" : "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
