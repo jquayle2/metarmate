@@ -27,7 +27,7 @@ Returns `"name": "North Las Vegas"` — cleaner but still not "North Las Vegas A
 The build script (`build_airports_from_ourairports.py`) reads from OurAirports CSV. The `name` field there is the source of the problem. Could post-process names in the script.
 
 ### 3. BlackboxPi SQLite Database
-`/Users/jquayle/Documents/Pi/BB-V2/airports.sqlite` — 19,594 US airports from a different source. May have better names. Worth comparing.
+`/Users/jquayle/code/Pi/BB-V2/airports.sqlite` — 19,594 US airports from a different source. May have better names. Worth comparing.
 
 ### 4. FAA NASR Data
 Official FAA names, available as downloadable dataset. Most authoritative but requires additional data pipeline work.
