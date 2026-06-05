@@ -51,4 +51,15 @@ struct Taf: Identifiable, Codable {
         }
         return nil
     }
+
+    // Base/FM periods only — the ones rendered as decoded plain-English blocks.
+    // Same filtering as currentForecast; does not alter its semantics.
+    var baseForecasts: [TafForecast] {
+        forecasts.filter { $0.type == .base || $0.type == .fm }
+    }
+
+    // TEMPO/BECMG/PROB overlays — surfaced in TAF Pilot Notes, not in the period blocks.
+    var overlayForecasts: [TafForecast] {
+        forecasts.filter { $0.type == .tempo || $0.type == .becmg || $0.type == .prob30 || $0.type == .prob40 }
+    }
 }

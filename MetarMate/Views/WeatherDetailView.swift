@@ -1531,7 +1531,7 @@ struct WeatherDetailView: View {
                             .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
                     }
                     Spacer()
-                    let totalPeriods = taf.forecasts.count
+                    let totalPeriods = taf.baseForecasts.count
                     if totalPeriods > 3 {
                         Button {
                             tafExpanded.toggle()
@@ -1543,7 +1543,9 @@ struct WeatherDetailView: View {
                     }
                 }
                 let tafIsUpcoming = taf.validFrom > Date()
-                let displayedPeriods = tafExpanded ? taf.forecasts : Array(taf.forecasts.prefix(3))
+                // Decoded blocks cover .base/.fm periods only; TEMPO/BECMG surface in TAF Pilot Notes.
+                let basePeriods = taf.baseForecasts
+                let displayedPeriods = tafExpanded ? basePeriods : Array(basePeriods.prefix(3))
                 ForEach(displayedPeriods) { period in
                     tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
                 }
@@ -1552,6 +1554,10 @@ struct WeatherDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(cardBackground)
+
+            // TAF Pilot Notes — forecast-oriented companion to the METAR Pilot Notes card.
+            // Self-hides when there are no notes.
+            tafPilotNotesSection(taf)
 
             // Raw TAF — separate card below the periods
             if showRaw {
@@ -1587,54 +1593,303 @@ struct WeatherDetailView: View {
         }
     }
 
+    // Decoded plain-English forecast block for a .base/.fm period.
+    // Left-edge strip in the period's flight-category color (4px, square corners — single-sided, no radius).
     private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool, isUpcoming: Bool = false) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Circle()
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text("From \(tafLocalClock(period.fromTime)) local")
+                    .font(.caption.bold())
+                    .foregroundColor(isCurrent ? .yellow : .primary)
+                if isCurrent {
+                    Text(isUpcoming ? "NEXT" : "NOW")
+                        .font(.caption2.bold())
+                        .foregroundColor(isUpcoming ? .orange : .yellow)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .overlay(Capsule().stroke(isUpcoming ? Color.orange : Color.yellow, lineWidth: 1))
+                }
+                Spacer()
+                FlightCategoryBadge(category: period.flightCategory)
+            }
+            Text(tafForecastSentence(period))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.leading, 10)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(isCurrent ? Color.yellow.opacity(0.05) : Color.clear)
+        .overlay(alignment: .leading) {
+            Rectangle()
                 .fill(period.flightCategory.swiftUIColor)
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+                .frame(width: 4)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text(periodTimeLabel(period))
-                        .font(.caption.bold())
-                        .foregroundColor(isCurrent ? .yellow : .primary)
-                    if isCurrent {
-                        Text(isUpcoming ? "NEXT" : "NOW")
-                            .font(.caption2.bold())
-                            .foregroundColor(isUpcoming ? .orange : .yellow)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .overlay(Capsule().stroke(isUpcoming ? Color.orange : Color.yellow, lineWidth: 1))
-                    }
-                    Spacer()
-                    FlightCategoryBadge(category: period.flightCategory)
-                }
-                if let wind = period.wind {
-                    Text(windText(wind))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                if let vis = period.visibility {
-                    Text("Vis: \(vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM")")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                if !period.clouds.isEmpty {
-                    Text(period.clouds.map { cloudLayerText($0) }.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                if !period.weatherPhenomena.isEmpty {
-                    Text(WeatherDecoder.decodeAll(period.weatherPhenomena))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+    // Decoded plain-English sentence for a forecast period — wind, visibility, weather, clouds.
+    private func tafForecastSentence(_ period: TafForecast) -> String {
+        var parts: [String] = []
+
+        if let wind = period.wind {
+            if wind.speed == 0 {
+                parts.append("winds calm")
+            } else {
+                let dir = wind.isVariable ? "variable" : String(format: "%03d°", wind.direction ?? 0)
+                var w = "wind \(dir) at \(wind.speed) kt"
+                if let gust = wind.gust { w += " gusting \(gust) kt" }
+                parts.append(w)
             }
         }
-        .padding(.vertical, 4)
-        .background(isCurrent ? Color.yellow.opacity(0.05) : Color.clear)
-        .cornerRadius(6)
+
+        if let vis = period.visibility {
+            parts.append("visibility \(vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM")")
+        }
+
+        if !period.weatherPhenomena.isEmpty {
+            parts.append(WeatherDecoder.decodeAll(period.weatherPhenomena).lowercased())
+        }
+
+        if period.clouds.isEmpty {
+            parts.append("sky clear")
+        } else {
+            parts.append(period.clouds.map { tafCloudPhrase($0) }.joined(separator: ", "))
+        }
+
+        let sentence = parts.joined(separator: ", ")
+        guard let first = sentence.first else { return "No forecast data." }
+        return first.uppercased() + sentence.dropFirst() + "."
+    }
+
+    // Plain-English cloud phrase, e.g. "broken at 2,500 ft", "scattered clouds at 4,000 ft".
+    private func tafCloudPhrase(_ layer: CloudLayer) -> String {
+        let word: String
+        switch layer.coverage {
+        case .few: word = "few clouds"
+        case .scattered: word = "scattered clouds"
+        case .broken: word = "broken"
+        case .overcast: word = "overcast"
+        case .clear, .skyClear: return "sky clear"
+        case .verticalVisibility:
+            return "vertical visibility \((layer.altitude * 100).formatted()) ft"
+        }
+        if layer.altitude == 0 { return word }
+        let cb = layer.isCumulonimbus ? " (CB)" : ""
+        return "\(word) at \((layer.altitude * 100).formatted()) ft\(cb)"
+    }
+
+    // Local "h:mm a" clock for a forecast time (Zulu → local).
+    private func tafLocalClock(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "h:mm a"
+        fmt.timeZone = .current
+        return fmt.string(from: date)
+    }
+
+    // MARK: - TAF Pilot Notes
+    // Forecast-oriented companion to the METAR Pilot Notes card. Every note carries timing
+    // and a planning-oriented "so what". Color discipline (per design):
+    //   red    = warning driven by IFR/LIFR or TS/heavy precip (category/convective meaning)
+    //   orange = wind/gust warning (never red — non-IFR/non-TS)
+    //   amber  = caution
+    //   gray   = neutral / deteriorating-trend summary
+    private struct TafPilotNote {
+        let icon: String
+        let headline: String   // time-stamped
+        let detail: String     // one-line "so what"
+        let color: Color
+        let rank: Int          // sort order: 0 red, 1 orange, 2 amber, 3 gray
+    }
+
+    private static let tafAmber = Color(red: 1.0, green: 0.6, blue: 0.0)
+
+    // Ceiling (lowest BKN/OVC/VV layer) in feet for a forecast period, if any.
+    private func tafCeilingFeet(_ period: TafForecast) -> Int? {
+        period.clouds
+            .filter { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility }
+            .map { $0.altitude * 100 }
+            .min()
+    }
+
+    private func tafVisText(_ vis: Double) -> String {
+        vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM"
+    }
+
+    // Heavy precip or thunderstorm in a period's phenomena — escalates overlay severity to warning.
+    private func tafHasConvectiveOrHeavy(_ period: TafForecast) -> Bool {
+        period.weatherPhenomena.contains { code in
+            let c = code.uppercased()
+            return c.contains("TS") || c.contains("GR") || c.hasPrefix("+") || c.contains("FC") || c.contains("FZ")
+        }
+        || period.clouds.contains { $0.isCumulonimbus }
+    }
+
+    private func tafCategorySeverity(_ cat: FlightCategory) -> Int {
+        switch cat {
+        case .vfr: return 0
+        case .mvfr: return 1
+        case .ifr: return 2
+        case .lifr: return 3
+        case .unknown: return 0
+        }
+    }
+
+    private func tafPilotNotes(for taf: Taf) -> [TafPilotNote] {
+        var notes: [TafPilotNote] = []
+        let amber = Self.tafAmber
+        let bases = taf.baseForecasts
+
+        // 1. IFR/LIFR onset in any base/fm period — flag each transition INTO low conditions.
+        for (i, p) in bases.enumerated() {
+            let cat = p.flightCategory
+            guard cat == .ifr || cat == .lifr else { continue }
+            let prevLow = i > 0 && (bases[i - 1].flightCategory == .ifr || bases[i - 1].flightCategory == .lifr)
+            if prevLow { continue }  // already in low conditions — don't repeat
+
+            var factors: [String] = []
+            if let c = tafCeilingFeet(p), c < 1000 { factors.append("ceiling \(c.formatted()) ft") }
+            if let v = p.visibility, v < 3 { factors.append("visibility \(tafVisText(v))") }
+            let limiting = factors.isEmpty ? "" : " — \(factors.joined(separator: ", "))"
+            notes.append(.init(
+                icon: cat == .lifr ? "cloud.fog.fill" : "cloud.fill",
+                headline: "\(cat.rawValue) from \(tafLocalClock(p.fromTime)) local",
+                detail: "Forecast \(cat.rawValue)\(limiting). Consider an alternate or adjust departure timing.",
+                color: .red, rank: 0))
+        }
+
+        // 2. TEMPO/BECMG overlays — surfaced here, not in the period blocks.
+        for p in taf.overlayForecasts {
+            let label = p.type == .becmg ? "Becoming" : (p.type == .tempo ? "Temporary" : p.type.rawValue)
+            let low = p.flightCategory == .ifr || p.flightCategory == .lifr
+            let severe = low || tafHasConvectiveOrHeavy(p)
+
+            var bits: [String] = []
+            if let v = p.visibility { bits.append("vis \(tafVisText(v))") }
+            if let c = tafCeilingFeet(p) { bits.append("ceiling \(c.formatted()) ft") }
+            if !p.weatherPhenomena.isEmpty { bits.append(WeatherDecoder.decodeAll(p.weatherPhenomena).lowercased()) }
+            let worst = bits.isEmpty ? p.flightCategory.rawValue : bits.joined(separator: ", ")
+
+            notes.append(.init(
+                icon: severe ? "exclamationmark.triangle.fill" : "cloud.sun.fill",
+                headline: "\(label) \(tafLocalClock(p.fromTime))–\(tafLocalClock(p.toTime)) local",
+                detail: "Watch for \(worst). Conditions may swing during this window — plan margins.",
+                color: severe ? .red : amber,
+                rank: severe ? 0 : 2))
+        }
+
+        // 3. Gusts crossing METAR-card thresholds in any base period (caution ≥15, warning ≥20).
+        for p in bases {
+            guard let gust = p.wind?.gust else { continue }
+            if gust >= 20 {
+                notes.append(.init(
+                    icon: "wind",
+                    headline: "Gusts \(gust) kt from \(tafLocalClock(p.fromTime)) local",
+                    detail: "Check crosswind component for your runway; add \(gust / 2) kt to approach speed.",
+                    color: .orange, rank: 1))
+            } else if gust >= 15 {
+                notes.append(.init(
+                    icon: "wind",
+                    headline: "Gusts \(gust) kt from \(tafLocalClock(p.fromTime)) local",
+                    detail: "Verify crosswind within limits; consider adding \(gust / 2) kt to approach speed.",
+                    color: amber, rank: 2))
+            }
+        }
+
+        // 4. Deteriorating trend across base periods — neutral summary.
+        if bases.count >= 2 {
+            let firstSev = tafCategorySeverity(bases.first!.flightCategory)
+            if let worst = bases.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
+               tafCategorySeverity(worst.flightCategory) > firstSev,
+               let onset = bases.first(where: { tafCategorySeverity($0.flightCategory) > firstSev }) {
+                notes.append(.init(
+                    icon: "chart.line.downtrend.xyaxis",
+                    headline: "Deteriorating by \(tafLocalClock(onset.fromTime)) local",
+                    detail: "Forecast steps down from \(bases.first!.flightCategory.rawValue) to \(worst.flightCategory.rawValue). An earlier departure stays ahead of it.",
+                    color: .gray, rank: 3))
+            }
+        }
+
+        // 5. Marginal-VFR ceiling/vis worth surfacing before it reaches IFR (optional caution).
+        for p in bases where p.flightCategory == .mvfr {
+            var factors: [String] = []
+            if let c = tafCeilingFeet(p), c < 1500 { factors.append("ceiling \(c.formatted()) ft") }
+            if let v = p.visibility, v < 4 { factors.append("visibility \(tafVisText(v))") }
+            guard !factors.isEmpty else { continue }
+            notes.append(.init(
+                icon: "cloud",
+                headline: "Marginal VFR from \(tafLocalClock(p.fromTime)) local",
+                detail: "Close to IFR — \(factors.joined(separator: ", ")). Watch the trend.",
+                color: amber, rank: 2))
+        }
+
+        return notes.sorted { $0.rank < $1.rank }
+    }
+
+    private func tafPilotNotesSection(_ taf: Taf) -> some View {
+        let notes = tafPilotNotes(for: taf)
+        guard !notes.isEmpty else { return AnyView(EmptyView()) }
+
+        let accent: Color = {
+            if notes.contains(where: { $0.color == .red }) { return .red }
+            if notes.contains(where: { $0.color == .orange }) { return .orange }
+            if notes.contains(where: { $0.color == Self.tafAmber }) { return Self.tafAmber }
+            return .gray
+        }()
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(accent)
+                        .font(.caption)
+                    Text("TAF PILOT NOTES")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+                }
+                ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
+                    HStack(alignment: .top, spacing: 0) {
+                        Rectangle()
+                            .fill(note.color)
+                            .frame(width: 3)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: note.icon)
+                                    .foregroundColor(note.color)
+                                    .font(.subheadline)
+                                    .frame(width: 20)
+                                Text(note.headline)
+                                    .font(.subheadline.bold())
+                                    .foregroundColor(.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Text(note.detail)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.leading, 28)
+                        }
+                        .padding(.leading, 8)
+                        .padding(.vertical, 2)
+                    }
+                }
+                Text("Forecast notes only. Verify against your aircraft POH and personal minimums.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 2)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(accent.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(accent.opacity(0.25), lineWidth: 1)
+                    )
+            )
+        )
     }
 
     // MARK: - Forecast Deviation Strip (Point 3)
