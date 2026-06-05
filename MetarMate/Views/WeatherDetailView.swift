@@ -1063,7 +1063,6 @@ struct WeatherDetailView: View {
     @State private var trendPulse = false
     @State private var showForecastDetail = false
     @State private var historyExpanded = false
-    @State private var tafExpanded = false
     @State private var rawTafExpanded = false
 
     private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
@@ -1531,22 +1530,12 @@ struct WeatherDetailView: View {
                             .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
                     }
                     Spacer()
-                    let totalPeriods = taf.baseForecasts.count
-                    if totalPeriods > 3 {
-                        Button {
-                            tafExpanded.toggle()
-                        } label: {
-                            Image(systemName: tafExpanded ? "chevron.down" : "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
                 }
                 let tafIsUpcoming = taf.validFrom > Date()
-                // Decoded blocks cover .base/.fm periods only; TEMPO/BECMG surface in TAF Pilot Notes.
-                let basePeriods = taf.baseForecasts
-                let displayedPeriods = tafExpanded ? basePeriods : Array(basePeriods.prefix(3))
-                ForEach(displayedPeriods) { period in
+                // Decoded blocks cover ALL .base/.fm periods — the same set the notes generator
+                // walks (Fix 3), so blocks and notes never disagree on which periods exist.
+                // TEMPO/BECMG surface in TAF Pilot Notes, not here.
+                ForEach(taf.baseForecasts) { period in
                     tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
                 }
             }
@@ -1687,6 +1676,32 @@ struct WeatherDetailView: View {
         return fmt.string(from: date)
     }
 
+    // Day-of-week disambiguation for a forecast time relative to now's local calendar day.
+    // "" = today, " tomorrow" = next local day, " MMM d" = further out (Fix 2).
+    private func tafDaySuffix(_ date: Date) -> String {
+        let cal = Calendar.current
+        let days = cal.dateComponents([.day],
+                                      from: cal.startOfDay(for: Date()),
+                                      to: cal.startOfDay(for: date)).day ?? 0
+        if days <= 0 { return "" }
+        if days == 1 { return " tomorrow" }
+        let df = DateFormatter()
+        df.dateFormat = "MMM d"
+        df.timeZone = .current
+        return " \(df.string(from: date))"
+    }
+
+    // Full point-in-time label, e.g. "3:00 PM local" / "9:00 AM local tomorrow".
+    private func tafTimeLabel(_ date: Date) -> String {
+        "\(tafLocalClock(date)) local\(tafDaySuffix(date))"
+    }
+
+    // Window label for an overlay group, e.g. "3:00 PM–9:00 AM local tomorrow"
+    // (day suffix keyed off the window start).
+    private func tafWindowLabel(from: Date, to: Date) -> String {
+        "\(tafLocalClock(from))–\(tafLocalClock(to)) local\(tafDaySuffix(from))"
+    }
+
     // MARK: - TAF Pilot Notes
     // Forecast-oriented companion to the METAR Pilot Notes card. Every note carries timing
     // and a planning-oriented "so what". Color discipline (per design):
@@ -1696,10 +1711,10 @@ struct WeatherDetailView: View {
     //   gray   = neutral / deteriorating-trend summary
     private struct TafPilotNote {
         let icon: String
-        let headline: String   // time-stamped
-        let detail: String     // one-line "so what"
+        let text: String       // single em-dash sentence: "<timing> — <so what>" (METAR-card style)
         let color: Color
-        let rank: Int          // sort order: 0 red, 1 orange, 2 amber, 3 gray
+        let rank: Int          // tier: 0 red, 1 orange, 2 amber, 3 gray
+        let time: Date         // forecast time, for chronological sort within a tier (Fix 2)
     }
 
     private static let tafAmber = Color(red: 1.0, green: 0.6, blue: 0.0)
@@ -1750,12 +1765,11 @@ struct WeatherDetailView: View {
             var factors: [String] = []
             if let c = tafCeilingFeet(p), c < 1000 { factors.append("ceiling \(c.formatted()) ft") }
             if let v = p.visibility, v < 3 { factors.append("visibility \(tafVisText(v))") }
-            let limiting = factors.isEmpty ? "" : " — \(factors.joined(separator: ", "))"
+            let limiting = factors.isEmpty ? "" : " (\(factors.joined(separator: ", ")))"
             notes.append(.init(
                 icon: cat == .lifr ? "cloud.fog.fill" : "cloud.fill",
-                headline: "\(cat.rawValue) from \(tafLocalClock(p.fromTime)) local",
-                detail: "Forecast \(cat.rawValue)\(limiting). Consider an alternate or adjust departure timing.",
-                color: .red, rank: 0))
+                text: "\(cat.rawValue) from \(tafTimeLabel(p.fromTime))\(limiting) — consider an alternate or adjust departure timing",
+                color: .red, rank: 0, time: p.fromTime))
         }
 
         // 2. TEMPO/BECMG overlays — surfaced here, not in the period blocks.
@@ -1772,10 +1786,9 @@ struct WeatherDetailView: View {
 
             notes.append(.init(
                 icon: severe ? "exclamationmark.triangle.fill" : "cloud.sun.fill",
-                headline: "\(label) \(tafLocalClock(p.fromTime))–\(tafLocalClock(p.toTime)) local",
-                detail: "Watch for \(worst). Conditions may swing during this window — plan margins.",
+                text: "\(label) \(tafWindowLabel(from: p.fromTime, to: p.toTime)) — watch for \(worst); plan margins for this window",
                 color: severe ? .red : amber,
-                rank: severe ? 0 : 2))
+                rank: severe ? 0 : 2, time: p.fromTime))
         }
 
         // 3. Gusts crossing METAR-card thresholds in any base period (caution ≥15, warning ≥20).
@@ -1784,15 +1797,13 @@ struct WeatherDetailView: View {
             if gust >= 20 {
                 notes.append(.init(
                     icon: "wind",
-                    headline: "Gusts \(gust) kt from \(tafLocalClock(p.fromTime)) local",
-                    detail: "Check crosswind component for your runway; add \(gust / 2) kt to approach speed.",
-                    color: .orange, rank: 1))
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — check crosswind component for your runway; add \(gust / 2) kt to approach speed",
+                    color: .orange, rank: 1, time: p.fromTime))
             } else if gust >= 15 {
                 notes.append(.init(
                     icon: "wind",
-                    headline: "Gusts \(gust) kt from \(tafLocalClock(p.fromTime)) local",
-                    detail: "Verify crosswind within limits; consider adding \(gust / 2) kt to approach speed.",
-                    color: amber, rank: 2))
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed",
+                    color: amber, rank: 2, time: p.fromTime))
             }
         }
 
@@ -1804,9 +1815,8 @@ struct WeatherDetailView: View {
                let onset = bases.first(where: { tafCategorySeverity($0.flightCategory) > firstSev }) {
                 notes.append(.init(
                     icon: "chart.line.downtrend.xyaxis",
-                    headline: "Deteriorating by \(tafLocalClock(onset.fromTime)) local",
-                    detail: "Forecast steps down from \(bases.first!.flightCategory.rawValue) to \(worst.flightCategory.rawValue). An earlier departure stays ahead of it.",
-                    color: .gray, rank: 3))
+                    text: "Deteriorating by \(tafTimeLabel(onset.fromTime)) — forecast steps down from \(bases.first!.flightCategory.rawValue) to \(worst.flightCategory.rawValue); an earlier departure stays ahead of it",
+                    color: .gray, rank: 3, time: onset.fromTime))
             }
         }
 
@@ -1818,12 +1828,12 @@ struct WeatherDetailView: View {
             guard !factors.isEmpty else { continue }
             notes.append(.init(
                 icon: "cloud",
-                headline: "Marginal VFR from \(tafLocalClock(p.fromTime)) local",
-                detail: "Close to IFR — \(factors.joined(separator: ", ")). Watch the trend.",
-                color: amber, rank: 2))
+                text: "Marginal VFR from \(tafTimeLabel(p.fromTime)) — \(factors.joined(separator: ", ")); close to IFR, watch the trend",
+                color: amber, rank: 2, time: p.fromTime))
         }
 
-        return notes.sorted { $0.rank < $1.rank }
+        // Sort by severity tier, then chronologically within the tier (Fix 2).
+        return notes.sorted { ($0.rank, $0.time) < ($1.rank, $1.time) }
     }
 
     private func tafPilotNotesSection(_ taf: Taf) -> some View {
@@ -1849,29 +1859,15 @@ struct WeatherDetailView: View {
                         .tracking(1)
                 }
                 ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
-                    HStack(alignment: .top, spacing: 0) {
-                        Rectangle()
-                            .fill(note.color)
-                            .frame(width: 3)
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: note.icon)
-                                    .foregroundColor(note.color)
-                                    .font(.subheadline)
-                                    .frame(width: 20)
-                                Text(note.headline)
-                                    .font(.subheadline.bold())
-                                    .foregroundColor(.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Text(note.detail)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.leading, 28)
-                        }
-                        .padding(.leading, 8)
-                        .padding(.vertical, 2)
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: note.icon)
+                            .foregroundColor(note.color)
+                            .font(.subheadline)
+                            .frame(width: 20)
+                        Text(note.text)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Text("Forecast notes only. Verify against your aircraft POH and personal minimums.")
