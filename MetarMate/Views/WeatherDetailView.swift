@@ -1585,10 +1585,11 @@ struct WeatherDetailView: View {
     // Decoded plain-English forecast block for a .base/.fm period.
     // Left-edge strip in the period's flight-category color (4px, square corners — single-sided, no radius).
     private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool, isUpcoming: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
+                // Period header — match the decoded METAR card's prominent label (~17pt semibold, primary/white).
                 Text("From \(tafLocalClock(period.fromTime)) local")
-                    .font(.caption.bold())
+                    .font(.headline)
                     .foregroundColor(isCurrent ? .yellow : .primary)
                 if isCurrent {
                     Text(isUpcoming ? "NEXT" : "NOW")
@@ -1601,9 +1602,12 @@ struct WeatherDetailView: View {
                 Spacer()
                 FlightCategoryBadge(category: period.flightCategory)
             }
+            // Decoded sentence — match the METAR card body size (~16pt) and lift off the dim gray
+            // toward the METAR body color. Single flowing neutral sentence, no per-value coloring.
             Text(tafForecastSentence(period))
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.callout)
+                .foregroundColor(.primary.opacity(0.85))
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.leading, 10)
