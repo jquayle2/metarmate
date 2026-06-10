@@ -4,20 +4,17 @@ import SwiftData
 // TEMPORARY — remove when Step 5 watch UI lands.
 //
 // Disposable end-to-end harness for the alert pipeline, for use before real watch-management
-// UI exists. One tap:
-//   1. ensures a single hardcoded KVGT watch (evaluated against the active MinimumsProfile),
-//   2. runs the shared checkNow once to establish KVGT's current side (and trigger the
-//      first-time notification-permission prompt),
-//   3. flips the stored side and runs checkNow again, forcing a GO<->NO_GO transition so a real
-//      notification reliably fires regardless of KVGT's actual weather that day.
+// UI exists. One tap evaluates KVGT's CURRENT real weather against a deliberately impossible
+// MinimumsProfile (min visibility 99 SM, max crosswind 0 kt) from a nil starting side — so the
+// verdict is an unambiguous NO-GO with no synthetic side-flip required. This proves the real
+// chain on real weather: fetch -> evaluate -> (nil-side first-eval) shouldFire -> post ->
+// foreground presentation. It uses the same GoNoGoEvaluator and NotificationManager.post the
+// background pipeline uses, so a fire here means the background's first-check (also nil-side)
+// will fire too.
 //
-// Proves the whole chain: permission prompt -> fetch -> evaluate -> notify -> persist. The
-// second run uses the exact same pipeline the background task (Part C) will call.
-//
-// Self-contained on purpose: delete this file and the one marked ToolbarItem in
-// NearestAirportsView to remove the harness completely.
+// Self-contained: delete this file and the one marked ToolbarItem in NearestAirportsView to
+// remove the harness completely.
 struct DebugAlertTestButton: View {
-    @Environment(\.modelContext) private var context
     @State private var outcomeText = ""
     @State private var showResult = false
 
@@ -37,29 +34,33 @@ struct DebugAlertTestButton: View {
 
     @MainActor
     private func runTest() async {
-        let icao = "KVGT"
-        let existing = (try? context.fetch(
-            FetchDescriptor<AirportWatch>(predicate: #Predicate { $0.icao == icao })
-        )) ?? []
-        let watch: AirportWatch
-        if let found = existing.first {
-            watch = found
-        } else {
-            watch = AirportWatch(icao: icao)
-            context.insert(watch)
-            try? context.save()
-        }
+        await NotificationManager.shared.requestAuthorizationIfNeeded()
 
-        await AlertPipeline.checkNow(in: context)        // establish current side + permission prompt
-        if let side = watch.side {                       // flip to force a transition on the next run
-            watch.side = (side == .go) ? .noGo : .go
-            try? context.save()
+        guard let metar = try? await WeatherService.shared.fetchMetar(for: "KVGT") else {
+            outcomeText = "KVGT METAR fetch failed."
+            showResult = true
+            return
         }
-        let outcome = await AlertPipeline.checkNow(in: context)   // guaranteed transition -> notification
+        let conditions = AlertConditions(from: metar)
+
+        // Impossible on purpose: forces NO-GO regardless of the day's weather.
+        let impossible = MinimumsProfile(name: "TEST impossible",
+                                         maxCrosswindKt: 0,
+                                         minVisibilitySM: 99)
+        let verdict = GoNoGoEvaluator.evaluate(impossible, conditions, previousSide: nil, icao: "KVGT")
+
+        var posted = false
+        if verdict.shouldFire {
+            posted = await NotificationManager.shared.post(
+                title: "NO-GO — KVGT (test)",
+                body: verdict.failingFactors.joined(separator: "; ") + ". " + verdict.sourceLabel + "."
+            )
+        }
 
         outcomeText = """
-        Watches checked: \(outcome.watchesChecked)
-        Notifications fired: \(outcome.notificationsFired)
+        Verdict: \(verdict.newSide == .noGo ? "NO-GO" : "GO")
+        shouldFire (nil prevSide): \(verdict.shouldFire)
+        posted (confirmed add): \(posted)
         Check Notification Center for the KVGT alert.
         """
         showResult = true
