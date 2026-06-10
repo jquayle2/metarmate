@@ -70,7 +70,8 @@ struct AlertsView: View {
             }
         }
         .task(id: watches.map(\.icao)) {
-            MinimumsProfile.ensureUniqueUUIDs(in: context)   // repair shared-uuid built-ins (once)
+            MinimumsProfile.ensureUniqueUUIDs(in: context)     // repair shared-uuid built-ins (once)
+            MinimumsProfile.backfillBuiltInKeys(in: context)   // assign stable starter keys (once)
             await vm.refresh(watches, in: context)
             // 5-min auto-refresh, same pattern as the detail view. Read-only — never fires.
             while !Task.isCancelled {

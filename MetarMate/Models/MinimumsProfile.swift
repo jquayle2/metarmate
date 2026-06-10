@@ -13,6 +13,9 @@ final class MinimumsProfile {
                                          // survives store resets, unlike a PersistentIdentifier
     var name: String
     var isBuiltIn: Bool                  // true = seeded starter, false = user-made/cloned
+    var builtInKey: String?              // stable starter identity, INDEPENDENT of display name,
+                                         // so "reset to default" works after a rename; nil for
+                                         // user profiles
 
     var maxCrosswindKt: Int?
     var maxGustKt: Int?
@@ -25,6 +28,7 @@ final class MinimumsProfile {
 
     init(name: String,
          isBuiltIn: Bool = false,
+         builtInKey: String? = nil,
          uuid: UUID = UUID(),
          maxCrosswindKt: Int? = nil,
          maxGustKt: Int? = nil,
@@ -36,6 +40,7 @@ final class MinimumsProfile {
         self.uuid = uuid
         self.name = name
         self.isBuiltIn = isBuiltIn
+        self.builtInKey = builtInKey
         self.maxCrosswindKt = maxCrosswindKt
         self.maxGustKt = maxGustKt
         self.minVisibilitySM = minVisibilitySM
@@ -62,30 +67,51 @@ extension MinimumsProfile {
     //   IFR current : xwind 15, gust 25, vis 1, ceiling 500,  IFR, sustained 25
     static func builtInStarters() -> [MinimumsProfile] {
         [
-            MinimumsProfile(name: "Student", isBuiltIn: true,
+            MinimumsProfile(name: "Student", isBuiltIn: true, builtInKey: "student",
                             maxCrosswindKt: 8, maxGustKt: 15, minVisibilitySM: 8,
                             minCeilingFt: 3500, minFlightCategory: .vfr, maxSustainedWindKt: 15),
-            MinimumsProfile(name: "VFR day", isBuiltIn: true,
+            MinimumsProfile(name: "VFR day", isBuiltIn: true, builtInKey: "vfrDay",
                             maxCrosswindKt: 12, maxGustKt: 20, minVisibilitySM: 6,
                             minCeilingFt: 3000, minFlightCategory: .vfr, maxSustainedWindKt: 20),
-            MinimumsProfile(name: "IFR current", isBuiltIn: true,
+            MinimumsProfile(name: "IFR current", isBuiltIn: true, builtInKey: "ifrCurrent",
                             maxCrosswindKt: 15, maxGustKt: 25, minVisibilitySM: 1,
                             minCeilingFt: 500, minFlightCategory: .ifr, maxSustainedWindKt: 25),
         ]
     }
 
-    // Re-applies the canonical starter values to a built-in profile, in place. builtInStarters()
-    // is the single source of truth — it both seeds and serves as the reset target. Matches by
-    // name (built-in names are not user-editable, so the match is stable). No-op for user profiles.
+    // Re-applies the canonical starter values in place. builtInStarters() is the single source
+    // of truth — it both seeds and serves as the reset target. Matches on the stable builtInKey
+    // (NOT the display name) so a renamed built-in still resets correctly. No-op for user profiles.
     func resetToBuiltInDefault() {
-        guard isBuiltIn,
-              let canonical = Self.builtInStarters().first(where: { $0.name == name }) else { return }
+        guard isBuiltIn, let key = builtInKey,
+              let canonical = Self.builtInStarters().first(where: { $0.builtInKey == key }) else { return }
         maxCrosswindKt = canonical.maxCrosswindKt
         maxGustKt = canonical.maxGustKt
         minVisibilitySM = canonical.minVisibilitySM
         minCeilingFt = canonical.minCeilingFt
         minFlightCategory = canonical.minFlightCategory
         maxSustainedWindKt = canonical.maxSustainedWindKt
+    }
+
+    // Backfills builtInKey on built-ins seeded before the field existed, matching their current
+    // name to a starter. Runs at launch BEFORE any rename is possible (built-in names are still
+    // canonical), so keys land before the user can rename. Idempotent: no-op once keys are set.
+    @MainActor
+    static func backfillBuiltInKeys(in context: ModelContext) {
+        let keyByName: [String: String] = builtInStarters().reduce(into: [:]) { dict, s in
+            if let key = s.builtInKey { dict[s.name] = key }
+        }
+        let builtIns = (try? context.fetch(
+            FetchDescriptor<MinimumsProfile>(predicate: #Predicate { $0.isBuiltIn })
+        )) ?? []
+        var changed = false
+        for profile in builtIns where profile.builtInKey == nil {
+            if let key = keyByName[profile.name] {
+                profile.builtInKey = key
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
     }
 
     // Idempotent: inserts the starters only if no built-in profile exists yet, so it runs
