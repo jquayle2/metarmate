@@ -4,12 +4,17 @@ import UserNotifications
 
 @main
 struct MetarMateApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
     init() {
         // App-wide default for the global crosswind alert minimum (knots). Registered at
         // launch so every reader — the alert evaluator (plain UserDefaults) and the
         // settings UI (@AppStorage) — sees 15 before the user sets anything, instead of 0.
         // A 0 default would make crosswind alerts fire on essentially any wind.
         UserDefaults.standard.register(defaults: ["globalCrosswindMinimumKt": 15])
+        // Register the background alert-check task here, in App.init, so it's registered before
+        // launch completes and the system can hand back a task scheduled while the app was dead.
+        AlertScheduler.register(container: sharedModelContainer)
     }
 
     var sharedModelContainer: ModelContainer = {
@@ -37,6 +42,14 @@ struct MetarMateApp: App {
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
                     MinimumsProfile.seedBuiltInsIfNeeded(in: sharedModelContainer.mainContext)
+                    // Submit an initial background alert-check request.
+                    AlertScheduler.schedule()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    // Re-submit when entering background (the canonical place — that's when iOS
+                    // starts considering the task). Safe to call repeatedly; it replaces the
+                    // pending request for the same identifier.
+                    if phase == .background { AlertScheduler.schedule() }
                 }
         }
         .modelContainer(sharedModelContainer)
