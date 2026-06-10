@@ -32,6 +32,12 @@ struct ContentView: View {
                     Label("Favorites", systemImage: "star.fill")
                 }
                 .tag(2)
+
+            AlertsView()
+                .tabItem {
+                    Label("Alerts", systemImage: "bell.fill")
+                }
+                .tag(3)
         }
         .preferredColorScheme(.dark)
         .onAppear {

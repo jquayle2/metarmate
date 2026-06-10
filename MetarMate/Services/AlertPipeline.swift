@@ -54,6 +54,31 @@ enum AlertPipeline {
         return await runChecks(in: context)
     }
 
+    // MARK: - Read-only display evaluation
+    // For the watches-list UI: fetch conditions via the same source ladder and evaluate each
+    // watch against the active profile, but WITHOUT firing notifications or mutating lastSide —
+    // viewing the list must never change alert state. conditions/verdict are nil when a station
+    // returned no data (or no active profile resolves).
+    struct WatchDisplay {
+        let conditions: AlertConditions?
+        let verdict: Verdict?
+    }
+
+    static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext) async -> [String: WatchDisplay] {
+        guard !watches.isEmpty, let profile = ActiveMinimumsProfile.resolve(in: context) else { return [:] }
+        let icaos = Array(Set(watches.map { $0.icao }))
+        let conditions = await fetchConditions(for: icaos)
+        var result: [String: WatchDisplay] = [:]
+        for watch in watches {
+            let c = conditions[watch.icao]
+            // previousSide: watch.side so the displayed side respects the same hysteresis the
+            // notifier uses. shouldFire is ignored here — display only.
+            let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: watch.side, icao: watch.icao) }
+            result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict)
+        }
+        return result
+    }
+
     // MARK: - Source ladder
     // Live ASOS only when the app's existing ASOS eligibility holds (StoreManager.isAsosUser —
     // the single source of truth, not re-invented here) AND the user has alerts opted into live
