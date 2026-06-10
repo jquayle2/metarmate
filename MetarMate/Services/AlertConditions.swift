@@ -4,8 +4,9 @@ import Foundation
 // One normalized snapshot of an airport's current conditions, regardless of where it came
 // from. METAR (hourly, aviationweather.gov) and live ASOS/AWOS (5-min, Synoptic) carry the
 // same facts in different shapes and units; the two adapters below reconcile them so the
-// AlertEvaluator only ever sees this one type. This is the single place source differences
-// are handled.
+// GoNoGoEvaluator only ever sees this one type. This is the single place source differences
+// are handled. (For ASOS, flight category is derived upstream via SynopticObservation's
+// estimatedCategory so both sources are directly comparable.)
 struct AlertConditions {
 
     enum Source: String {
