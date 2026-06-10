@@ -12,7 +12,7 @@ struct MetarMateApp: App {
     }
 
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([AirportFavorite.self, WeatherAlert.self])
+        let schema = Schema([AirportFavorite.self, MinimumsProfile.self, AirportWatch.self])
         // Store lives in the shared App Group container so the app, widget, and
         // background alert task all read/write the same SwiftData store.
         guard let groupURL = FileManager.default
