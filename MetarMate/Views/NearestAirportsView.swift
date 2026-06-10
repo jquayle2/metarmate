@@ -71,6 +71,10 @@ struct NearestAirportsView: View {
                         ProgressView()
                     }
                 }
+                // TEMPORARY — remove when Step 5 watch UI lands.
+                ToolbarItem(placement: .navigationBarLeading) {
+                    DebugAlertTestButton()
+                }
             }
         }
         .task {
