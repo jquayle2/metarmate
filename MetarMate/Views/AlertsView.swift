@@ -23,6 +23,7 @@ struct AlertsView: View {
     @Query(sort: \MinimumsProfile.name) private var profiles: [MinimumsProfile]
     @AppStorage("activeMinimumsProfileID") private var activeProfileID: String = ""
     @StateObject private var vm = AlertsViewModel()
+    @State private var showAddSheet = false
 
     private var activeProfile: MinimumsProfile? {
         profiles.first { $0.uuid.uuidString == activeProfileID }
@@ -45,6 +46,7 @@ struct AlertsView: View {
                                 WatchRow(watch: watch, display: vm.displays[watch.icao])
                                     .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
                             }
+                            .onDelete(perform: deleteWatches)
                         }
                         .listStyle(.plain)
                         .refreshable { await vm.refresh(watches, in: context) }   // pull-to-refresh
@@ -53,6 +55,12 @@ struct AlertsView: View {
             }
             .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { showAddSheet = true } label: { Image(systemName: "plus") }
+                }
+            }
+            .sheet(isPresented: $showAddSheet) { AddWatchView() }
         }
         .task(id: watches.map(\.icao)) {
             MinimumsProfile.ensureUniqueUUIDs(in: context)   // repair shared-uuid built-ins (once)
@@ -118,8 +126,23 @@ struct AlertsView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+            Button {
+                showAddSheet = true
+            } label: {
+                Label("Add Airport", systemImage: "plus")
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func deleteWatches(at offsets: IndexSet) {
+        for index in offsets { context.delete(watches[index]) }
+        try? context.save()
     }
 }
 
