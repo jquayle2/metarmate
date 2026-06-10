@@ -34,9 +34,9 @@ enum AlertPipeline {
             guard let c = conditions[watch.icao] else { continue }   // no data this cycle → leave side untouched
             let verdict = GoNoGoEvaluator.evaluate(profile, c, previousSide: watch.side, icao: watch.icao)
             if verdict.shouldFire {
-                NotificationManager.shared.post(title: title(for: verdict, icao: watch.icao),
-                                                body: body(for: verdict))
-                fired += 1
+                let posted = await NotificationManager.shared.post(title: title(for: verdict, icao: watch.icao),
+                                                                   body: body(for: verdict))
+                if posted { fired += 1 }   // count only confirmed adds, not intentions
             }
             watch.side = verdict.newSide
             watch.lastEvaluatedDate = Date()

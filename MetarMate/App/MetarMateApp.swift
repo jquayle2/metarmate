@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct MetarMateApp: App {
@@ -32,6 +33,8 @@ struct MetarMateApp: App {
         WindowGroup {
             SplashScreenView()
                 .task {
+                    // Set the notification delegate so foreground notifications present.
+                    UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
                     MinimumsProfile.seedBuiltInsIfNeeded(in: sharedModelContainer.mainContext)
                 }
