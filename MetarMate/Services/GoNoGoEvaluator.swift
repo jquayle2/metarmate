@@ -138,8 +138,18 @@ enum GoNoGoEvaluator {
         case nil:   newSide = factors.contains { $0.bareFail() } ? .noGo : .go
         }
 
-        // Fire only on a GO<->NO_GO transition. No prior side establishes a baseline silently.
-        let shouldFire = (previousSide != nil) && (previousSide != newSide)
+        // Fire on a GO<->NO_GO transition. On a watch's FIRST evaluation (no prior side) there
+        // is no transition to detect, so fire iff the verdict is already NO_GO — otherwise a
+        // watch created during (or first checked in) below-minimums conditions would never
+        // alert. The background task hits this nil-side case on every watch's first check. A
+        // first-eval GO stays silent: it just establishes the baseline ("airport is fine" isn't
+        // news), and the next genuine NO_GO transition will fire.
+        let shouldFire: Bool
+        if let previousSide {
+            shouldFire = (previousSide != newSide)
+        } else {
+            shouldFire = (newSide == .noGo)
+        }
         let failing = (newSide == .noGo) ? factors.filter { $0.bareFail() }.map(\.failureText) : []
 
         return Verdict(shouldFire: shouldFire,
