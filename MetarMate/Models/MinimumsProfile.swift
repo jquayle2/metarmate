@@ -47,3 +47,38 @@ final class MinimumsProfile {
         set { minFlightCategory = newValue?.rawValue }
     }
 }
+
+// MARK: - Starter profiles
+extension MinimumsProfile {
+
+    // STRAWMAN NUMBERS — flagged for CFII review. Editing later is trivial (a value tweak),
+    // and users can clone/edit these or build their own from scratch.
+    //   Student     : xwind 8,  gust 15, vis 8, ceiling 3500, VFR, sustained 15
+    //   VFR day     : xwind 12, gust 20, vis 6, ceiling 3000, VFR, sustained 20
+    //   IFR current : xwind 15, gust 25, vis 1, ceiling 500,  IFR, sustained 25
+    static func builtInStarters() -> [MinimumsProfile] {
+        [
+            MinimumsProfile(name: "Student", isBuiltIn: true,
+                            maxCrosswindKt: 8, maxGustKt: 15, minVisibilitySM: 8,
+                            minCeilingFt: 3500, minFlightCategory: .vfr, maxSustainedWindKt: 15),
+            MinimumsProfile(name: "VFR day", isBuiltIn: true,
+                            maxCrosswindKt: 12, maxGustKt: 20, minVisibilitySM: 6,
+                            minCeilingFt: 3000, minFlightCategory: .vfr, maxSustainedWindKt: 20),
+            MinimumsProfile(name: "IFR current", isBuiltIn: true,
+                            maxCrosswindKt: 15, maxGustKt: 25, minVisibilitySM: 1,
+                            minCeilingFt: 500, minFlightCategory: .ifr, maxSustainedWindKt: 25),
+        ]
+    }
+
+    // Idempotent: inserts the starters only if no built-in profile exists yet, so it runs
+    // once on first launch and is a no-op on every launch after.
+    @MainActor
+    static func seedBuiltInsIfNeeded(in context: ModelContext) {
+        let builtInCount = (try? context.fetchCount(
+            FetchDescriptor<MinimumsProfile>(predicate: #Predicate { $0.isBuiltIn })
+        )) ?? 0
+        guard builtInCount == 0 else { return }
+        for profile in builtInStarters() { context.insert(profile) }
+        try? context.save()
+    }
+}

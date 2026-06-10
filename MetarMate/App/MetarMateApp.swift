@@ -31,6 +31,10 @@ struct MetarMateApp: App {
     var body: some Scene {
         WindowGroup {
             SplashScreenView()
+                .task {
+                    // Seed the built-in minimums profiles on first launch (idempotent).
+                    MinimumsProfile.seedBuiltInsIfNeeded(in: sharedModelContainer.mainContext)
+                }
         }
         .modelContainer(sharedModelContainer)
     }
