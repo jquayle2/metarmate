@@ -74,6 +74,20 @@ extension MinimumsProfile {
         ]
     }
 
+    // Re-applies the canonical starter values to a built-in profile, in place. builtInStarters()
+    // is the single source of truth — it both seeds and serves as the reset target. Matches by
+    // name (built-in names are not user-editable, so the match is stable). No-op for user profiles.
+    func resetToBuiltInDefault() {
+        guard isBuiltIn,
+              let canonical = Self.builtInStarters().first(where: { $0.name == name }) else { return }
+        maxCrosswindKt = canonical.maxCrosswindKt
+        maxGustKt = canonical.maxGustKt
+        minVisibilitySM = canonical.minVisibilitySM
+        minCeilingFt = canonical.minCeilingFt
+        minFlightCategory = canonical.minFlightCategory
+        maxSustainedWindKt = canonical.maxSustainedWindKt
+    }
+
     // Idempotent: inserts the starters only if no built-in profile exists yet, so it runs
     // once on first launch and is a no-op on every launch after. On that first seed it also
     // points the global active profile at "VFR day".

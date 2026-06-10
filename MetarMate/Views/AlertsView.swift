@@ -24,6 +24,7 @@ struct AlertsView: View {
     @AppStorage("activeMinimumsProfileID") private var activeProfileID: String = ""
     @StateObject private var vm = AlertsViewModel()
     @State private var showAddSheet = false
+    @State private var showProfiles = false
 
     private var activeProfile: MinimumsProfile? {
         profiles.first { $0.uuid.uuidString == activeProfileID }
@@ -61,6 +62,12 @@ struct AlertsView: View {
                 }
             }
             .sheet(isPresented: $showAddSheet) { AddWatchView() }
+            .sheet(isPresented: $showProfiles, onDismiss: {
+                // Edits to the active profile should show immediately on return.
+                Task { await vm.refresh(watches, in: context) }
+            }) {
+                ProfilesListView()
+            }
         }
         .task(id: watches.map(\.icao)) {
             MinimumsProfile.ensureUniqueUUIDs(in: context)   // repair shared-uuid built-ins (once)
@@ -93,6 +100,12 @@ struct AlertsView: View {
                         Text(profile.name)
                     }
                 }
+            }
+            Divider()
+            Button {
+                showProfiles = true
+            } label: {
+                Label("Manage Profiles…", systemImage: "slider.horizontal.3")
             }
         } label: {
             HStack(spacing: 6) {
