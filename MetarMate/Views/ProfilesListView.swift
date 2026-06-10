@@ -9,6 +9,7 @@ struct ProfilesListView: View {
     @Query(sort: \MinimumsProfile.name) private var profiles: [MinimumsProfile]
     @AppStorage("activeMinimumsProfileID") private var activeProfileID: String = ""
     @State private var path = NavigationPath()
+    @State private var showNewSheet = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -52,17 +53,13 @@ struct ProfilesListView: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { createNew() } label: { Image(systemName: "plus") }
+                    Button { showNewSheet = true } label: { Image(systemName: "plus") }
                 }
             }
+            .sheet(isPresented: $showNewSheet) {
+                NewProfileSheet(container: context.container)
+            }
         }
-    }
-
-    private func createNew() {
-        let profile = MinimumsProfile(name: "New Profile", isBuiltIn: false)
-        context.insert(profile)
-        try? context.save()
-        path.append(profile)
     }
 
     private func clone(_ source: MinimumsProfile) {
@@ -151,7 +148,9 @@ struct ProfileEditorView: View {
         }
         .navigationTitle(profile.name.isEmpty ? "New Profile" : profile.name)
         .navigationBarTitleDisplayMode(.inline)
-        .onDisappear { try? context.save() }
+        // Existing-profile edits persist via the main context's autosave. New profiles are
+        // edited in a non-autosaving child context (see NewProfileSheet) and saved only on
+        // commit — so there is deliberately no onDisappear save here.
     }
 
     private var categoryRow: some View {
@@ -164,6 +163,44 @@ struct ProfileEditorView: View {
             Text("MVFR").tag(Optional(FlightCategory.mvfr))
             Text("IFR").tag(Optional(FlightCategory.ifr))
             Text("LIFR").tag(Optional(FlightCategory.lifr))
+        }
+    }
+}
+
+// MARK: - NewProfileSheet
+// Create-from-scratch with save-on-commit. The draft lives in a non-autosaving CHILD context,
+// so tapping "+" does NOT persist anything: "Save" writes the child (propagating to the store
+// and the parent's @Query), and "Cancel" / backing out simply discards the child untouched.
+private struct NewProfileSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var childContext: ModelContext
+    @State private var profile: MinimumsProfile
+
+    init(container: ModelContainer) {
+        let child = ModelContext(container)
+        child.autosaveEnabled = false
+        let draft = MinimumsProfile(name: "New Profile", isBuiltIn: false)
+        child.insert(draft)
+        _childContext = State(initialValue: child)
+        _profile = State(initialValue: draft)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ProfileEditorView(profile: profile)
+                .environment(\.modelContext, childContext)   // edits land in the scratch context
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }   // child discarded, nothing persisted
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            try? childContext.save()       // commit → store → parent @Query
+                            dismiss()
+                        }
+                        .disabled(profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
         }
     }
 }
