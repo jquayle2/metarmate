@@ -11,12 +11,12 @@ enum Side: String {
 }
 
 // MARK: - AirportWatch
-// One MinimumsProfile applied to one airport. Carries the hysteresis memory (lastSide) so the
-// background evaluator only notifies on a side change, not on every wake-up.
+// One watched airport. Personal minimums are a single globally-active MinimumsProfile (see
+// ActiveMinimumsProfile), not chosen per-watch — so a watch is just the airport plus its
+// hysteresis memory (lastSide), letting the background evaluator notify only on a side change.
 @Model
 final class AirportWatch {
     var icao: String
-    var profile: MinimumsProfile?        // relationship; nullified if the profile is deleted
     var isEnabled: Bool
 
     var lastSide: String?                // Side.rawValue (GO / NO_GO) — access via `side`
@@ -24,13 +24,11 @@ final class AirportWatch {
     var createdDate: Date
 
     init(icao: String,
-         profile: MinimumsProfile?,
          isEnabled: Bool = true,
          lastSide: Side? = nil,
          lastEvaluatedDate: Date? = nil,
          createdDate: Date = Date()) {
         self.icao = icao
-        self.profile = profile
         self.isEnabled = isEnabled
         self.lastSide = lastSide?.rawValue
         self.lastEvaluatedDate = lastEvaluatedDate

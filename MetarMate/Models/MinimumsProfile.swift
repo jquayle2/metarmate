@@ -71,14 +71,52 @@ extension MinimumsProfile {
     }
 
     // Idempotent: inserts the starters only if no built-in profile exists yet, so it runs
-    // once on first launch and is a no-op on every launch after.
+    // once on first launch and is a no-op on every launch after. On that first seed it also
+    // points the global active profile at "VFR day".
     @MainActor
     static func seedBuiltInsIfNeeded(in context: ModelContext) {
         let builtInCount = (try? context.fetchCount(
             FetchDescriptor<MinimumsProfile>(predicate: #Predicate { $0.isBuiltIn })
         )) ?? 0
         guard builtInCount == 0 else { return }
-        for profile in builtInStarters() { context.insert(profile) }
-        try? context.save()
+        let starters = builtInStarters()
+        for profile in starters { context.insert(profile) }
+        try? context.save()   // save assigns the persistent identifiers we point at below
+        if let vfrDay = starters.first(where: { $0.name == "VFR day" }) {
+            ActiveMinimumsProfile.set(vfrDay.persistentModelID)
+        }
+    }
+}
+
+// MARK: - ActiveMinimumsProfile
+// The single, globally-active profile applied to every AirportWatch. Stored as the active
+// MinimumsProfile's persistent identifier under "activeMinimumsProfileID" (the @AppStorage key
+// the picker UI binds to), sitting alongside the other alert globals in UserDefaults.
+// PersistentIdentifier isn't a raw @AppStorage type, so it's encoded to Data here; resolve()
+// tolerates a stale id (e.g. if the store was reset) by falling back to a built-in.
+enum ActiveMinimumsProfile {
+    static let key = "activeMinimumsProfileID"
+
+    static func set(_ id: PersistentIdentifier) {
+        guard let data = try? JSONEncoder().encode(id) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func storedID() -> PersistentIdentifier? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(PersistentIdentifier.self, from: data)
+    }
+
+    /// The live active profile. Falls back to "VFR day" (then any built-in, then any profile)
+    /// if the stored id is missing or no longer resolves.
+    @MainActor
+    static func resolve(in context: ModelContext) -> MinimumsProfile? {
+        if let id = storedID(), let profile = context.model(for: id) as? MinimumsProfile {
+            return profile
+        }
+        let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
+        return all.first(where: { $0.name == "VFR day" })
+            ?? all.first(where: { $0.isBuiltIn })
+            ?? all.first
     }
 }
