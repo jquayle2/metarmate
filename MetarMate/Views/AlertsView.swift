@@ -3,25 +3,14 @@ import SwiftData
 import Combine
 
 // MARK: - AlertsViewModel
-// Holds the read-only display evaluation for the watches list. checkNow runs the real pipeline
-// (fires + persists), then refreshes the display.
+// Read-only display evaluation for the watches list. Refreshing shows verdicts but NEVER fires
+// notifications or mutates lastSide — firing is the background task's job alone.
 @MainActor
 final class AlertsViewModel: ObservableObject {
     @Published var displays: [String: AlertPipeline.WatchDisplay] = [:]
-    @Published var isChecking = false
-    @Published var isLoading = false
 
     func refresh(_ watches: [AirportWatch], in context: ModelContext) async {
-        isLoading = true
         displays = await AlertPipeline.evaluateForDisplay(watches, in: context)
-        isLoading = false
-    }
-
-    func checkNow(_ watches: [AirportWatch], in context: ModelContext) async {
-        isChecking = true
-        await AlertPipeline.checkNow(in: context)        // the proven pipeline: fetch → evaluate → notify → persist
-        await refresh(watches, in: context)              // reflect any newly-persisted sides
-        isChecking = false
     }
 }
 
@@ -43,27 +32,38 @@ struct AlertsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if watches.isEmpty {
-                    emptyState
-                } else {
-                    List {
-                        ForEach(watches) { watch in
-                            WatchRow(watch: watch, display: vm.displays[watch.icao])
-                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
+            VStack(spacing: 0) {
+                // Header: profile switcher sits as a fixed band at the top; rows scroll under it
+                // (a top safeAreaInset was colliding with the list/title).
+                profileSwitcher
+                Group {
+                    if watches.isEmpty {
+                        emptyState
+                    } else {
+                        List {
+                            ForEach(watches) { watch in
+                                WatchRow(watch: watch, display: vm.displays[watch.icao])
+                                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
+                            }
                         }
+                        .listStyle(.plain)
+                        .refreshable { await vm.refresh(watches, in: context) }   // pull-to-refresh
                     }
-                    .listStyle(.plain)
-                    .refreshable { await vm.refresh(watches, in: context) }
                 }
             }
             .navigationTitle("Alerts")
-            .safeAreaInset(edge: .top) { profileSwitcher }
-            .safeAreaInset(edge: .bottom) {
-                if !watches.isEmpty { checkNowButton }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .task(id: watches.map(\.icao)) {
+            MinimumsProfile.ensureUniqueUUIDs(in: context)   // repair shared-uuid built-ins (once)
+            await vm.refresh(watches, in: context)
+            // 5-min auto-refresh, same pattern as the detail view. Read-only — never fires.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(300))
+                guard !Task.isCancelled else { break }
+                await vm.refresh(watches, in: context)
             }
         }
-        .task(id: watches.map(\.icao)) { await vm.refresh(watches, in: context) }
         .onChange(of: activeProfileID) {
             // Switching the active profile re-evaluates every visible watch.
             Task { await vm.refresh(watches, in: context) }
@@ -77,7 +77,9 @@ struct AlertsView: View {
                 Button {
                     ActiveMinimumsProfile.set(profile.uuid)   // writes the active-profile pointer
                 } label: {
-                    if profile.uuid == activeProfile?.uuid {
+                    // SINGLE-select: only the active profile is checked. Compare by
+                    // persistentModelID (always unique per row) so exactly one row checks.
+                    if profile.persistentModelID == activeProfile?.persistentModelID {
                         Label(profile.name, systemImage: "checkmark")
                     } else {
                         Text(profile.name)
@@ -102,27 +104,6 @@ struct AlertsView: View {
             .frame(maxWidth: .infinity)
             .background(.bar)
         }
-    }
-
-    private var checkNowButton: some View {
-        Button {
-            Task { await vm.checkNow(watches, in: context) }
-        } label: {
-            HStack {
-                if vm.isChecking { ProgressView().tint(.white) }
-                Text(vm.isChecking ? "Checking…" : "Check Now")
-                    .fontWeight(.semibold)
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.accentColor)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .disabled(vm.isChecking)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
     }
 
     private var emptyState: some View {

@@ -90,6 +90,32 @@ extension MinimumsProfile {
             ActiveMinimumsProfile.set(vfrDay.uuid)
         }
     }
+
+    // Repairs duplicate uuids. Built-ins seeded BEFORE the `uuid` field existed get a uuid via
+    // SwiftData lightweight migration, which can assign the same default value to every existing
+    // row — leaving all profiles sharing one uuid. That makes the active-profile pointer resolve
+    // ambiguously (so switching silently can't take) and makes the switcher check every row. Any
+    // colliding profile gets a fresh uuid and the active pointer is re-anchored to VFR day.
+    // Idempotent: a no-op once uuids are unique, so fresh installs are never affected.
+    @MainActor
+    static func ensureUniqueUUIDs(in context: ModelContext) {
+        let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
+        guard !all.isEmpty else { return }
+        var seen = Set<UUID>()
+        var deduped = false
+        for profile in all {
+            if seen.contains(profile.uuid) {
+                profile.uuid = UUID()
+                deduped = true
+            }
+            seen.insert(profile.uuid)
+        }
+        guard deduped else { return }
+        try? context.save()
+        if let vfrDay = all.first(where: { $0.name == "VFR day" }) ?? all.first {
+            ActiveMinimumsProfile.set(vfrDay.uuid)
+        }
+    }
 }
 
 // MARK: - ActiveMinimumsProfile
