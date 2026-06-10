@@ -3,10 +3,13 @@ import SwiftData
 
 @main
 struct MetarMateApp: App {
-    // App-wide default crosswind alert minimum (knots), used when an alert has no
-    // explicit crosswindLimitKt. Lives here as the app-wide setting; the management UI
-    // (and the AlertEvaluator's fallback) read the same "globalCrosswindMinimumKt" key.
-    @AppStorage("globalCrosswindMinimumKt") private var globalCrosswindMinimumKt = 15
+    init() {
+        // App-wide default for the global crosswind alert minimum (knots). Registered at
+        // launch so every reader — the alert evaluator (plain UserDefaults) and the
+        // settings UI (@AppStorage) — sees 15 before the user sets anything, instead of 0.
+        // A 0 default would make crosswind alerts fire on essentially any wind.
+        UserDefaults.standard.register(defaults: ["globalCrosswindMinimumKt": 15])
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([AirportFavorite.self, WeatherAlert.self])
