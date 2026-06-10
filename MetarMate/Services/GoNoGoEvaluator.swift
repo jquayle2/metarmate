@@ -17,21 +17,33 @@ struct Verdict {
 //   wind / crosswind / gust : 2 kt   (SETTLED)
 //   category                : 0.5    (SETTLED — half a category step; categories are already
 //                                     quantized so this just formalizes "a full step is needed")
-//   visibility / ceiling    : HELD   (see below — pending Jeff sign-off)
+//   visibility / ceiling    : limit-keyed ladder (APPROVED — see below)
 //
-// The vis/ceiling deadbands are intentionally functions of the limit, not flat constants, so a
-// scaled / category-breakpoint approach can drop in without changing any call site. The interim
-// bodies below are flat placeholders (the project's TAF-verification tolerances) ONLY so the
-// engine builds — they are NOT the finalized values.
+// Vis/ceiling deadbands scale with the band the limit sits in, because a flat margin is too
+// coarse near IFR minimums and noise-level at high VFR values. Anchored to the project's
+// TrendThresholds ladder and TAF-verification tolerances (±0.5 SM / ±300 ft land in the mid
+// bands), set at ~half the trend step so they debounce without masking a real crossing.
 private enum Deadband {
     static let windKt = 2.0
     static let crosswindKt = 2.0
     static let gustKt = 2.0
     static let categoryStep = 0.5
 
-    // HELD — PENDING JEFF SIGN-OFF (Part D). Interim = TAF-verification tolerance, flat.
-    static func visibilitySM(forLimit limit: Double) -> Double { 0.5 }
-    static func ceilingFt(forLimit limit: Double) -> Double { 300 }
+    static func visibilitySM(forLimit limit: Double) -> Double {
+        switch limit {
+        case ...1.0:  return 0.25   // ≤ 1 SM: tight near IFR/LIFR minimums
+        case ...5.0:  return 0.5    // 1–5 SM: IFR–MVFR (TAF-verif anchor)
+        default:      return 1.0    // > 5 SM: VFR-cautious
+        }
+    }
+
+    static func ceilingFt(forLimit limit: Double) -> Double {
+        switch limit {
+        case ..<1000: return 200    // < 1000 ft: IFR/LIFR
+        case ..<3000: return 300    // 1000–3000 ft: MVFR (TAF-verif anchor)
+        default:      return 500    // ≥ 3000 ft: VFR
+        }
+    }
 }
 
 // MARK: - GoNoGoEvaluator
