@@ -9,6 +9,8 @@ import SwiftData
 // migration-safety pattern — a renamed/removed case leaves old rows readable, just inert.
 @Model
 final class MinimumsProfile {
+    var uuid: UUID = UUID()              // stable identity for the active-profile pointer;
+                                         // survives store resets, unlike a PersistentIdentifier
     var name: String
     var isBuiltIn: Bool                  // true = seeded starter, false = user-made/cloned
 
@@ -23,6 +25,7 @@ final class MinimumsProfile {
 
     init(name: String,
          isBuiltIn: Bool = false,
+         uuid: UUID = UUID(),
          maxCrosswindKt: Int? = nil,
          maxGustKt: Int? = nil,
          minVisibilitySM: Double? = nil,
@@ -30,6 +33,7 @@ final class MinimumsProfile {
          minFlightCategory: FlightCategory? = nil,
          maxSustainedWindKt: Int? = nil,
          createdDate: Date = Date()) {
+        self.uuid = uuid
         self.name = name
         self.isBuiltIn = isBuiltIn
         self.maxCrosswindKt = maxCrosswindKt
@@ -81,40 +85,41 @@ extension MinimumsProfile {
         guard builtInCount == 0 else { return }
         let starters = builtInStarters()
         for profile in starters { context.insert(profile) }
-        try? context.save()   // save assigns the persistent identifiers we point at below
+        try? context.save()
         if let vfrDay = starters.first(where: { $0.name == "VFR day" }) {
-            ActiveMinimumsProfile.set(vfrDay.persistentModelID)
+            ActiveMinimumsProfile.set(vfrDay.uuid)
         }
     }
 }
 
 // MARK: - ActiveMinimumsProfile
 // The single, globally-active profile applied to every AirportWatch. Stored as the active
-// MinimumsProfile's persistent identifier under "activeMinimumsProfileID" (the @AppStorage key
-// the picker UI binds to), sitting alongside the other alert globals in UserDefaults.
-// PersistentIdentifier isn't a raw @AppStorage type, so it's encoded to Data here; resolve()
-// tolerates a stale id (e.g. if the store was reset) by falling back to a built-in.
+// MinimumsProfile's stable `uuid` (string form) under "activeMinimumsProfileID" (the
+// @AppStorage key the picker UI binds to), sitting alongside the other alert globals in
+// UserDefaults. A UUID — unlike a PersistentIdentifier — survives a SwiftData store reset, so
+// the pointer can't be left dangling by the no-migration store moves this app uses. resolve()
+// still falls back to "VFR day" if the stored uuid is missing or no longer matches exactly one
+// profile (e.g. a stale pointer left over from the old PersistentIdentifier format).
 enum ActiveMinimumsProfile {
     static let key = "activeMinimumsProfileID"
 
-    static func set(_ id: PersistentIdentifier) {
-        guard let data = try? JSONEncoder().encode(id) else { return }
-        UserDefaults.standard.set(data, forKey: key)
+    static func set(_ uuid: UUID) {
+        UserDefaults.standard.set(uuid.uuidString, forKey: key)
     }
 
-    static func storedID() -> PersistentIdentifier? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(PersistentIdentifier.self, from: data)
+    static func storedUUID() -> UUID? {
+        UserDefaults.standard.string(forKey: key).flatMap { UUID(uuidString: $0) }
     }
 
     /// The live active profile. Falls back to "VFR day" (then any built-in, then any profile)
-    /// if the stored id is missing or no longer resolves.
+    /// if the stored uuid is missing or doesn't resolve to exactly one profile.
     @MainActor
     static func resolve(in context: ModelContext) -> MinimumsProfile? {
-        if let id = storedID(), let profile = context.model(for: id) as? MinimumsProfile {
-            return profile
-        }
         let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
+        if let uuid = storedUUID() {
+            let matches = all.filter { $0.uuid == uuid }
+            if matches.count == 1 { return matches[0] }
+        }
         return all.first(where: { $0.name == "VFR day" })
             ?? all.first(where: { $0.isBuiltIn })
             ?? all.first
