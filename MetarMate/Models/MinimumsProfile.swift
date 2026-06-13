@@ -55,6 +55,16 @@ final class MinimumsProfile {
         get { minFlightCategory.flatMap { FlightCategory(rawValue: $0) } }
         set { minFlightCategory = newValue?.rawValue }
     }
+
+    // Stable token for the active-profile pointer. Built-ins anchor on builtInKey ("builtin:<key>")
+    // so the selection survives uuid churn / store migration / the ensureUniqueUUIDs repair;
+    // user profiles use their uuid (kept stable per object by the dedup repair). A built-in whose
+    // key hasn't been backfilled yet falls back to its uuid — the next resolve() self-heals it to
+    // the stable form once the key lands.
+    var activeToken: String {
+        if isBuiltIn, let key = builtInKey { return "builtin:\(key)" }
+        return uuid.uuidString
+    }
 }
 
 // MARK: - Starter profiles
@@ -127,20 +137,25 @@ extension MinimumsProfile {
         for profile in starters { context.insert(profile) }
         try? context.save()
         if let vfrDay = starters.first(where: { $0.name == "VFR day" }) {
-            ActiveMinimumsProfile.set(vfrDay.uuid)
+            ActiveMinimumsProfile.set(vfrDay)
         }
     }
 
     // Repairs duplicate uuids. Built-ins seeded BEFORE the `uuid` field existed get a uuid via
     // SwiftData lightweight migration, which can assign the same default value to every existing
-    // row — leaving all profiles sharing one uuid. That makes the active-profile pointer resolve
-    // ambiguously (so switching silently can't take) and makes the switcher check every row. Any
-    // colliding profile gets a fresh uuid and the active pointer is re-anchored to VFR day.
+    // row — leaving all profiles sharing one uuid. Any colliding profile gets a fresh uuid.
+    //
+    // Crucially, this must NOT silently change the user's active selection. Built-ins now anchor
+    // the pointer on builtInKey (uuid-independent), so reassigning a built-in's uuid never touches
+    // the pointer. For a user profile whose uuid we change, we re-point to that SAME profile by
+    // object identity (captured before any reassignment) — not blindly to "VFR day". We only fall
+    // back when the pointer genuinely designated nothing resolvable.
     // Idempotent: a no-op once uuids are unique, so fresh installs are never affected.
     @MainActor
     static func ensureUniqueUUIDs(in context: ModelContext) {
         let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
         guard !all.isEmpty else { return }
+        let activeBefore = ActiveMinimumsProfile.resolve(in: context)   // the SAME object to keep
         var seen = Set<UUID>()
         var deduped = false
         for profile in all {
@@ -152,42 +167,64 @@ extension MinimumsProfile {
         }
         guard deduped else { return }
         try? context.save()
-        if let vfrDay = all.first(where: { $0.name == "VFR day" }) ?? all.first {
-            ActiveMinimumsProfile.set(vfrDay.uuid)
+        // Re-anchor to the same profile (its uuid may have just changed). activeToken is stable
+        // for built-ins and the fresh uuid for user profiles, so the selection is preserved.
+        if let active = activeBefore {
+            ActiveMinimumsProfile.set(active)
+        } else if let vfrDay = all.first(where: { $0.name == "VFR day" }) ?? all.first {
+            ActiveMinimumsProfile.set(vfrDay)
         }
     }
 }
 
 // MARK: - ActiveMinimumsProfile
-// The single, globally-active profile applied to every AirportWatch. Stored as the active
-// MinimumsProfile's stable `uuid` (string form) under "activeMinimumsProfileID" (the
-// @AppStorage key the picker UI binds to), sitting alongside the other alert globals in
-// UserDefaults. A UUID — unlike a PersistentIdentifier — survives a SwiftData store reset, so
-// the pointer can't be left dangling by the no-migration store moves this app uses. resolve()
-// still falls back to "VFR day" if the stored uuid is missing or no longer matches exactly one
-// profile (e.g. a stale pointer left over from the old PersistentIdentifier format).
+// The single, globally-active profile applied to every AirportWatch. Stored under
+// "activeMinimumsProfileID" (the @AppStorage key the picker UI binds to) as the active profile's
+// stable `activeToken`: "builtin:<key>" for built-ins, the uuid string for user profiles. Anchoring
+// built-ins on builtInKey — not the volatile uuid — is what lets the selection survive uuid churn,
+// store migration, and the ensureUniqueUUIDs repair (the Item-0 regression: a uuid-keyed pointer
+// got silently re-anchored away from the user's choice). resolve() also accepts the LEGACY raw-uuid
+// form so existing installs keep resolving, and self-heals it to the stable token on first read.
 enum ActiveMinimumsProfile {
     static let key = "activeMinimumsProfileID"
 
-    static func set(_ uuid: UUID) {
-        UserDefaults.standard.set(uuid.uuidString, forKey: key)
+    static func set(_ profile: MinimumsProfile) {
+        UserDefaults.standard.set(profile.activeToken, forKey: key)
     }
 
-    static func storedUUID() -> UUID? {
-        UserDefaults.standard.string(forKey: key).flatMap { UUID(uuidString: $0) }
+    static func storedToken() -> String? {
+        UserDefaults.standard.string(forKey: key).flatMap { $0.isEmpty ? nil : $0 }
     }
 
-    /// The live active profile. Falls back to "VFR day" (then any built-in, then any profile)
-    /// if the stored uuid is missing or doesn't resolve to exactly one profile.
+    /// The live active profile. Matches the stored token (stable or legacy-uuid form); falls back
+    /// to "VFR day" (then any built-in, then any profile) if the pointer is missing or doesn't
+    /// resolve to exactly one profile. Persists the resolved/healed token so the pointer stays
+    /// valid and canonical.
     @MainActor
     static func resolve(in context: ModelContext) -> MinimumsProfile? {
         let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
-        if let uuid = storedUUID() {
-            let matches = all.filter { $0.uuid == uuid }
-            if matches.count == 1 { return matches[0] }
+        guard !all.isEmpty else { return nil }
+        if let token = storedToken(), let match = match(token, in: all) {
+            if match.activeToken != token { set(match) }   // self-heal legacy raw-uuid pointer
+            return match
         }
-        return all.first(where: { $0.name == "VFR day" })
+        let fallback = all.first(where: { $0.name == "VFR day" })
             ?? all.first(where: { $0.isBuiltIn })
             ?? all.first
+        if let fallback { set(fallback) }   // keep the stored pointer valid + canonical
+        return fallback
+    }
+
+    /// Resolve a stored token to a single profile. Handles the stable "builtin:<key>" form and the
+    /// legacy raw-uuid form. A raw uuid that matches more than one profile (the shared-uuid latent
+    /// state) is treated as unresolvable so the caller falls back rather than picking arbitrarily.
+    @MainActor
+    private static func match(_ token: String, in all: [MinimumsProfile]) -> MinimumsProfile? {
+        if token.hasPrefix("builtin:") {
+            let key = String(token.dropFirst("builtin:".count))
+            return all.first { $0.isBuiltIn && $0.builtInKey == key }
+        }
+        let matches = all.filter { $0.uuid.uuidString == token }
+        return matches.count == 1 ? matches[0] : nil
     }
 }

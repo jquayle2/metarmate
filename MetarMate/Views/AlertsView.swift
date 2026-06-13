@@ -27,7 +27,8 @@ struct AlertsView: View {
     @State private var showProfiles = false
 
     private var activeProfile: MinimumsProfile? {
-        profiles.first { $0.uuid.uuidString == activeProfileID }
+        profiles.first { $0.activeToken == activeProfileID }
+            ?? profiles.first { $0.uuid.uuidString == activeProfileID }   // legacy raw-uuid pointer
             ?? profiles.first { $0.name == "VFR day" }
             ?? profiles.first
     }
@@ -70,8 +71,8 @@ struct AlertsView: View {
             }
         }
         .task(id: watches.map(\.icao)) {
-            MinimumsProfile.ensureUniqueUUIDs(in: context)     // repair shared-uuid built-ins (once)
             MinimumsProfile.backfillBuiltInKeys(in: context)   // assign stable starter keys (once)
+            MinimumsProfile.ensureUniqueUUIDs(in: context)     // then de-dup, preserving the active choice
             await vm.refresh(watches, in: context)
             // 5-min auto-refresh, same pattern as the detail view. Read-only — never fires.
             while !Task.isCancelled {
@@ -91,7 +92,7 @@ struct AlertsView: View {
         Menu {
             ForEach(profiles) { profile in
                 Button {
-                    ActiveMinimumsProfile.set(profile.uuid)   // writes the active-profile pointer
+                    ActiveMinimumsProfile.set(profile)   // writes the active-profile pointer (stable token)
                 } label: {
                     // SINGLE-select: only the active profile is checked. Compare by
                     // persistentModelID (always unique per row) so exactly one row checks.

@@ -80,7 +80,7 @@ struct ProfilesListView: View {
 
     private func delete(_ profile: MinimumsProfile) {
         guard !profile.isBuiltIn else { return }   // built-ins reset, never delete
-        let wasActive = profile.uuid.uuidString == activeProfileID
+        let wasActive = profile.activeToken == activeProfileID
         context.delete(profile)
         try? context.save()
         // If we just deleted the active profile, re-anchor to a sensible default. resolve()
@@ -88,7 +88,7 @@ struct ProfilesListView: View {
         if wasActive,
            let fallback = profiles.first(where: { $0.name == "VFR day" })
                        ?? profiles.first(where: { $0.isBuiltIn }) {
-            ActiveMinimumsProfile.set(fallback.uuid)
+            ActiveMinimumsProfile.set(fallback)
         }
     }
 
