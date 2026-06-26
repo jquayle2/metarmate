@@ -296,6 +296,14 @@ struct SynopticObservation: Identifiable, Sendable {
             .min()
     }
 
+    /// Coverage code (BKN/OVC/VV) of the ceiling layer — the lowest BKN/OVC/VV layer, matching ceilingAGL.
+    nonisolated var ceilingCoverage: String? {
+        cloudLayers
+            .filter { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility }
+            .min(by: { $0.altitude < $1.altitude })?
+            .coverage.rawValue
+    }
+
     /// Temperature in Celsius (converted from Fahrenheit)
     nonisolated var temperatureCelsius: Int? {
         temperature.map { Int(($0 - 32) * 5 / 9) }

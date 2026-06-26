@@ -325,9 +325,14 @@ private struct WatchRow: View {
     private func skyVisString(_ c: AlertConditions) -> String {
         var parts: [String] = []
         if let ceiling = c.ceilingFeet {
-            // AlertConditions keeps only ceiling height (coverage code is normalized away),
-            // so label it with the conventional ceiling marker.
-            parts.append("BKN \(ceiling / 100)")
+            // Show the TRUE coverage code from the observation (OVC vs BKN is operationally
+            // meaningful). If coverage is genuinely unavailable, show height alone rather than
+            // guessing a prefix.
+            if let cov = c.ceilingCoverage {
+                parts.append("\(cov) \(ceiling / 100)")
+            } else {
+                parts.append("\(ceiling / 100)")
+            }
         } else {
             parts.append("CLR")
         }

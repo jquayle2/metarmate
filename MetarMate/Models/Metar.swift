@@ -67,6 +67,12 @@ struct Metar: Identifiable, Codable {
                .map { $0.altitude * 100 }
     }
 
+    /// Coverage code (BKN/OVC/VV) of the ceiling layer — the same layer that produces ceilingFeet.
+    nonisolated var ceilingCoverage: String? {
+        clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })?
+              .coverage.rawValue
+    }
+
     var isOld: Bool {
         Date().timeIntervalSince(observationTime) > 3600
     }

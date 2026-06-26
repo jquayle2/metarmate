@@ -18,6 +18,7 @@ struct AlertConditions {
     var windSpeed: Int               // knots
     var windGust: Int?               // knots; nil = no gust reported
     var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling
+    var ceilingCoverage: String?     // coverage code (BKN/OVC/VV) of the ceiling layer; nil = no/unknown
     var visibilitySM: Double         // statute miles
     var flightCategory: FlightCategory
     var source: Source
@@ -27,6 +28,7 @@ struct AlertConditions {
          windSpeed: Int,
          windGust: Int?,
          ceilingFeet: Int?,
+         ceilingCoverage: String? = nil,
          visibilitySM: Double,
          flightCategory: FlightCategory,
          source: Source,
@@ -35,6 +37,7 @@ struct AlertConditions {
         self.windSpeed = windSpeed
         self.windGust = windGust
         self.ceilingFeet = ceilingFeet
+        self.ceilingCoverage = ceilingCoverage
         self.visibilitySM = visibilitySM
         self.flightCategory = flightCategory
         self.source = source
@@ -49,6 +52,7 @@ struct AlertConditions {
                   windSpeed: metar.wind.speed,
                   windGust: metar.wind.gust,
                   ceilingFeet: metar.ceilingFeet,
+                  ceilingCoverage: metar.ceilingCoverage,
                   visibilitySM: metar.visibility,
                   flightCategory: metar.flightCategory,
                   source: .metar,
@@ -65,6 +69,7 @@ struct AlertConditions {
                   windSpeed: obs.windSpeed.map { Int($0.rounded()) } ?? Self.missingWindSpeedKt,
                   windGust: obs.windGust.map { Int($0.rounded()) },
                   ceilingFeet: obs.ceilingAGL,
+                  ceilingCoverage: obs.ceilingCoverage,
                   visibilitySM: obs.visibility ?? Self.missingVisibilitySM,
                   flightCategory: obs.estimatedCategory,
                   source: .asos,
