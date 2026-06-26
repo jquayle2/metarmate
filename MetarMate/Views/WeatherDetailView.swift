@@ -1831,16 +1831,20 @@ struct WeatherDetailView: View {
 
         // 3. Gusts crossing METAR-card thresholds in any base period (caution ≥15, warning ≥20).
         for p in bases {
-            guard let gust = p.wind?.gust else { continue }
+            guard let wind = p.wind, let gust = wind.gust else { continue }
+            // Per-period best runway computed off this period's gust (worst-case); nil → generic copy.
+            let r = bestRunway(wind, useGust: true)
             if gust >= 20 {
+                let detail = r.map(crosswindPhrase) ?? "check crosswind component for your runway"
                 notes.append(.init(
                     icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — check crosswind component for your runway; add \(gust / 2) kt to approach speed",
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); add \(gust / 2) kt to approach speed",
                     color: .orange, rank: 1, time: p.fromTime))
             } else if gust >= 15 {
+                let detail = r.map(crosswindPhrase) ?? "verify crosswind within limits"
                 notes.append(.init(
                     icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed",
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); consider adding \(gust / 2) kt to approach speed",
                     color: amber, rank: 2, time: p.fromTime))
             }
         }
