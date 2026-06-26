@@ -151,7 +151,7 @@ struct CrosswindKeypadView: View {
             keypadSection
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.04, green: 0.05, blue: 0.09))
+        .background(Color(red: 0.04, green: 0.05, blue: 0.09).ignoresSafeArea())
         .animation(.easeInOut(duration: 0.2), value: activeField)
     }
 
