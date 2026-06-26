@@ -56,6 +56,7 @@ struct NearestAirportsView: View {
                                     distance: airportVM.distance(to: airport)
                                 )
                             }
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 16))
                             .listRowBackground(Color(.systemGray6).opacity(0.2))
                         }
                     }
