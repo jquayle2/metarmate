@@ -31,13 +31,20 @@ struct RunwayCrosswindSheet: View {
         return g
     }
 
-    /// All runway ends, ranked best-first using the same preference as RunwayService.bestRunway.
+    /// Runway ends, ranked best-first (same preference as RunwayService.bestRunway), with
+    /// parallel runways collapsed — 12L/12R share a heading, so an identical crosswind.
     private var results: [RunwayResult] {
         guard let dir = direction, let spd = speed, spd > 0 else { return [] }
         let raw = RunwayService.shared.crosswinds(
             for: airport.icao, windDirection: dir,
             windSpeed: Double(spd), windGust: gust.map(Double.init))
+        var seen = Set<String>()
         return raw.sorted(by: Self.isBetter)
+            .filter { seen.insert(RunwayService.runwayNumber($0.runwayEnd.ident)).inserted }
+    }
+
+    private func ident(_ r: RunwayResult) -> String {
+        RunwayService.shared.displayIdent(r.runwayEnd, icao: airport.icao)
     }
 
     /// Mirrors RunwayService.bestRunway selection: headwind-favored, then lowest crosswind.
@@ -155,7 +162,7 @@ struct RunwayCrosswindSheet: View {
                     .tracking(1)
             }
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("RWY \(r.runwayEnd.ident)")
+                Text("RWY \(ident(r))")
                     .font(.title2.bold().monospacedDigit())
                 Spacer()
                 crosswindBadge(r)
@@ -186,7 +193,7 @@ struct RunwayCrosswindSheet: View {
                 .padding(.bottom, 8)
             ForEach(Array(results.enumerated()), id: \.offset) { idx, r in
                 HStack(spacing: 12) {
-                    Text("RWY \(r.runwayEnd.ident)")
+                    Text("RWY \(ident(r))")
                         .font(.body.monospacedDigit())
                         .frame(width: 90, alignment: .leading)
                     Text(alongText(r))

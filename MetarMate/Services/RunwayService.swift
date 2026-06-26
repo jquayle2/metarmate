@@ -42,6 +42,19 @@ final class RunwayService {
         loaded = true
     }
 
+    /// Numeric runway designator without the L/C/R position suffix ("12L" → "12").
+    static func runwayNumber(_ ident: String) -> String {
+        String(ident.prefix(while: { $0.isNumber }))
+    }
+
+    /// Display ident: the bare number when parallel runways share it (12L/12R have an
+    /// identical heading, so identical crosswind), else the full ident.
+    func displayIdent(_ end: RunwayEnd, icao: String) -> String {
+        let number = Self.runwayNumber(end.ident)
+        let count = runways(for: icao).filter { Self.runwayNumber($0.ident) == number }.count
+        return count > 1 ? number : end.ident
+    }
+
     func runways(for icao: String) -> [RunwayEnd] {
         loadIfNeeded()
         guard let rwys = runwayData[icao] else { return [] }

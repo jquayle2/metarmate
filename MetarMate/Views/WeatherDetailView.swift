@@ -841,11 +841,12 @@ struct WeatherDetailView: View {
             for: airport.icao, windDirection: dir, windSpeed: Double(wind.speed), windGust: gust)
     }
 
-    /// "RWY 30R: 18 kt XW (right), 12 kt headwind"
+    /// "RWY 30: 18 kt XW (right), 12 kt headwind" — parallels collapse to the bare number.
     private func crosswindPhrase(_ r: RunwayResult) -> String {
+        let ident = RunwayService.shared.displayIdent(r.runwayEnd, icao: airport.icao)
         let side = r.isLeft ? "left" : "right"
         let along = r.headwind >= 0 ? "\(r.headwind) kt headwind" : "\(abs(r.headwind)) kt tailwind"
-        return "RWY \(r.runwayEnd.ident): \(r.crosswind) kt XW (\(side)), \(along)"
+        return "RWY \(ident): \(r.crosswind) kt XW (\(side)), \(along)"
     }
 
     private func pilotNotes(for metar: Metar, history: [Metar]) -> [PilotNote] {
