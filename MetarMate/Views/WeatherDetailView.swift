@@ -800,6 +800,24 @@ struct WeatherDetailView: View {
         var color: Color { severity == .warning ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0) }
     }
 
+    // MARK: - Crosswind helpers (engine lives in RunwayService — these only adapt types/format)
+
+    /// Best runway for a given wind, or nil when wind is variable/calm or no runway data exists.
+    /// `useGust` drives the crosswind magnitude off the gust (worst-case) when true.
+    private func bestRunway(_ wind: Wind, useGust: Bool) -> RunwayResult? {
+        guard !wind.isVariable, let dir = wind.direction, wind.speed > 0 else { return nil }
+        let gust = useGust ? wind.gust.map(Double.init) : nil
+        return RunwayService.shared.bestRunway(
+            for: airport.icao, windDirection: dir, windSpeed: Double(wind.speed), windGust: gust)
+    }
+
+    /// "RWY 30R: 18 kt XW (right), 12 kt headwind"
+    private func crosswindPhrase(_ r: RunwayResult) -> String {
+        let side = r.isLeft ? "left" : "right"
+        let along = r.headwind >= 0 ? "\(r.headwind) kt headwind" : "\(abs(r.headwind)) kt tailwind"
+        return "RWY \(r.runwayEnd.ident): \(r.crosswind) kt XW (\(side)), \(along)"
+    }
+
     private func pilotNotes(for metar: Metar, history: [Metar]) -> [PilotNote] {
         var notes: [PilotNote] = []
         let wind = metar.wind
@@ -816,18 +834,34 @@ struct WeatherDetailView: View {
             notes.append(.init(icon: "wind", text: "Windshear in weather phenomena", severity: .warning))
         }
 
-        // High sustained wind
+        // High sustained wind — show computed best runway when runway data exists.
         if speed >= 25 {
-            notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — crosswind likely significant; verify component against aircraft limits", severity: .warning))
+            if let r = bestRunway(wind, useGust: false) {
+                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — \(crosswindPhrase(r)); verify against aircraft limits", severity: .warning))
+            } else {
+                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — crosswind likely significant; verify component against aircraft limits", severity: .warning))
+            }
         } else if speed >= 20 {
-            notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — check crosswind component for your runway", severity: .caution))
+            if let r = bestRunway(wind, useGust: false) {
+                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — \(crosswindPhrase(r))", severity: .caution))
+            } else {
+                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — check crosswind component for your runway", severity: .caution))
+            }
         }
 
-        // Gusts — lead with crosswind concern, secondary approach speed tip
+        // Gusts — lead with crosswind concern (computed off the gust), secondary approach speed tip
         if gust >= 20 {
-            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — check crosswind component for your runway; add \(gust / 2) kt to approach speed", severity: .warning))
+            if let r = bestRunway(wind, useGust: true) {
+                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — \(crosswindPhrase(r)); add \(gust / 2) kt to approach speed", severity: .warning))
+            } else {
+                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — check crosswind component for your runway; add \(gust / 2) kt to approach speed", severity: .warning))
+            }
         } else if gust >= 15 {
-            notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed", severity: .caution))
+            if let r = bestRunway(wind, useGust: true) {
+                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — \(crosswindPhrase(r)); consider adding \(gust / 2) kt to approach speed", severity: .caution))
+            } else {
+                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed", severity: .caution))
+            }
         }
 
         // Gust spread (turbulence indicator)
