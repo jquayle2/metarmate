@@ -23,8 +23,14 @@ struct RunwayCrosswindSheet: View {
         let spd = initialWind.speed
         let gst = initialWind.gust ?? spd
 
-        // Seed the runway from the best runway for this wind. Fall back to the runway
-        // most aligned with the wind (designator ≈ direction/10) when there's no data.
+        // The METAR wind is TRUE-north; the keypad works in the MAGNETIC frame (designator×10
+        // headings, like the manual tab). Convert before seeding so the calc lines up with the
+        // runway numbers and with Pilot Notes / bestRunway.
+        let magDir = RunwayService.shared.magneticWind(dir, for: airport.icao)
+
+        // Seed the runway from the best runway for this wind (bestRunway takes the TRUE wind and
+        // converts internally). Fall back to the runway most aligned with the magnetic wind
+        // (designator ≈ magnetic direction / 10) when there's no runway data.
         let seededRunway: Int = {
             if let best = RunwayService.shared.bestRunway(
                 for: airport.icao, windDirection: dir,
@@ -32,12 +38,12 @@ struct RunwayCrosswindSheet: View {
                let n = Int(RunwayService.runwayNumber(best.runwayEnd.ident)), (1...36).contains(n) {
                 return n
             }
-            let n = Int((Double(dir) / 10).rounded())
+            let n = Int((Double(magDir) / 10).rounded())
             return min(36, max(1, n == 0 ? 36 : n))
         }()
 
         _runway = State(initialValue: seededRunway)
-        _windDirection = State(initialValue: dir)
+        _windDirection = State(initialValue: magDir)
         _windSpeed = State(initialValue: spd)
         _gustSpeed = State(initialValue: gst)
     }
@@ -49,7 +55,6 @@ struct RunwayCrosswindSheet: View {
             windSpeed: $windSpeed,
             gustSpeed: $gustSpeed,
             title: airport.icao,
-            trueHeading: { RunwayService.shared.heading(for: airport.icao, runwayNumber: $0) },
             onDone: { dismiss() }
         )
         .presentationDetents([.large])

@@ -55,13 +55,24 @@ final class RunwayService {
         return count > 1 ? number : end.ident
     }
 
-    /// True magnetic heading for the given runway designator number (1...36) at this airport,
-    /// pulled from the same runways.json data bestRunway uses — so the contextual crosswind
-    /// calculator computes off the exact heading, not the designator×10 approximation. Parallel
-    /// ends (12L/12R) share a heading, so the bare number resolves unambiguously. Returns nil
-    /// when the airport or runway is unknown (caller falls back to designator×10).
-    func heading(for icao: String, runwayNumber: Int) -> Int? {
-        runways(for: icao).first { Int(Self.runwayNumber($0.ident)) == runwayNumber }?.heading
+    /// A runway's MAGNETIC heading for crosswind math: the designator number ×10. Runway
+    /// numbers ARE the magnetic heading rounded to 10°, which is the frame pilots and ForeFlight
+    /// reason in — so this matches their crosswind component and best-runway pick. (runways.json
+    /// stores TRUE headings, a different frame; mixing those with magnetic runway numbers was the
+    /// bug — see XW_TRUE_MAGNETIC_BRIEF.)
+    static func designatorMagneticHeading(_ ident: String) -> Int {
+        (Int(runwayNumber(ident)) ?? 0) * 10
+    }
+
+    /// Convert a METAR wind direction (referenced to TRUE north) into the MAGNETIC frame at the
+    /// given airport, using the WMM declination from its lat/lon. Falls back to the true value
+    /// unchanged when the airport's coordinates are unknown (declination can't be computed).
+    func magneticWind(_ trueDirection: Int, for icao: String) -> Int {
+        guard let airport = AirportService.shared.airport(icao: icao),
+              !(airport.latitude == 0 && airport.longitude == 0) else { return trueDirection }
+        let mag = MagneticDeclination.shared.magneticFromTrue(
+            Double(trueDirection), latitude: airport.latitude, longitude: airport.longitude)
+        return ((Int(mag.rounded()) % 360) + 360) % 360
     }
 
     func runways(for icao: String) -> [RunwayEnd] {
@@ -77,18 +88,24 @@ final class RunwayService {
 
     /// Crosswind/headwind for every runway end at the given wind. `windGust` (when present)
     /// is used as the effective speed — the same worst-case convention bestRunway uses.
+    ///
+    /// `windDirection` is the TRUE-north METAR value; it is converted to MAGNETIC here and the
+    /// math runs against each runway's magnetic (designator×10) heading, so results match the
+    /// magnetic frame pilots and ForeFlight use.
     func crosswinds(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?) -> [RunwayResult] {
         let ends = runways(for: icao)
         guard !ends.isEmpty else { return [] }
 
         let effectiveSpeed = windGust ?? windSpeed
+        let windMag = magneticWind(windDirection, for: icao)
 
         return ends.map { end in
-            let angle = Double(windDirection - end.heading) * .pi / 180.0
+            let heading = Self.designatorMagneticHeading(end.ident)
+            let angle = Double(windMag - heading) * .pi / 180.0
             let xw = abs(Int(round(effectiveSpeed * sin(angle))))
             let hw = Int(round(effectiveSpeed * cos(angle)))
             let left: Bool = {
-                let diff = ((windDirection - end.heading) % 360 + 360) % 360
+                let diff = ((windMag - heading) % 360 + 360) % 360
                 return diff > 0 && diff < 180
             }()
             return RunwayResult(runwayEnd: end, crosswind: xw, headwind: hw, isLeft: left)

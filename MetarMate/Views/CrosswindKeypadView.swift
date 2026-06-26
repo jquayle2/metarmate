@@ -50,12 +50,6 @@ struct CrosswindKeypadView: View {
     let title: String
     var onDone: (() -> Void)? = nil
 
-    /// Resolves a runway designator number (1...36) to its TRUE magnetic heading. Supplied by
-    /// the airport-context sheet (pulls from RunwayService, the same source Pilot Notes uses) so
-    /// the math agrees with Pilot Notes to the knot. nil on the manual XWind tab, where there is
-    /// no runway database and designator×10 is the only — and correct — fallback.
-    var trueHeading: ((Int) -> Int?)? = nil
-
     @State private var activeField: KeypadField?
     @State private var inputBuffer: String = ""
     @State private var errorMessage: String? = nil
@@ -71,25 +65,23 @@ struct CrosswindKeypadView: View {
          gustSpeed: Binding<Int>,
          title: String,
          initialActiveField: KeypadField? = .runway,
-         trueHeading: ((Int) -> Int?)? = nil,
          onDone: (() -> Void)? = nil) {
         _runway = runway
         _windDirection = windDirection
         _windSpeed = windSpeed
         _gustSpeed = gustSpeed
         self.title = title
-        self.trueHeading = trueHeading
         self.onDone = onDone
         _activeField = State(initialValue: initialActiveField)
     }
 
     private var windDeg: Int { windDirection % 360 }
 
-    /// The runway heading the trig runs off: the true magnetic heading when an airport context
-    /// supplied a resolver (so it matches RunwayService / Pilot Notes), else designator×10 for
-    /// the manual tab. Re-resolved from the current `runway`, so retyping or flipping the runway
-    /// stays on the true heading too.
-    private var runwayHeading: Int { trueHeading?(runway) ?? runway * 10 }
+    /// The runway heading the trig runs off: the designator number ×10. Both the manual tab and
+    /// the airport sheet work in the MAGNETIC frame — the manual tab from typed input, the sheet
+    /// from a wind already converted true→magnetic before seeding — so designator×10 is correct
+    /// for both. (Runway numbers ARE the magnetic heading rounded to 10°.)
+    private var runwayHeading: Int { runway * 10 }
 
     private var crosswind: Int {
         let angle = Double(windDeg - runwayHeading) * .pi / 180
