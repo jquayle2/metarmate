@@ -108,11 +108,16 @@ struct CrosswindKeypadView: View {
         return ""
     }
 
+    /// Crosswind magnitude color on MetarMate's WIND axis only — never the
+    /// flight-category/verdict green. Red ≥20 kt, amber ≥15 kt (the project gust
+    /// thresholds), neutral below so a benign crosswind reads as informational.
+    private static let amber = Color(red: 1.0, green: 0.6, blue: 0.0)
+    private static let neutralWind = Color(white: 0.9)
     private var severityColor: Color {
         let xw = gustSpeed > windSpeed ? gustCrosswind : crosswind
         if xw >= 20 { return .red }
-        if xw >= 15 { return .orange }
-        return .green
+        if xw >= 15 { return Self.amber }
+        return Self.neutralWind
     }
 
     var body: some View {

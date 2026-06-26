@@ -2,6 +2,12 @@ import SwiftUI
 
 /// Big crosswind number with L/R arrows, headwind/tailwind line, and Vref/flap
 /// advisories. Ported from the XW Calc app for the contextual crosswind keypad sheet.
+///
+/// COLOR AXIS: MetarMate reserves green/red for the flight-category and go/no-go
+/// verdict axes, so this readout stays on the wind palette. The crosswind magnitude
+/// `color` is supplied amber/red only (see CrosswindKeypadView.severityColor) and the
+/// headwind uses a neutral wind-axis blue — never green. Tailwind keeps red as a
+/// distinct wind-axis caution (boxed/triangle-flagged so it doesn't read as a verdict).
 struct CrosswindReadout: View {
     let crosswind: Int
     let gustCrosswind: Int?
@@ -13,6 +19,10 @@ struct CrosswindReadout: View {
     let windSpeed: Int
     let gustSpeed: Int?
     var onFlipRunway: (() -> Void)? = nil
+
+    /// Neutral wind-axis accent for the headwind value — deliberately NOT green so it
+    /// can't bleed into the flight-category/verdict axis.
+    private static let windAxisBlue = Color(red: 0.22, green: 0.74, blue: 0.97)
 
     private var gustAddKts: Int? {
         guard let gust = gustSpeed, gust > windSpeed else { return nil }
@@ -95,7 +105,7 @@ struct CrosswindReadout: View {
                     Text("HEADWIND")
                         .foregroundColor(Color(white: 0.45))
                     Text("\(abs(headwind)) kt")
-                        .foregroundColor(.green)
+                        .foregroundColor(Self.windAxisBlue)
                 }
                 .font(.system(size: 22, weight: .bold, design: .monospaced))
             }
