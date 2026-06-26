@@ -38,6 +38,12 @@ struct ContentView: View {
                     Label("Alerts", systemImage: "bell.fill")
                 }
                 .tag(3)
+
+            CrosswindTabView()
+                .tabItem {
+                    Label("XWind", systemImage: "wind")
+                }
+                .tag(4)
         }
         .preferredColorScheme(.dark)
         .onAppear {

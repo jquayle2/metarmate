@@ -35,19 +35,22 @@ enum KeypadField: Int, CaseIterable {
 }
 
 /// Manual crosswind calculator with the XW Calc swipe-to-enter-two-digits keypad.
-/// Ported into MetarMate as the contextual tap-to-open sheet: state is transient
-/// @State (not @AppStorage) and seeded from the wind that opened the sheet plus
-/// RunwayService.bestRunway, so it lands on the most relevant runway.
+/// The four values are injected as bindings so the same keypad serves two hosts:
+///   • RunwayCrosswindSheet — transient @State seeded from the wind that opened the
+///     contextual sheet plus RunwayService.bestRunway, so it lands on the best runway.
+///   • CrosswindTabView — @AppStorage last-used values for the standalone XWind tab.
+/// `title` is the second header line (ICAO for the sheet, "MANUAL" for the tab); a nil
+/// `onDone` hides the Done button (the tab has nothing to dismiss to).
 struct CrosswindKeypadView: View {
-    let airport: Airport
-    var onDone: () -> Void
+    @Binding var runway: Int
+    @Binding var windDirection: Int
+    @Binding var windSpeed: Int
+    @Binding var gustSpeed: Int
 
-    @State private var runway: Int
-    @State private var windDirection: Int
-    @State private var windSpeed: Int
-    @State private var gustSpeed: Int
+    let title: String
+    var onDone: (() -> Void)? = nil
 
-    @State private var activeField: KeypadField? = .runway
+    @State private var activeField: KeypadField?
     @State private var inputBuffer: String = ""
     @State private var errorMessage: String? = nil
     @State private var shakeOffset: CGFloat = 0
@@ -56,31 +59,20 @@ struct CrosswindKeypadView: View {
     @State private var digitFrames: [String: CGRect] = [:]
     @State private var swallowZeroUntil: Date? = nil
 
-    init(airport: Airport, initialWind: Wind, onDone: @escaping () -> Void) {
-        self.airport = airport
+    init(runway: Binding<Int>,
+         windDirection: Binding<Int>,
+         windSpeed: Binding<Int>,
+         gustSpeed: Binding<Int>,
+         title: String,
+         initialActiveField: KeypadField? = .runway,
+         onDone: (() -> Void)? = nil) {
+        _runway = runway
+        _windDirection = windDirection
+        _windSpeed = windSpeed
+        _gustSpeed = gustSpeed
+        self.title = title
         self.onDone = onDone
-
-        let dir = initialWind.direction ?? 0
-        let spd = initialWind.speed
-        let gst = initialWind.gust ?? spd
-
-        // Seed the runway from the best runway for this wind. Fall back to the runway
-        // most aligned with the wind (designator ≈ direction/10) when there's no data.
-        let seededRunway: Int = {
-            if let best = RunwayService.shared.bestRunway(
-                for: airport.icao, windDirection: dir,
-                windSpeed: Double(spd), windGust: initialWind.gust.map(Double.init)),
-               let n = Int(RunwayService.runwayNumber(best.runwayEnd.ident)), (1...36).contains(n) {
-                return n
-            }
-            let n = Int((Double(dir) / 10).rounded())
-            return min(36, max(1, n == 0 ? 36 : n))
-        }()
-
-        _runway = State(initialValue: seededRunway)
-        _windDirection = State(initialValue: dir)
-        _windSpeed = State(initialValue: spd)
-        _gustSpeed = State(initialValue: gst)
+        _activeField = State(initialValue: initialActiveField)
     }
 
     private var windDeg: Int { windDirection % 360 }
@@ -164,15 +156,17 @@ struct CrosswindKeypadView: View {
                     .font(.system(size: 10, weight: .heavy, design: .monospaced))
                     .tracking(2)
                     .foregroundColor(Color(white: 0.4))
-                Text(airport.icao)
+                Text(title)
                     .font(.system(size: 20, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
             }
             Spacer()
-            Button(action: onDone) {
-                Text("Done")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(Color(red: 0.22, green: 0.74, blue: 0.97))
+            if let onDone {
+                Button(action: onDone) {
+                    Text("Done")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(Color(red: 0.22, green: 0.74, blue: 0.97))
+                }
             }
         }
         .padding(.horizontal, 16)
