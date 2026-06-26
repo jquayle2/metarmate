@@ -62,7 +62,7 @@ struct AlertsView: View {
                                         row
                                     }
                                 }
-                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 16))
                                 .listRowBackground(Color(.systemGray6).opacity(0.2))
                             }
                             .onDelete(perform: deleteWatches)
@@ -219,7 +219,7 @@ private struct WatchRow: View {
                             .foregroundColor(.primary)
                         if let iata = airport?.iata, !iata.isEmpty {
                             Text(iata)
-                                .font(.system(size: 11, weight: .regular))
+                                .font(.caption2)
                                 .foregroundColor(.secondary.opacity(0.7))
                         }
                         if let cat = conditions?.flightCategory {
@@ -230,7 +230,7 @@ private struct WatchRow: View {
                     // Airport name line (sibling to Nearest), when the ICAO resolved.
                     if let name = airport?.name {
                         Text(name)
-                            .font(.subheadline)
+                            .font(.callout)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -240,18 +240,18 @@ private struct WatchRow: View {
                         conditionsSummary(c)
                     } else if display == nil {
                         Text("Checking…")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     } else {
                         Text("No weather data")
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
 
                     // Limiting factor(s) in plain language when NO-GO.
                     if let v = verdict, v.newSide == .noGo, !v.failingFactors.isEmpty {
                         Text(v.failingFactors.joined(separator: " · "))
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -259,7 +259,7 @@ private struct WatchRow: View {
                     // Source + freshness — the alert-specific provenance line.
                     if let c = conditions {
                         Text(freshness(c))
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -270,7 +270,7 @@ private struct WatchRow: View {
                 verdictBadge
             }
             .padding(.leading, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 5)
         }
     }
 
@@ -301,21 +301,21 @@ private struct WatchRow: View {
 
         HStack(spacing: 0) {
             Text(skyVis)
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
             if let wColor {
                 Text(" · ")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                 Text(windStr)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(wColor)
                     .fontWeight(.semibold)
                     .lineLimit(1)
             } else {
                 Text(" · \(windStr)")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }

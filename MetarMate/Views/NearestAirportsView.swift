@@ -19,6 +19,8 @@ struct NearestAirportsView: View {
                 }
             }
             .foregroundColor(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.bottom, 4)

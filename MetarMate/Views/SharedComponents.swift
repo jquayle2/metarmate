@@ -138,25 +138,25 @@ struct AirportRowView: View {
                             .foregroundColor(.primary)
                         if let iata = airport.iata, !iata.isEmpty {
                             Text(iata)
-                                .font(.system(size: 11, weight: .regular))
+                                .font(.caption2)
                                 .foregroundColor(.secondary.opacity(0.7))
                         }
                     }
 
                     Text(airport.name)
-                        .font(.subheadline)
+                        .font(.callout)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
 
                     if !airport.hasMetar {
                         Text("Advisory weather only")
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.orange)
                     } else if let metar = metar {
                         airportWeatherSummaryRow(metar: metar)
                     } else {
                         Text("METAR unavailable")
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -166,13 +166,13 @@ struct AirportRowView: View {
                 // Distance — visually secondary
                 if let distance = distance {
                     Text(distance)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(.secondary.opacity(0.6))
                         .fontWeight(.regular)
                 }
             }
             .padding(.leading, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 5)
         }
     }
 
@@ -214,21 +214,21 @@ struct AirportRowView: View {
 
         return HStack(spacing: 0) {
             Text(skyVis)
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
             if let color = windColor {
                 Text(" · ")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                 Text(windStr)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(color)
                     .fontWeight(.semibold)
                     .lineLimit(1)
             } else {
                 Text(" · \(windStr)")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
