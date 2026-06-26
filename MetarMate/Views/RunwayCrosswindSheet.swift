@@ -49,6 +49,7 @@ struct RunwayCrosswindSheet: View {
             windSpeed: $windSpeed,
             gustSpeed: $gustSpeed,
             title: airport.icao,
+            trueHeading: { RunwayService.shared.heading(for: airport.icao, runwayNumber: $0) },
             onDone: { dismiss() }
         )
         .presentationDetents([.large])

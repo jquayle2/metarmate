@@ -55,6 +55,15 @@ final class RunwayService {
         return count > 1 ? number : end.ident
     }
 
+    /// True magnetic heading for the given runway designator number (1...36) at this airport,
+    /// pulled from the same runways.json data bestRunway uses — so the contextual crosswind
+    /// calculator computes off the exact heading, not the designator×10 approximation. Parallel
+    /// ends (12L/12R) share a heading, so the bare number resolves unambiguously. Returns nil
+    /// when the airport or runway is unknown (caller falls back to designator×10).
+    func heading(for icao: String, runwayNumber: Int) -> Int? {
+        runways(for: icao).first { Int(Self.runwayNumber($0.ident)) == runwayNumber }?.heading
+    }
+
     func runways(for icao: String) -> [RunwayEnd] {
         loadIfNeeded()
         guard let rwys = runwayData[icao] else { return [] }

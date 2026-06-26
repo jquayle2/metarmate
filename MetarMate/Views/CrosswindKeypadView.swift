@@ -50,6 +50,12 @@ struct CrosswindKeypadView: View {
     let title: String
     var onDone: (() -> Void)? = nil
 
+    /// Resolves a runway designator number (1...36) to its TRUE magnetic heading. Supplied by
+    /// the airport-context sheet (pulls from RunwayService, the same source Pilot Notes uses) so
+    /// the math agrees with Pilot Notes to the knot. nil on the manual XWind tab, where there is
+    /// no runway database and designator×10 is the only — and correct — fallback.
+    var trueHeading: ((Int) -> Int?)? = nil
+
     @State private var activeField: KeypadField?
     @State private var inputBuffer: String = ""
     @State private var errorMessage: String? = nil
@@ -65,36 +71,44 @@ struct CrosswindKeypadView: View {
          gustSpeed: Binding<Int>,
          title: String,
          initialActiveField: KeypadField? = .runway,
+         trueHeading: ((Int) -> Int?)? = nil,
          onDone: (() -> Void)? = nil) {
         _runway = runway
         _windDirection = windDirection
         _windSpeed = windSpeed
         _gustSpeed = gustSpeed
         self.title = title
+        self.trueHeading = trueHeading
         self.onDone = onDone
         _activeField = State(initialValue: initialActiveField)
     }
 
     private var windDeg: Int { windDirection % 360 }
 
+    /// The runway heading the trig runs off: the true magnetic heading when an airport context
+    /// supplied a resolver (so it matches RunwayService / Pilot Notes), else designator×10 for
+    /// the manual tab. Re-resolved from the current `runway`, so retyping or flipping the runway
+    /// stays on the true heading too.
+    private var runwayHeading: Int { trueHeading?(runway) ?? runway * 10 }
+
     private var crosswind: Int {
-        let angle = Double(windDeg - runway * 10) * .pi / 180
+        let angle = Double(windDeg - runwayHeading) * .pi / 180
         return abs(Int(round(Double(windSpeed) * sin(angle))))
     }
 
     private var gustCrosswind: Int {
         guard gustSpeed > windSpeed else { return crosswind }
-        let angle = Double(windDeg - runway * 10) * .pi / 180
+        let angle = Double(windDeg - runwayHeading) * .pi / 180
         return abs(Int(round(Double(gustSpeed) * sin(angle))))
     }
 
     private var headwind: Int {
-        let angle = Double(windDeg - runway * 10) * .pi / 180
+        let angle = Double(windDeg - runwayHeading) * .pi / 180
         return Int(round(Double(windSpeed) * cos(angle)))
     }
 
     private var side: String {
-        let diff = ((windDeg - runway * 10) % 360 + 360) % 360
+        let diff = ((windDeg - runwayHeading) % 360 + 360) % 360
         if diff > 0 && diff < 180 { return "R" }
         if diff > 180 { return "L" }
         return ""
