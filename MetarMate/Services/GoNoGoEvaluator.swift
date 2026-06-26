@@ -73,11 +73,14 @@ enum GoNoGoEvaluator {
                                                        windSpeed: Double(conditions.windSpeed),
                                                        windGust: conditions.windGust.map(Double.init)) {
             let xw = Double(best.crosswind)   // already gust-based when a gust was supplied
+            // Collapse parallel runways to the bare number (12L/12R share a heading, hence an
+            // identical crosswind — the L/R pick is arbitrary), matching the detail view.
+            let ident = RunwayService.shared.displayIdent(best.runwayEnd, icao: icao)
             factors.append(Factor(
-                label: "crosswind Rwy \(best.runwayEnd.ident)",
+                label: "crosswind Rwy \(ident)",
                 value: xw, limit: crosswindLimit, deadband: Deadband.crosswindKt,
                 worseWhenHigher: true,
-                failureText: "Rwy \(best.runwayEnd.ident) crosswind \(Int(xw)) kt over \(Int(crosswindLimit)) kt"))
+                failureText: "Rwy \(ident) crosswind \(Int(xw)) kt over \(Int(crosswindLimit)) kt"))
         }
 
         // 2. Sustained wind
