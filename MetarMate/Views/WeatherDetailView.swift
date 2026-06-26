@@ -14,6 +14,13 @@ struct WeatherDetailView: View {
     @State private var showNearbyAirports = false
     @State private var showProUpgrade = false     // ASOS paywall
     @State private var showProSheet = false       // Pro paywall (favorites/widgets/Siri)
+    @State private var crosswindContext: CrosswindContext?   // tap-to-open crosswind calc
+
+    /// Carries the wind that seeds the contextual crosswind calculator.
+    private struct CrosswindContext: Identifiable {
+        let id = UUID()
+        let wind: Wind
+    }
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -86,6 +93,9 @@ struct WeatherDetailView: View {
         }
         .sheet(isPresented: $showProSheet) {
             ProUpgradeView(mode: .pro)
+        }
+        .sheet(item: $crosswindContext) { ctx in
+            RunwayCrosswindSheet(airport: airport, initialWind: ctx.wind)
         }
         .task {
             await vm.load(airport: airport)
@@ -540,7 +550,7 @@ struct WeatherDetailView: View {
                     let dir = obs.windDirection.map { String(format: "%03d°", $0) } ?? "VRB"
                     let gustText = obs.windGust.map { " gusting \(Int($0)) kt" } ?? ""
                     let wind = Wind(direction: obs.windDirection, speed: Int(spd), gust: obs.windGust.map { Int($0) }, isVariable: obs.windDirection == nil)
-                    conditionRow("wind", "Wind", "\(dir) at \(Int(spd)) kt\(gustText)", color: windConditionColor(wind))
+                    windConditionRow(wind, value: "\(dir) at \(Int(spd)) kt\(gustText)")
                 }
             }
 
@@ -646,7 +656,7 @@ struct WeatherDetailView: View {
     private func decodedConditionsSection(_ metar: Metar) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Decoded METAR")
-            conditionRow("wind", "Wind", windText(metar.wind), color: windConditionColor(metar.wind))
+            windConditionRow(metar.wind, value: windText(metar.wind))
             conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility), color: visibilityConditionColor(metar.visibility))
             conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
             if !metar.clouds.isEmpty {
@@ -665,6 +675,26 @@ struct WeatherDetailView: View {
         }
         .padding()
         .background(cardBackground)
+    }
+
+    // Wind condition row that opens the contextual crosswind calculator on tap.
+    @ViewBuilder
+    private func windConditionRow(_ wind: Wind, value: String) -> some View {
+        Button {
+            crosswindContext = .init(wind: wind)
+        } label: {
+            HStack(spacing: 6) {
+                conditionRow("wind", "Wind", value, color: windConditionColor(wind))
+                HStack(spacing: 2) {
+                    Text("XW")
+                        .font(.caption2.weight(.semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                }
+                .foregroundColor(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Condition row color helpers

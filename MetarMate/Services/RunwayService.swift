@@ -53,14 +53,15 @@ final class RunwayService {
         return ends
     }
 
-    func bestRunway(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?) -> RunwayResult? {
+    /// Crosswind/headwind for every runway end at the given wind. `windGust` (when present)
+    /// is used as the effective speed — the same worst-case convention bestRunway uses.
+    func crosswinds(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?) -> [RunwayResult] {
         let ends = runways(for: icao)
-        guard !ends.isEmpty else { return nil }
+        guard !ends.isEmpty else { return [] }
 
         let effectiveSpeed = windGust ?? windSpeed
 
-        var best: RunwayResult?
-        for end in ends {
+        return ends.map { end in
             let angle = Double(windDirection - end.heading) * .pi / 180.0
             let xw = abs(Int(round(effectiveSpeed * sin(angle))))
             let hw = Int(round(effectiveSpeed * cos(angle)))
@@ -68,9 +69,16 @@ final class RunwayService {
                 let diff = ((windDirection - end.heading) % 360 + 360) % 360
                 return diff > 0 && diff < 180
             }()
+            return RunwayResult(runwayEnd: end, crosswind: xw, headwind: hw, isLeft: left)
+        }
+    }
 
-            let result = RunwayResult(runwayEnd: end, crosswind: xw, headwind: hw, isLeft: left)
+    func bestRunway(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?) -> RunwayResult? {
+        let results = crosswinds(for: icao, windDirection: windDirection, windSpeed: windSpeed, windGust: windGust)
+        guard !results.isEmpty else { return nil }
 
+        var best: RunwayResult?
+        for result in results {
             guard let current = best else {
                 best = result
                 continue
