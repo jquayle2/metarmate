@@ -45,8 +45,25 @@ struct AlertsView: View {
                     } else {
                         List {
                             ForEach(watches) { watch in
-                                WatchRow(watch: watch, display: vm.displays[watch.icao])
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
+                                // Resolve the watch's ICAO to an Airport so the row can push
+                                // WeatherDetailView, exactly like a Nearest row. Done once here
+                                // (not per body pass). Unresolvable stations fall back to a
+                                // non-tappable row rather than crashing.
+                                let airport = AirportService.shared.airport(icao: watch.icao)
+                                let row = WatchRow(watch: watch,
+                                                   display: vm.displays[watch.icao],
+                                                   airport: airport)
+                                Group {
+                                    if let airport {
+                                        NavigationLink(destination: WeatherDetailView(airport: airport)) {
+                                            row
+                                        }
+                                    } else {
+                                        row
+                                    }
+                                }
+                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 16))
+                                .listRowBackground(Color(.systemGray6).opacity(0.2))
                             }
                             .onDelete(perform: deleteWatches)
                         }
@@ -162,59 +179,102 @@ struct AlertsView: View {
 }
 
 // MARK: - WatchRow
+// Reads as a sibling of the Nearest list's AirportRowView (same left category strip, ICAO/IATA
+// header, airport name, and "CLR · 10+SM · 180@19G30" conditions line) with the alert-specific
+// elements layered on top: the GO/NO-GO verdict badge, the failing-factors line, and the
+// "via METAR · N min ago" freshness line.
+//
+// COLOR AXIS (kept strictly separate — do not regress):
+//   • Left strip + FlightCategoryBadge = CATEGORY axis (VFR/MVFR/IFR/LIFR).
+//   • GO/NO-GO badge                   = VERDICT axis (red NO-GO / green GO).
+//   • Wind text in the conditions line = WIND axis (amber/red only, otherwise secondary).
 private struct WatchRow: View {
     let watch: AirportWatch
     let display: AlertPipeline.WatchDisplay?
+    let airport: Airport?
 
     private var conditions: AlertConditions? { display?.conditions }
     private var verdict: Verdict? { display?.verdict }
 
+    // CATEGORY axis — left strip color (falls back to gray when conditions are unknown).
+    private var categoryColor: Color {
+        conditions?.flightCategory.swiftUIColor ?? Color(.systemGray3)
+    }
+
     var body: some View {
         HStack(spacing: 0) {
-            // (a) Left status strip — airport's current flight category (existing category colors).
-            (conditions?.flightCategory.swiftUIColor ?? Color(.systemGray3))
-                .frame(width: 6)
+            // Left-edge flight category strip — matches AirportRowView's treatment exactly.
+            Rectangle()
+                .fill(categoryColor)
+                .frame(width: 3)
+                .clipShape(RoundedRectangle(cornerRadius: 1.5))
+                .padding(.vertical, 6)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(watch.icao)
-                        .font(.headline)
-                    if let cat = conditions?.flightCategory {
-                        FlightCategoryBadge(category: cat)
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    // ICAO prominent, IATA small/secondary, category badge inline.
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(airport?.icao ?? watch.icao)
+                            .font(.system(.headline, design: .default).weight(.bold))
+                            .foregroundColor(.primary)
+                        if let iata = airport?.iata, !iata.isEmpty {
+                            Text(iata)
+                                .font(.system(size: 11, weight: .regular))
+                                .foregroundColor(.secondary.opacity(0.7))
+                        }
+                        if let cat = conditions?.flightCategory {
+                            FlightCategoryBadge(category: cat)
+                        }
                     }
-                    Spacer()
-                    verdictBadge
+
+                    // Airport name line (sibling to Nearest), when the ICAO resolved.
+                    if let name = airport?.name {
+                        Text(name)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    // Conditions summary ("CLR · 10+SM · 180@19G30") or a status placeholder.
+                    if let c = conditions {
+                        conditionsSummary(c)
+                    } else if display == nil {
+                        Text("Checking…")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No weather data")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Limiting factor(s) in plain language when NO-GO.
+                    if let v = verdict, v.newSide == .noGo, !v.failingFactors.isEmpty {
+                        Text(v.failingFactors.joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    // Source + freshness — the alert-specific provenance line.
+                    if let c = conditions {
+                        Text(freshness(c))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
                 }
 
-                // (c) Limiting factor(s) in plain language when NO-GO.
-                if let v = verdict, v.newSide == .noGo, !v.failingFactors.isEmpty {
-                    Text(v.failingFactors.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Spacer()
 
-                // (d) Source + freshness.
-                if let c = conditions {
-                    Text(freshness(c))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                } else if display == nil {
-                    Text("Checking…")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("No weather data")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                // VERDICT axis — GO/NO-GO badge, trailing (red NO-GO / green GO).
+                verdictBadge
             }
-            .padding(.leading, 12)
+            .padding(.leading, 10)
             .padding(.vertical, 8)
         }
     }
 
-    // (b) Go/no-go verdict badge — red NO-GO, green GO (per spec; distinct from the category strip).
+    // VERDICT axis — must stay distinct from the category strip.
     @ViewBuilder private var verdictBadge: some View {
         if let v = verdict {
             let isNoGo = v.newSide == .noGo
@@ -230,6 +290,67 @@ private struct WatchRow: View {
                 .font(.caption.bold())
                 .foregroundColor(.secondary)
         }
+    }
+
+    // MARK: - Conditions line (built from AlertConditions, mirroring AirportRowView)
+
+    @ViewBuilder private func conditionsSummary(_ c: AlertConditions) -> some View {
+        let skyVis = skyVisString(c)
+        let windStr = windString(c)
+        let wColor = windColor(c)   // WIND axis — amber/red only
+
+        HStack(spacing: 0) {
+            Text(skyVis)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            if let wColor {
+                Text(" · ")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(windStr)
+                    .font(.caption)
+                    .foregroundColor(wColor)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+            } else {
+                Text(" · \(windStr)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private func skyVisString(_ c: AlertConditions) -> String {
+        var parts: [String] = []
+        if let ceiling = c.ceilingFeet {
+            // AlertConditions keeps only ceiling height (coverage code is normalized away),
+            // so label it with the conventional ceiling marker.
+            parts.append("BKN \(ceiling / 100)")
+        } else {
+            parts.append("CLR")
+        }
+        let vis = c.visibilitySM >= 10 ? "10+SM" : "\(String(format: "%g", c.visibilitySM))SM"
+        parts.append(vis)
+        return parts.joined(separator: " · ")
+    }
+
+    private func windString(_ c: AlertConditions) -> String {
+        if c.windSpeed == 0 { return "Calm" }
+        let dir = c.windDirection.map { String(format: "%03d", $0) } ?? "VRB"
+        if let gust = c.windGust { return "\(dir)@\(c.windSpeed)G\(gust)" }
+        return "\(dir)@\(c.windSpeed)"
+    }
+
+    // WIND axis — amber/red only, matching AirportRowView's thresholds. nil = no wind emphasis.
+    private func windColor(_ c: AlertConditions) -> Color? {
+        let speed = c.windSpeed
+        let gust = c.windGust ?? 0
+        let spread = gust - speed
+        if gust >= 20 || speed >= 25 || spread >= 15 { return .red }
+        if gust >= 15 || speed >= 20 || spread >= 10 { return .orange }
+        return nil
     }
 
     private func freshness(_ c: AlertConditions) -> String {
