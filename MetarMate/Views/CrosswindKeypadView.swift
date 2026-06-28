@@ -34,13 +34,11 @@ enum KeypadField: Int, CaseIterable {
     }
 }
 
-/// Manual crosswind calculator with the XW Calc swipe-to-enter-two-digits keypad.
-/// The four values are injected as bindings so the same keypad serves two hosts:
-///   • RunwayCrosswindSheet — transient @State seeded from the wind that opened the
-///     contextual sheet plus RunwayService.bestRunway, so it lands on the best runway.
-///   • CrosswindTabView — @AppStorage last-used values for the standalone XWind tab.
-/// `title` is the second header line (ICAO for the sheet, "MANUAL" for the tab); a nil
-/// `onDone` hides the Done button (the tab has nothing to dismiss to).
+/// Manual crosswind calculator with the XW Calc swipe-to-enter-two-digits keypad. Hosted by
+/// CrosswindTabView (the standalone XWind tab), which injects @AppStorage last-used values as
+/// bindings. Dumb-and-honest: designator×10 vs the wind AS-TYPED, no true→magnetic conversion
+/// (auto crosswind from a METAR lives only in Pilot Notes / RunwayService, which converts).
+/// `title` is the second header line ("MANUAL"); a nil `onDone` hides the Done button.
 struct CrosswindKeypadView: View {
     @Binding var runway: Int
     @Binding var windDirection: Int
@@ -77,10 +75,9 @@ struct CrosswindKeypadView: View {
 
     private var windDeg: Int { windDirection % 360 }
 
-    /// The runway heading the trig runs off: the designator number ×10. Both the manual tab and
-    /// the airport sheet work in the MAGNETIC frame — the manual tab from typed input, the sheet
-    /// from a wind already converted true→magnetic before seeding — so designator×10 is correct
-    /// for both. (Runway numbers ARE the magnetic heading rounded to 10°.)
+    /// The runway heading the trig runs off: the designator number ×10. The pilot types the wind
+    /// in the same frame they read the runway number (magnetic), so the typed wind is used as-is
+    /// against designator×10 — no conversion. (Runway numbers ARE the magnetic heading / 10.)
     private var runwayHeading: Int { runway * 10 }
 
     private var crosswind: Int {

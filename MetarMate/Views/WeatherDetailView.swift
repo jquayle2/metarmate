@@ -14,13 +14,6 @@ struct WeatherDetailView: View {
     @State private var showNearbyAirports = false
     @State private var showProUpgrade = false     // ASOS paywall
     @State private var showProSheet = false       // Pro paywall (favorites/widgets/Siri)
-    @State private var crosswindContext: CrosswindContext?   // tap-to-open crosswind calc
-
-    /// Carries the wind that seeds the contextual crosswind calculator.
-    private struct CrosswindContext: Identifiable {
-        let id = UUID()
-        let wind: Wind
-    }
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -42,7 +35,7 @@ struct WeatherDetailView: View {
                     headerSection
                     if store.isAsosUser, vm.hasASOSData, let obs = vm.synopticLatest {
                         decodedASOSSection(obs)
-                    } else if !store.isAsosUser, vm.metar != nil {
+                    } else if FeatureFlags.asosAvailable, !store.isAsosUser, vm.metar != nil {
                         asosProTeaser
                     }
                     if let metar = vm.metar {
@@ -93,9 +86,6 @@ struct WeatherDetailView: View {
         }
         .sheet(isPresented: $showProSheet) {
             ProUpgradeView(mode: .pro)
-        }
-        .sheet(item: $crosswindContext) { ctx in
-            RunwayCrosswindSheet(airport: airport, initialWind: ctx.wind)
         }
         .task {
             await vm.load(airport: airport)
@@ -677,24 +667,12 @@ struct WeatherDetailView: View {
         .background(cardBackground)
     }
 
-    // Wind condition row that opens the contextual crosswind calculator on tap.
+    // Plain, non-interactive wind row. (Previously a tap target that opened a contextual
+    // crosswind calculator seeded from this wind; that affordance was removed — auto crosswind
+    // from a METAR now lives only in Pilot Notes, which converts to the magnetic frame.)
     @ViewBuilder
     private func windConditionRow(_ wind: Wind, value: String) -> some View {
-        Button {
-            crosswindContext = .init(wind: wind)
-        } label: {
-            HStack(spacing: 6) {
-                conditionRow("wind", "Wind", value, color: windConditionColor(wind))
-                HStack(spacing: 2) {
-                    Text("XW")
-                        .font(.caption2.weight(.semibold))
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                }
-                .foregroundColor(.secondary)
-            }
-        }
-        .buttonStyle(.plain)
+        conditionRow("wind", "Wind", value, color: windConditionColor(wind))
     }
 
     // MARK: - Condition row color helpers
