@@ -804,27 +804,141 @@ struct WeatherDetailView: View {
         let icon: String
         let text: String
         let severity: Severity   // .caution (yellow) or .warning (orange)
+        var crosswind: CrosswindDisplay? = nil   // when set, renders the 3-line crosswind body
         enum Severity { case caution, warning }
-        var color: Color { severity == .warning ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0) }
+        var color: Color {
+            if let cw = crosswind { return cw.windColor }   // amber/red wind palette for the icon
+            return severity == .warning ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
+        }
     }
 
     // MARK: - Crosswind helpers (engine lives in RunwayService — these only adapt types/format)
 
-    /// Best runway for a given wind, or nil when wind is variable/calm or no runway data exists.
-    /// `useGust` drives the crosswind magnitude off the gust (worst-case) when true.
-    private func bestRunway(_ wind: Wind, useGust: Bool) -> RunwayResult? {
-        guard !wind.isVariable, let dir = wind.direction, wind.speed > 0 else { return nil }
-        let gust = useGust ? wind.gust.map(Double.init) : nil
-        return RunwayService.shared.bestRunway(
-            for: airport.icao, windDirection: dir, windSpeed: Double(wind.speed), windGust: gust)
+    /// Structured crosswind display data for a Pilot Notes line. DISPLAY ONLY — every number
+    /// comes from RunwayService (magnetic-frame math); this only reads it at two speeds and
+    /// formats. `side`/colors are borrowed from the calculator's CrosswindReadout so the two
+    /// agree. `line1` is set by the caller (METAR vs TAF-with-timing).
+    private struct CrosswindDisplay {
+        var line1: String = ""
+        let side: String          // calc convention: "L" arrow-before-points-right, "R" arrow-after-points-left
+        let xwLow: Int, xwHigh: Int
+        let hwLow: Int, hwHigh: Int   // along-track; negative = tailwind (rare on the best runway)
+        let isRed: Bool           // gust (high-end) crosswind crosses the calc's red threshold
+        let vref: String?
+        let ident: String
+        /// Calc wind palette: amber by default, red when the gust crosswind crosses the threshold.
+        static let amberWind = Color(red: 1.0, green: 0.6, blue: 0.0)
+        var windColor: Color { isRed ? .red : Self.amberWind }
     }
 
-    /// "RWY 30: 18 kt XW (right), 12 kt headwind" — parallels collapse to the bare number.
-    private func crosswindPhrase(_ r: RunwayResult) -> String {
-        let ident = RunwayService.shared.displayIdent(r.runwayEnd, icao: airport.icao)
-        let side = r.isLeft ? "left" : "right"
-        let along = r.headwind >= 0 ? "\(r.headwind) kt headwind" : "\(abs(r.headwind)) kt tailwind"
-        return "RWY \(ident): \(r.crosswind) kt XW (\(side)), \(along)"
+    /// Calc red-crosswind threshold (CrosswindKeypadView.severityColor): red at ≥20 kt.
+    private static let crosswindRedThreshold = 20
+
+    /// Crosswind/headwind ranges (sustained→gust) for the best runway, plus the runner-up when
+    /// it's a genuine near-tie (see RunwayService.bestRunways) — best first, at most two. Selection
+    /// runs off the gust (worst case); it's scale-invariant, so the same ends are best at the
+    /// sustained speed, which we read for the low end. Empty when calm/variable/no runway data.
+    private func crosswindDisplays(_ wind: Wind) -> [CrosswindDisplay] {
+        guard !wind.isVariable, let dir = wind.direction, wind.speed > 0 else { return [] }
+        let icao = airport.icao
+        let speed = Double(wind.speed)
+        let hasGust = (wind.gust ?? 0) > wind.speed
+        let gustArg = hasGust ? wind.gust.map(Double.init) : nil
+
+        let ranked = RunwayService.shared.bestRunways(
+            for: icao, windDirection: dir, windSpeed: speed, windGust: gustArg)
+        guard !ranked.isEmpty else { return [] }
+
+        // Sustained-speed components for every end, to read the low end per chosen runway.
+        let sustained = RunwayService.shared.crosswinds(
+            for: icao, windDirection: dir, windSpeed: speed, windGust: nil)
+
+        return ranked.map { buildCrosswindDisplay($0, sustained: sustained, wind: wind, icao: icao) }
+    }
+
+    /// Assemble a CrosswindDisplay for one runway end: the gust-speed components are the high end,
+    /// the same end's sustained-speed components the low end. side/colors mirror CrosswindReadout.
+    private func buildCrosswindDisplay(_ gustResult: RunwayResult, sustained: [RunwayResult],
+                                       wind: Wind, icao: String) -> CrosswindDisplay {
+        let ident = RunwayService.shared.displayIdent(gustResult.runwayEnd, icao: icao)
+        let sus = sustained.first { $0.runwayEnd.ident == gustResult.runwayEnd.ident } ?? gustResult
+
+        let xwLow = min(sus.crosswind, gustResult.crosswind)
+        let xwHigh = max(sus.crosswind, gustResult.crosswind)
+        let hwLow = min(sus.headwind, gustResult.headwind)
+        let hwHigh = max(sus.headwind, gustResult.headwind)
+
+        // Reuse the calc's RunwayResult.isLeft so the arrow matches CrosswindReadout exactly.
+        let side = xwHigh == 0 ? "" : (gustResult.isLeft ? "R" : "L")
+        let isRed = xwHigh >= Self.crosswindRedThreshold
+
+        let hasGust = (wind.gust ?? 0) > wind.speed
+        let g = wind.gust ?? wind.speed
+        let vref: String? = hasGust ? "\(g >= 20 ? "add" : "consider adding") \(g / 2) kt to approach speed" : nil
+
+        return CrosswindDisplay(side: side, xwLow: xwLow, xwHigh: xwHigh,
+                                hwLow: hwLow, hwHigh: hwHigh, isRed: isRed, vref: vref, ident: ident)
+    }
+
+    private func crosswindXWText(_ cw: CrosswindDisplay) -> String {
+        cw.xwLow == cw.xwHigh ? "XW \(cw.xwLow) kt" : "XW \(cw.xwLow)-\(cw.xwHigh) kt"
+    }
+
+    private func crosswindAlongText(_ cw: CrosswindDisplay) -> String {
+        let lo = cw.hwLow, hi = cw.hwHigh
+        if lo >= 0 {
+            return lo == hi ? "HW \(lo) kt" : "HW \(lo)-\(hi) kt"
+        } else if hi <= 0 {
+            let a = abs(hi), b = abs(lo)   // a ≤ b
+            return a == b ? "TW \(a) kt" : "TW \(a)-\(b) kt"
+        } else {
+            return "HW \(lo)-\(hi) kt"
+        }
+    }
+
+    /// Three-line crosswind body: title, arrow+XW range (amber/red) and HW range (neutral), and a
+    /// muted Vref line. Arrow placement mirrors the calculator's CrosswindReadout.
+    @ViewBuilder
+    private func crosswindNoteBody(_ cw: CrosswindDisplay) -> some View {
+        let neutral = Color(white: 0.65)
+        VStack(alignment: .leading, spacing: 3) {
+            Text(cw.line1)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // One line at default sizes; wraps to two at large Dynamic Type.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    crosswindXWGroup(cw)
+                    Text(crosswindAlongText(cw)).foregroundColor(neutral)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    crosswindXWGroup(cw)
+                    Text(crosswindAlongText(cw)).foregroundColor(neutral)
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+
+            if let vref = cw.vref {
+                Text(vref)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func crosswindXWGroup(_ cw: CrosswindDisplay) -> some View {
+        HStack(spacing: 4) {
+            if cw.side == "L" {
+                Image(systemName: "arrow.right").foregroundColor(cw.windColor)
+            }
+            Text(crosswindXWText(cw)).foregroundColor(cw.windColor)
+            if cw.side == "R" {
+                Image(systemName: "arrow.left").foregroundColor(cw.windColor)
+            }
+        }
     }
 
     private func pilotNotes(for metar: Metar, history: [Metar]) -> [PilotNote] {
@@ -843,33 +957,28 @@ struct WeatherDetailView: View {
             notes.append(.init(icon: "wind", text: "Windshear in weather phenomena", severity: .warning))
         }
 
-        // High sustained wind — show computed best runway when runway data exists.
-        if speed >= 25 {
-            if let r = bestRunway(wind, useGust: false) {
-                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — \(crosswindPhrase(r)); verify against aircraft limits", severity: .warning))
+        // Crosswind — one consolidated note showing the sustained→gust range on the best runway.
+        // Triggers on a notable sustained wind or any gust crossing the caution threshold.
+        let hasGust = gust > speed
+        if speed >= 20 || gust >= 15 {
+            let severity: PilotNote.Severity = (speed >= 25 || gust >= 20) ? .warning : .caution
+            let displays = crosswindDisplays(wind)
+            if !displays.isEmpty {
+                // Best runway first; a near-tie runner-up follows with subtler "or RWY" framing.
+                for (i, display) in displays.enumerated() {
+                    var cw = display
+                    if i == 0 {
+                        let lead = hasGust ? "Gusts \(gust) kt" : "Wind \(speed) kt"
+                        cw.line1 = "\(lead) — RWY \(cw.ident)"
+                    } else {
+                        cw.line1 = "or RWY \(cw.ident)"
+                    }
+                    notes.append(.init(icon: "wind", text: cw.line1, severity: severity, crosswind: cw))
+                }
             } else {
-                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — crosswind likely significant; verify component against aircraft limits", severity: .warning))
-            }
-        } else if speed >= 20 {
-            if let r = bestRunway(wind, useGust: false) {
-                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — \(crosswindPhrase(r))", severity: .caution))
-            } else {
-                notes.append(.init(icon: "wind", text: "Sustained \(speed) kt — check crosswind component for your runway", severity: .caution))
-            }
-        }
-
-        // Gusts — lead with crosswind concern (computed off the gust), secondary approach speed tip
-        if gust >= 20 {
-            if let r = bestRunway(wind, useGust: true) {
-                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — \(crosswindPhrase(r)); add \(gust / 2) kt to approach speed", severity: .warning))
-            } else {
-                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — check crosswind component for your runway; add \(gust / 2) kt to approach speed", severity: .warning))
-            }
-        } else if gust >= 15 {
-            if let r = bestRunway(wind, useGust: true) {
-                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — \(crosswindPhrase(r)); consider adding \(gust / 2) kt to approach speed", severity: .caution))
-            } else {
-                notes.append(.init(icon: "wind", text: "Gusts \(gust) kt — verify crosswind within limits; consider adding \(gust / 2) kt to approach speed", severity: .caution))
+                let lead = hasGust ? "Gusts \(gust) kt" : "Sustained \(speed) kt"
+                let vref = hasGust ? "; \(gust >= 20 ? "add" : "consider adding") \(gust / 2) kt to approach speed" : ""
+                notes.append(.init(icon: "wind", text: "\(lead) — check crosswind component for your runway\(vref)", severity: severity))
             }
         }
 
@@ -977,10 +1086,14 @@ struct WeatherDetailView: View {
                             .foregroundColor(note.color)
                             .font(.subheadline)
                             .frame(width: 20)
-                        Text(note.text)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if let cw = note.crosswind {
+                            crosswindNoteBody(cw)
+                        } else {
+                            Text(note.text)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 Text("Operational thresholds shown. Verify against your aircraft POH and personal minimums.")
@@ -1762,6 +1875,7 @@ struct WeatherDetailView: View {
         let color: Color
         let rank: Int          // tier: 0 red, 1 orange, 2 amber, 3 gray
         let time: Date         // forecast time, for chronological sort within a tier (Fix 2)
+        var crosswind: CrosswindDisplay? = nil   // when set, renders the 3-line crosswind body
     }
 
     private static let tafAmber = Color(red: 1.0, green: 0.6, blue: 0.0)
@@ -1840,21 +1954,27 @@ struct WeatherDetailView: View {
 
         // 3. Gusts crossing METAR-card thresholds in any base period (caution ≥15, warning ≥20).
         for p in bases {
-            guard let wind = p.wind, let gust = wind.gust else { continue }
-            // Per-period best runway computed off this period's gust (worst-case); nil → generic copy.
-            let r = bestRunway(wind, useGust: true)
-            if gust >= 20 {
-                let detail = r.map(crosswindPhrase) ?? "check crosswind component for your runway"
+            guard let wind = p.wind, let gust = wind.gust, gust >= 15 else { continue }
+            // Per-period crosswind range on the best runway (plus near-tie runner-up); empty → generic copy.
+            let displays = crosswindDisplays(wind)
+            if !displays.isEmpty {
+                for (i, display) in displays.enumerated() {
+                    var cw = display
+                    cw.line1 = i == 0
+                        ? "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — RWY \(cw.ident)"
+                        : "or RWY \(cw.ident)"
+                    // Crosswind line uses the calc wind palette (amber, red when the gust XW crosses
+                    // the red threshold); ranks with the red/amber tiers so the card accent follows.
+                    notes.append(.init(icon: "wind", text: cw.line1,
+                                       color: cw.windColor, rank: cw.isRed ? 0 : 2,
+                                       time: p.fromTime, crosswind: cw))
+                }
+            } else {
+                let detail = gust >= 20 ? "check crosswind component for your runway" : "verify crosswind within limits"
                 notes.append(.init(
                     icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); add \(gust / 2) kt to approach speed",
-                    color: .orange, rank: 1, time: p.fromTime))
-            } else if gust >= 15 {
-                let detail = r.map(crosswindPhrase) ?? "verify crosswind within limits"
-                notes.append(.init(
-                    icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); consider adding \(gust / 2) kt to approach speed",
-                    color: amber, rank: 2, time: p.fromTime))
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); \(gust >= 20 ? "add" : "consider adding") \(gust / 2) kt to approach speed",
+                    color: gust >= 20 ? .orange : amber, rank: gust >= 20 ? 1 : 2, time: p.fromTime))
             }
         }
 
@@ -1915,10 +2035,14 @@ struct WeatherDetailView: View {
                             .foregroundColor(note.color)
                             .font(.subheadline)
                             .frame(width: 20)
-                        Text(note.text)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if let cw = note.crosswind {
+                            crosswindNoteBody(cw)
+                        } else {
+                            Text(note.text)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 Text("Forecast notes only. Verify against your aircraft POH and personal minimums.")
