@@ -16,13 +16,16 @@ enum AlertScheduler {
 
     // Register the launch handler. Must be called once at launch BEFORE launch completes
     // (from App.init), so the system can hand back a task it scheduled while the app was dead.
-    static func register(container: ModelContainer) {
+    // Deliberately takes NO container: holding the app-lifetime container open across a
+    // background-launch suspension is what triggers RunningBoard 0xdead10cc on the App Group
+    // store. The handler builds its own short-lived container when the task actually fires.
+    static func register() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
                 return
             }
-            handle(task: refreshTask, container: container)
+            handle(task: refreshTask)
         }
     }
 
@@ -39,18 +42,28 @@ enum AlertScheduler {
         }
     }
 
-    private static func handle(task: BGAppRefreshTask, container: ModelContainer) {
+    private static func handle(task: BGAppRefreshTask) {
         // Reschedule the next cycle first, so a single run always sets up the next one even if
         // it's later cancelled by expiration.
         schedule()
 
         let work = Task { @MainActor in
+            // Build a dedicated, short-lived container for THIS run. Scoping it to this closure
+            // means its SQLite connection — and the App Group store's WAL lock — is released the
+            // moment the work finishes, BEFORE we report completion and iOS suspends the process.
+            // A long-lived container held across suspension is what triggers RunningBoard
+            // 0xdead10cc. runChecks saves internally, so nothing is lost when the container goes.
+            let container = ModelStore.makeContainer()
             await AlertPipeline.runChecks(in: container.mainContext)
+            // container + its mainContext go out of scope here → connection closed, lock released.
         }
-        // iOS gives a limited window; if it expires, cancel the in-flight work.
+        // iOS gives a limited window; if it expires, cancel the in-flight work so the container
+        // is still torn down promptly rather than held until the watchdog fires.
         task.expirationHandler = { work.cancel() }
 
         Task {
+            // Awaiting work.value returns only after the @MainActor closure above has fully
+            // returned and released its container, so the lock is gone before we complete.
             _ = await work.value
             task.setTaskCompleted(success: !work.isCancelled)
         }
