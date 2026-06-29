@@ -27,10 +27,44 @@ struct MetarMateApp: App {
         }
         let storeURL = groupURL.appendingPathComponent("MetarMate.store")
         let config = ModelConfiguration(schema: schema, url: storeURL)
+
+        func build() throws -> ModelContainer {
+            try ModelContainer(for: schema, configurations: [config])
+        }
+
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            return try build()
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // Recovery path. A failed open is usually one of two things:
+            //   1. A stale/locked WAL sidecar left behind when a prior run (often the
+            //      background alert task) was killed mid-write — the classic 0xdead10cc /
+            //      slow-open cause. Clearing -wal/-shm lets SQLite rebuild them cleanly.
+            //   2. A schema mismatch (SwiftData 134110) the user can't otherwise escape.
+            // Clearing the sidecars preserves the real data in MetarMate.store, so favorites,
+            // profiles, and watches survive this first recovery attempt.
+            let fm = FileManager.default
+            // Sidecars are named by appending to the FULL store filename:
+            // "MetarMate.store-wal" / "MetarMate.store-shm". Build the paths by string
+            // append — appendingPathExtension would wrongly yield "MetarMate.store.wal".
+            let wal = URL(fileURLWithPath: storeURL.path + "-wal")
+            let shm = URL(fileURLWithPath: storeURL.path + "-shm")
+            try? fm.removeItem(at: wal)
+            try? fm.removeItem(at: shm)
+            do {
+                return try build()
+            } catch {
+                // Last resort: the store itself is unusable. Drop it (and any sidecars) so
+                // the app can launch with a fresh store rather than crash-looping. User data
+                // is lost here, but a launchable app beats an unlaunchable one.
+                try? fm.removeItem(at: storeURL)
+                try? fm.removeItem(at: wal)
+                try? fm.removeItem(at: shm)
+                do {
+                    return try build()
+                } catch {
+                    fatalError("Could not create ModelContainer even after recovery: \(error)")
+                }
+            }
         }
     }()
 
