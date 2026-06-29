@@ -1,5 +1,30 @@
 import Foundation
 
+// MARK: - Density Altitude severity (single source of truth)
+// One band definition keyed to ABSOLUTE density altitude (feet), used everywhere:
+// color, icon, the section visibility gate, and Performance auto-expand. Keep these in
+// one place so they are trivially tunable.
+//
+// Color scale (LOCKED — wind-axis discipline; this is a labeled performance metric, NOT
+// flight category and NOT go/no-go):
+//   green  < AMBER_DA_FT
+//   amber  AMBER_DA_FT ..< RED_DA_FT
+//   red    >= RED_DA_FT
+// Bands are on ABSOLUTE density altitude in feet, NOT the penalty above field. The HP-loss %
+// shown elsewhere is a normally-aspirated estimate, informational only, and does NOT drive color.
+// This DELIBERATELY replaces the old HP-loss 10/20/30 scale.
+
+let AMBER_DA_FT = 5000   // ~light-aircraft performance gets marginal (AOPA/FAA anchor)
+let RED_DA_FT   = 8000   // ~30% power loss territory for normally-aspirated singles
+
+enum DASeverity { case green, amber, red }
+
+func daSeverity(densityAltitudeFt: Int) -> DASeverity {
+    if densityAltitudeFt >= RED_DA_FT   { return .red }
+    if densityAltitudeFt >= AMBER_DA_FT { return .amber }
+    return .green
+}
+
 // MARK: - Density Altitude Calculator
 // All the math a pilot actually needs for performance planning.
 

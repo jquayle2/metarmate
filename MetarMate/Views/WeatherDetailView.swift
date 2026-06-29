@@ -113,8 +113,11 @@ struct WeatherDetailView: View {
             altimeterInHg: metar.altimeter,
             fieldElevationFt: airport.elevation
         )
-        let daAmber = da.hpLossPercent >= 10
-        let daRed   = da.hpLossPercent >= 20
+        // Gate on ABSOLUTE density altitude via the single source of truth (DensityAltitude.swift),
+        // NOT HP-loss. Keeps the section's "Red only"/"Amber+" gate in lockstep with the colors.
+        let daSev   = daSeverity(densityAltitudeFt: da.densityAltitudeFt)
+        let daRed   = daSev == .red
+        let daAmber = daSev == .amber || daSev == .red
 
         let trendChanging = vm.trend.map { $0.overall != .steady && $0.overall != .unknown } ?? false
         let trendAmber = vm.trend.map { $0.overall != .unknown && $0.overall != .steady } ?? false
@@ -662,9 +665,41 @@ struct WeatherDetailView: View {
                              WeatherDecoder.decodeAll(metar.weatherPhenomena),
                              color: wxPhenomenaConditionColor(metar.weatherPhenomena))
             }
+            densityAltitudeRow(DensityAltitude.calculate(
+                temperatureC: Double(metar.temperature),
+                dewpointC: Double(metar.dewpoint),
+                altimeterInHg: metar.altimeter,
+                fieldElevationFt: airport.elevation
+            ))
         }
         .padding()
         .background(cardBackground)
+    }
+
+    // Decoded-METAR Density Altitude row. Colored by ABSOLUTE-DA severity so it agrees with the
+    // Performance card and the section gate. HP-loss % is neutral, informational secondary text.
+    private func densityAltitudeRow(_ da: DensityAltitudeResult) -> some View {
+        let severity = daSeverity(densityAltitudeFt: da.densityAltitudeFt)
+        let color = daSeverityColor(severity)
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "airplane.departure")
+                .foregroundColor(color == .green ? .secondary : color.opacity(0.8))
+                .frame(width: 20)
+            Text("Density Altitude")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 100, alignment: .leading)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(da.densityAltitudeText)
+                    .font(.subheadline)
+                    .foregroundColor(color)
+                    .fontWeight(severity == .green ? .regular : .semibold)
+                Text("\(da.hpLossText) (normally aspirated)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
     }
 
     // Plain, non-interactive wind row. (Previously a tap target that opened a contextual
@@ -1114,6 +1149,9 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Density Altitude
+    // nil = follow the auto default (expanded at amber/red); once the user taps, their choice sticks.
+    @State private var performanceExpandedOverride: Bool? = nil
+
     private func densityAltitudeSection(_ metar: Metar) -> some View {
         let da = DensityAltitude.calculate(
             temperatureC: Double(metar.temperature),
@@ -1121,12 +1159,20 @@ struct WeatherDetailView: View {
             altimeterInHg: metar.altimeter,
             fieldElevationFt: airport.elevation
         )
+        let severity = daSeverity(densityAltitudeFt: da.densityAltitudeFt)
+        let color = daSeverityColor(severity)
+        let icon  = daSeverityIcon(severity)
+        // Auto-expand when amber or above; collapsed when green. User taps override the default.
+        let expanded = Binding(
+            get: { performanceExpandedOverride ?? (severity != .green) },
+            set: { performanceExpandedOverride = $0 }
+        )
         return VStack(alignment: .leading, spacing: 12) {
-            DisclosureGroup {
+            DisclosureGroup(isExpanded: expanded) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 6) {
-                            statBlock("Density Altitude", da.densityAltitudeText)
+                            statBlock("Density Altitude", da.densityAltitudeText, valueColor: color)
                             statBlock("Pressure Altitude", "\(da.pressureAltitudeFt.formatted()) ft MSL")
                         }
                         Spacer()
@@ -1136,15 +1182,16 @@ struct WeatherDetailView: View {
                         }
                     }
                     Divider()
+                    // HP-loss is INFORMATIONAL secondary text — neutral, never drives the color.
                     HStack(spacing: 8) {
-                        Image(systemName: hpLossIcon(da.hpLossPercent))
-                            .foregroundColor(hpLossColor(da.hpLossPercent))
+                        Image(systemName: "bolt.slash")
+                            .foregroundColor(.secondary)
                             .font(.title3)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(da.hpLossText)
+                            Text("\(da.hpLossText) est.")
                                 .font(.subheadline.bold())
-                                .foregroundColor(hpLossColor(da.hpLossPercent))
-                            Text("Normally aspirated engine estimate")
+                                .foregroundColor(.secondary)
+                            Text("Normally aspirated engine — informational only")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -1152,12 +1199,12 @@ struct WeatherDetailView: View {
                     if let rollText = da.takeoffRollText {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.right.to.line")
-                                .foregroundColor(hpLossColor(da.hpLossPercent))
+                                .foregroundColor(.secondary)
                                 .font(.title3)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(rollText)
                                     .font(.subheadline.bold())
-                                    .foregroundColor(hpLossColor(da.hpLossPercent))
+                                    .foregroundColor(.secondary)
                                 Text("Rule of thumb — verify with POH")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
@@ -1166,6 +1213,10 @@ struct WeatherDetailView: View {
                     }
                     Text(da.summary)
                         .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Rule-of-thumb advisory — not a go/no-go limit. Verify against your aircraft POH and personal minimums.")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1177,11 +1228,14 @@ struct WeatherDetailView: View {
                         .foregroundColor(.secondary)
                         .tracking(1)
                     HStack(spacing: 6) {
-                        Image(systemName: hpLossIcon(da.hpLossPercent))
-                            .foregroundColor(hpLossColor(da.hpLossPercent))
-                        Text("\(da.densityAltitudeText)  ·  \(da.hpLossText)")
+                        Image(systemName: icon)
+                            .foregroundColor(color)
+                        Text(da.densityAltitudeText)
                             .font(.subheadline.bold())
-                            .foregroundColor(hpLossColor(da.hpLossPercent))
+                            .foregroundColor(color)
+                        Text("·  \(da.hpLossText) (NA)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
@@ -1190,29 +1244,34 @@ struct WeatherDetailView: View {
         .background(cardBackground)
     }
 
-    private func statBlock(_ label: String, _ value: String, rightAlign: Bool = false) -> some View {
+    private func statBlock(_ label: String, _ value: String, rightAlign: Bool = false, valueColor: Color = .primary) -> some View {
         VStack(alignment: rightAlign ? .trailing : .leading, spacing: 1) {
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.secondary)
             Text(value)
                 .font(.subheadline.bold())
-                .foregroundColor(.primary)
+                .foregroundColor(valueColor)
         }
     }
 
-    private func hpLossColor(_ percent: Double) -> Color {
-        if percent < 10 { return .green }
-        if percent < 20 { return .yellow }
-        if percent < 30 { return Color.orange }
-        return .red
+    // Density-altitude severity → color/icon. Keyed to ABSOLUTE DA via daSeverity (the single
+    // source of truth). THREE bands only: green / amber / red. Wind-axis discipline — distinct,
+    // labeled performance metric, NOT flight category and NOT go/no-go.
+    private func daSeverityColor(_ severity: DASeverity) -> Color {
+        switch severity {
+        case .green: return .green
+        case .amber: return Color(red: 1.0, green: 0.6, blue: 0.0)
+        case .red:   return .red
+        }
     }
 
-    private func hpLossIcon(_ percent: Double) -> String {
-        if percent < 10 { return "checkmark.circle.fill" }
-        if percent < 20 { return "exclamationmark.triangle.fill" }
-        if percent < 30 { return "exclamationmark.triangle.fill" }
-        return "xmark.octagon.fill"
+    private func daSeverityIcon(_ severity: DASeverity) -> String {
+        switch severity {
+        case .green: return "checkmark.circle.fill"
+        case .amber: return "exclamationmark.triangle.fill"
+        case .red:   return "xmark.octagon.fill"
+        }
     }
 
     // MARK: - Trend
@@ -2313,11 +2372,10 @@ struct WeatherDetailView: View {
         let hasAmber = !advisories.isEmpty
         let hasRed   = advisories.contains(where: { $0.isWarning })
 
-        let daFt    = wx.densityAltitudeFt ?? 0
-        let daPenalty = daFt - Double(airport.elevation)
-        let daHpLoss = max(0, daPenalty / 1000.0 * 3.0)
-        let daAmber = daHpLoss >= 10
-        let daRed   = daHpLoss >= 20
+        // Gate on ABSOLUTE density altitude via the single source of truth, matching the METAR path.
+        let daSev   = daSeverity(densityAltitudeFt: Int((wx.densityAltitudeFt ?? 0).rounded()))
+        let daRed   = daSev == .red
+        let daAmber = daSev == .amber || daSev == .red
 
         ForEach(prefs.advisorySections) { config in
             switch config.id {
@@ -2590,10 +2648,12 @@ struct WeatherDetailView: View {
         guard let daFt = wx.densityAltitudeFt else { return AnyView(EmptyView()) }
         let elevFt  = Double(airport.elevation)
         let penalty = daFt - elevFt
-        let hpLoss  = max(0, penalty / 1000.0 * 3.0)
+        let hpLoss  = max(0, daFt / 1000.0 * 3.0)   // NA power-loss estimate vs sea level, informational
 
-        let daColor: Color = hpLoss < 10 ? .green : hpLoss < 20 ? .yellow : hpLoss < 30 ? .orange : .red
-        let daIcon  = hpLoss < 10 ? "checkmark.circle.fill" : hpLoss < 20 ? "exclamationmark.triangle.fill" : "xmark.octagon.fill"
+        // Color/icon keyed to ABSOLUTE density altitude (single source of truth), NOT HP-loss.
+        let severity = daSeverity(densityAltitudeFt: Int(daFt.rounded()))
+        let daColor  = daSeverityColor(severity)
+        let daIcon   = daSeverityIcon(severity)
 
         return AnyView(
             VStack(alignment: .leading, spacing: 10) {
@@ -2609,7 +2669,7 @@ struct WeatherDetailView: View {
                             .font(.subheadline.bold())
                             .foregroundColor(daColor)
                         if hpLoss >= 1 {
-                            Text(String(format: "~%.0f%% HP loss est. · +%.0f ft above field elev", hpLoss, penalty))
+                            Text(String(format: "~%.0f%% NA power loss est. · +%.0f ft above field elev", hpLoss, penalty))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         } else {
