@@ -110,9 +110,14 @@ struct DensityAltitude {
         // Density altitude = pressure altitude + 120 * (OAT - ISA temp)
         let densityAlt = pressureAlt + 120.0 * isaDeviation
 
-        // Normally aspirated HP loss: ~3% per 1000 ft DA above sea level
-        // (turbo/turbocharged engines are much less affected — future enhancement)
-        let hpLoss = max(0, densityAlt / 1000.0 * 3.0)
+        // Normally aspirated power loss via the density-ratio (sigma) model. At WOT with mixture
+        // properly leaned, max available power tracks the air-density ratio sigma (mass airflow).
+        // Per the ISA troposphere:  sigma = (1 - 6.87535e-6 * DA_ft) ^ 4.2561,  loss = (1 - sigma).
+        // Clamp the base to >= 0 (tropopause ~36,089 ft) so extreme/garbage DA never yields NaN.
+        // (Turbo/turbocharged engines are much less affected — future enhancement.)
+        let sigmaBase = max(0, 1.0 - 6.87535e-6 * densityAlt)
+        let sigma = pow(sigmaBase, 4.2561)
+        let hpLoss = max(0, (1.0 - sigma) * 100.0)
 
         // Penalty above field: how much extra DA the pilot "feels" vs just being at elevation
         let penaltyFt = Int(densityAlt) - fieldElevationFt
