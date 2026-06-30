@@ -45,6 +45,7 @@ struct WeatherDetailView: View {
             }
             .padding()
         }
+        .background(IsobarBackground())
         .navigationTitle(airport.icao)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -70,7 +71,7 @@ struct WeatherDetailView: View {
                         }
                     } label: {
                         Image(systemName: isFavorite ? "star.fill" : "star")
-                            .foregroundColor(isFavorite ? .yellow : .secondary)
+                            .foregroundColor(isFavorite ? Brand.accentOrange : Brand.slate)
                     }
                 }
             }
@@ -217,26 +218,37 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Header
+    // Station block (badges 1A/2A): orange kicker → heavy station name → status pill,
+    // sitting directly on the navy ground.
     private var headerSection: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
+            TrackedLabel(text: stationKicker, color: Brand.accentOrange, size: 10, tracking: 3.2)
+                .padding(.bottom, 8)
             Text(airport.name)
-                .font(.title3.bold())
-                .multilineTextAlignment(.center)
-            HStack(spacing: 10) {
-                FlightCategoryBadge(category: vm.flightCategory)
+                .font(.avenir(31, .heavy))
+                .foregroundColor(Brand.cloud)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 12) {
+                StatusPill(category: vm.flightCategory)
                 if let metar = vm.metar {
                     observationTimeView(metar)
                 }
             }
+            .padding(.top, 14)
             if airport.elevation != 0 {
                 Text("Elev \(airport.elevation.formatted()) ft MSL")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .font(.avenir(12, .demibold))
+                    .foregroundColor(Brand.slate)
+                    .padding(.top, 8)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(cardBackground)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+    }
+
+    private var stationKicker: String {
+        if let iata = airport.iata, !iata.isEmpty { return "\(airport.icao) · \(iata)" }
+        return airport.icao
     }
 
     // MARK: - ASOS teaser (shown when not subscribed and free period expired)
@@ -510,8 +522,8 @@ struct WeatherDetailView: View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let minutes = Int(context.date.timeIntervalSince(metar.observationTime) / 60)
             Text("Observed \(minutes) min ago")
-                .font(.caption)
-                .foregroundColor(metar.isOld ? Color.red : .secondary)
+                .font(.avenir(13.5, .demibold))
+                .foregroundColor(metar.isOld ? Brand.valueRed : Brand.slate)
         }
     }
 
@@ -637,9 +649,10 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader("Raw METAR")
             Text(metar.rawText)
-                .font(.system(.caption, design: .monospaced))
-                .foregroundColor(.primary)
+                .font(.brandMono(11.5, weight: .medium))
+                .foregroundColor(Brand.monoDim)
                 .textSelection(.enabled)
+                .lineSpacing(2)
         }
         .padding()
         .background(cardBackground)
@@ -712,71 +725,59 @@ struct WeatherDetailView: View {
 
     // MARK: - Condition row color helpers
 
-    // Wind: green / amber / orange — never red (red is reserved for IFR flight category)
+    // Disciplined palette (visual refresh). Gusty/strong wind reads caution; calm/light is good.
     private func windConditionColor(_ wind: Wind) -> Color {
         let gust = wind.gust ?? 0
         let speed = wind.speed
         let spread = gust - speed
-        if gust >= 20 || speed >= 25 || spread >= 15 { return .orange }
-        if gust >= 15 || speed >= 20 || spread >= 10 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber
-        if speed > 0 { return .green }
-        return .green  // calm is green
+        if wind.gust != nil || speed >= 20 || spread >= 10 { return Brand.cautionOrange }
+        return Brand.vfrGreen   // calm or light steady → good
     }
 
-    // Visibility: flight category colors — VFR green, MVFR blue, IFR red, LIFR magenta
+    // Visibility: < 3 SM is sub-minimum danger (value red); 3–5 marginal caution; else good.
     private func visibilityConditionColor(_ vis: Double) -> Color {
-        if vis < 1 { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
-        if vis < 3 { return .red }                                       // IFR
-        if vis < 5 { return Color(red: 0.2, green: 0.5, blue: 1.0) }   // MVFR blue
-        return .green                                                     // VFR
+        ColorRules.visibilityColor(vis)
     }
 
-    // Ceiling: flight category colors — same scale
+    // Ceiling: < 1000 IFR danger; < 3000 marginal; clear/high = good.
     private func ceilingConditionColor(_ ceilingFt: Int?) -> Color {
-        guard let c = ceilingFt else { return .green }                   // clear = VFR
-        if c < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
-        if c < 1000 { return .red }                                      // IFR
-        if c < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }  // MVFR blue
-        return .green                                                     // VFR
+        ColorRules.ceilingColor(ceilingFt)
     }
 
-    // Temp/dewpoint spread: fog risk — red/amber/green
+    // Temp/dewpoint spread: tight spread = fog risk.
     private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
-        let spread = temp - dew
-        if spread <= 2 { return .red }
-        if spread <= 4 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
-        return .green
+        ColorRules.spreadColor(tempC: temp, dewpointC: dew)
     }
 
-    // Altimeter: pressure hazard — amber/orange scale
+    // Altimeter: genuinely-low pressure reads caution (accent orange); normal is neutral.
     private func altimeterConditionColor(_ alt: Double) -> Color {
-        if alt < 29.70 { return .orange }
-        if alt < 29.80 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
-        return .green
+        ColorRules.altimeterColor(alt)
     }
 
-    // Weather phenomena: orange for significant, red for TS/FZ (life-safety)
+    // Present weather: situational caution; TS/FZ escalate to danger.
     private func wxPhenomenaConditionColor(_ phenomena: [String]) -> Color {
         let hasTS = phenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
         let hasFZ = phenomena.contains(where: { $0.contains("FZ") })
-        if hasTS || hasFZ { return .red }
-        return .orange
+        if hasTS || hasFZ { return Brand.valueRed }
+        return Brand.cautionOrange
     }
 
-    private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = .primary) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+    // Decoded row: icon (in value's color) · label (Fog-2) · right-aligned value.
+    // Neutral values (Fog) render unremarkable; signal colors get heavier weight.
+    private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = Brand.fog) -> some View {
+        let isNeutral = (color == Brand.fog)
+        return HStack(spacing: 13) {
             Image(systemName: icon)
-                .foregroundColor(color == .primary ? .secondary : color.opacity(0.8))
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(isNeutral ? Brand.slate : color)
                 .frame(width: 20)
             Text(label)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
+                .font(.avenir(16, .demibold))
+                .foregroundColor(Brand.fog2)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(value)
-                .font(.subheadline)
+                .font(.avenir(16, isNeutral ? .demibold : .heavy))
                 .foregroundColor(color)
-                .fontWeight(color == .primary || color == .green ? .regular : .semibold)
-            Spacer()
         }
     }
 
@@ -1105,18 +1106,13 @@ struct WeatherDetailView: View {
         guard !notes.isEmpty else { return AnyView(EmptyView()) }
 
         return AnyView(
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(notes.contains(where: { $0.severity == .warning }) ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0))
-                        .font(.caption)
-                    Text("PILOT NOTES")
-                        .font(.caption.bold())
-                        .foregroundColor(.secondary)
-                        .tracking(1)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 9) {
+                    WeatherFrontTriangle(color: Brand.accentOrange, size: 14)
+                    TrackedLabel(text: "Pilot Notes", color: Brand.accentOrange, size: 10.5, tracking: 2.6)
                 }
                 ForEach(Array(notes.enumerated()), id: \.offset) { _, note in
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .top, spacing: 11) {
                         Image(systemName: note.icon)
                             .foregroundColor(note.color)
                             .font(.subheadline)
@@ -1125,24 +1121,25 @@ struct WeatherDetailView: View {
                             crosswindNoteBody(cw)
                         } else {
                             Text(note.text)
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
+                                .font(.avenir(14.5, .demibold))
+                                .foregroundColor(Brand.fog)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
                 Text("Operational thresholds shown. Verify against your aircraft POH and personal minimums.")
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Brand.slate)
                     .padding(.top, 2)
             }
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.orange.opacity(0.06))
+                RoundedRectangle(cornerRadius: Brand.cardRadius, style: .continuous)
+                    .fill(LinearGradient(colors: [Brand.pilotNotesTop, Brand.pilotNotesBottom],
+                                         startPoint: .top, endPoint: .bottom))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Brand.cardRadius, style: .continuous)
+                            .stroke(Brand.pilotNotesBorder, lineWidth: 1)
                     )
             )
         )
@@ -1365,59 +1362,44 @@ struct WeatherDetailView: View {
         // Forecast divergence is called out separately in the summary text.
         let observedOverall = trend.observed.overall
         let isMixed = trend.headline.hasPrefix("Mixed")
-        let color: Color = isMixed ? .orange : (observedOverall == .unknown ? trend.overall.color : observedOverall.color)
-        let iconDirection = isMixed ? TrendDirection.steady : (observedOverall == .unknown ? trend.overall : observedOverall)
+        let direction = isMixed ? TrendDirection.steady : (observedOverall == .unknown ? trend.overall : observedOverall)
         let roc = trend.observed.rateOfChange
         let isDeteriorating = observedOverall == .deteriorating && !isMixed
+        let style = ColorRules.trendStyle(direction)
+        let headlineColor = isDeteriorating ? Brand.valueRed : Brand.cloud
 
-        return HStack(spacing: 0) {
-            // Left-edge status strip
-            Rectangle()
-                .fill(color)
-                .frame(width: 4)
-                .clipShape(RoundedRectangle(cornerRadius: 2))
+        return HStack(spacing: 16) {
+            // Signature trend mark — up/orange for improving-stable, down/red for deteriorating.
+            TrendArrowView(up: style.up, color: style.color)
 
-            HStack(spacing: 10) {
-                // Animated icon — pulses when deteriorating
-                Image(systemName: iconDirection.systemImage)
-                    .foregroundColor(color)
-                    .font(.title2)
-                    .scaleEffect(trendPulse ? 1.15 : 1.0)
-                    .opacity(trendPulse ? 0.7 : 1.0)
-                    .animation(
-                        isDeteriorating
-                            ? .easeInOut(duration: 1.2).repeatForever(autoreverses: true)
-                            : .default,
-                        value: trendPulse
-                    )
-                    .onAppear { if isDeteriorating { trendPulse = true } }
-                    .onChange(of: trend.overall) { trendPulse = (observedOverall == .deteriorating) }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(trend.headline)
+                    .font(.avenir(15, .heavy))
+                    .foregroundColor(headlineColor)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(trend.headline)
-                        .font(.headline)
-                        .foregroundColor(color)
-
-                    // Prominent delta line — most important change front and center
-                    if let deltaLine = prominentDeltaLine(trend: trend, roc: roc) {
-                        Text(deltaLine)
-                            .font(.subheadline.bold())
-                            .foregroundColor(.primary)
-                    }
-
-                    Text(trend.summaryText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                if let deltaLine = prominentDeltaLine(trend: trend, roc: roc) {
+                    Text(deltaLine)
+                        .font(.brandMono(15, weight: .bold))
+                        .foregroundColor(Brand.cloud)
                 }
-                Spacer()
+
+                Text(trend.summaryText)
+                    .font(.avenir(12.5, .demibold))
+                    .foregroundColor(Brand.slate)
             }
-            .padding(10)
+            Spacer(minLength: 0)
         }
-        .background(color.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(isDeteriorating
+                      ? AnyShapeStyle(LinearGradient(colors: [Brand.alertTop, Brand.alertBottom],
+                                                     startPoint: .top, endPoint: .bottom))
+                      : AnyShapeStyle(Brand.cardFill))
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(color.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isDeteriorating ? Brand.alertBorder : Brand.cardBorder, lineWidth: 1)
         )
         .transition(.asymmetric(
             insertion: .move(edge: .top).combined(with: .opacity),
@@ -3228,19 +3210,17 @@ struct WeatherDetailView: View {
 
     // MARK: - Helpers
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(Color(.systemGray6).opacity(0.3))
+        RoundedRectangle(cornerRadius: Brand.cardRadius, style: .continuous)
+            .fill(Brand.cardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Brand.cardRadius, style: .continuous)
+                    .stroke(Brand.cardBorder, lineWidth: 1)
             )
     }
 
+    // Brand section header — tracked caps slate + accent front-line + cold-front triangles.
     private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption.bold())
-            .foregroundColor(.secondary)
-            .tracking(1)
+        SectionFrontHeader(title: title)
     }
 
     private func windText(_ wind: Wind) -> String {

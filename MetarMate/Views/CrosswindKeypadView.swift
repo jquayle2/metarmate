@@ -139,6 +139,8 @@ struct CrosswindKeypadView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
 
+                advisoryStrip
+
                 valueBoxGrid
                     .padding(.horizontal, 16)
             }
@@ -146,33 +148,66 @@ struct CrosswindKeypadView: View {
             keypadSection
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.04, green: 0.05, blue: 0.09).ignoresSafeArea())
+        .background(IsobarBackground())
         .animation(.easeInOut(duration: 0.2), value: activeField)
+    }
+
+    // MARK: - Advisory strip (caution wash)
+
+    @ViewBuilder
+    private var advisoryStrip: some View {
+        let xw = gustSpeed > windSpeed ? gustCrosswind : crosswind
+        let gustAdd = (gustSpeed > windSpeed) ? max((gustSpeed - windSpeed + 1) / 2, 0) : 0
+        let lines: [String] = {
+            var l: [String] = []
+            if gustAdd > 0 { l.append("Increase Vref by \(gustAdd) kt") }
+            if xw > 10 { l.append("Consider reducing flaps") }
+            return l
+        }()
+        if !lines.isEmpty {
+            HStack(alignment: .center, spacing: 13) {
+                WeatherFrontTriangle(color: Brand.cautionOrange, size: 12)
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { idx, line in
+                        Text(line)
+                            .font(.avenir(idx == 0 ? 14 : 13, idx == 0 ? .bold : .demibold))
+                            .foregroundColor(idx == 0 ? Brand.cloud : Brand.fog)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: Brand.stripRadius, style: .continuous)
+                .fill(LinearGradient(colors: [Brand.advisoryTop, Brand.advisoryBottom],
+                                     startPoint: .top, endPoint: .bottom)))
+            .overlay(RoundedRectangle(cornerRadius: Brand.stripRadius, style: .continuous)
+                .stroke(Brand.advisoryBorder, lineWidth: 1))
+            .padding(.horizontal, 16)
+        }
     }
 
     // MARK: - Header
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("CROSSWIND CALC")
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                    .tracking(2)
-                    .foregroundColor(Color(white: 0.4))
-                Text(title)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 5) {
+                TrackedLabel(text: "Crosswind Calc · \(title)", color: Brand.accentOrange,
+                             size: 10, tracking: 3.0)
+                Text("Runway \(String(format: "%02d", runway))")
+                    .font(.avenir(26, .heavy))
+                    .foregroundColor(Brand.cloud)
             }
             Spacer()
             if let onDone {
                 Button(action: onDone) {
                     Text("Done")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(Color(red: 0.22, green: 0.74, blue: 0.97))
+                        .font(.avenir(17, .demibold))
+                        .foregroundColor(Brand.accentOrange)
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 24)
         .padding(.top, 14)
         .padding(.bottom, 4)
     }
@@ -194,49 +229,47 @@ struct CrosswindKeypadView: View {
 
     private func valueBox(field: KeypadField, displayValue: String) -> some View {
         let isActive = activeField == field
+        let labelColor = isActive ? Brand.accentOrange : Brand.slate
+        let valueColor: Color = field == .gust ? Brand.cautionOrange : Brand.cloud
 
         return Button(action: {
-            if activeField == field {
-                activeField = nil
-                inputBuffer = ""
-                errorMessage = nil
-            } else {
-                activeField = field
-                inputBuffer = ""
-                errorMessage = nil
-            }
+            activeField = (activeField == field) ? nil : field
+            inputBuffer = ""
+            errorMessage = nil
         }) {
-            VStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(field.title)
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .tracking(2)
-                    .foregroundColor(field.color.opacity(0.6))
+                    .font(.avenir(9.5, .heavy))
+                    .tracking(1.8)
+                    .foregroundColor(labelColor)
 
                 if isActive {
                     Text(inputBuffer.isEmpty ? displayValue : inputBuffer)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .foregroundColor(inputBuffer.isEmpty ? Color.white.opacity(0.25) : .white)
+                        .font(.brandMono(22, weight: .bold))
+                        .foregroundColor(inputBuffer.isEmpty ? Brand.cloud.opacity(0.4) : valueColor)
                         .offset(x: shakeOffset)
                 } else {
                     Text(displayValue)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
+                        .font(.brandMono(22, weight: .bold))
+                        .foregroundColor(valueColor)
                 }
 
                 if isActive, let error = errorMessage {
                     Text(error)
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundColor(.red)
+                        .font(.brandMono(10, weight: .bold))
+                        .foregroundColor(Brand.valueRed)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 70)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 64)
+            .padding(.horizontal, 14)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(white: isActive ? 0.1 : 0.06))
+                RoundedRectangle(cornerRadius: Brand.stripRadius, style: .continuous)
+                    .fill(isActive ? Brand.accentOrange.opacity(0.08) : Brand.cardFill)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isActive ? field.color : Color(white: 0.12), lineWidth: isActive ? 2 : 1)
+                        RoundedRectangle(cornerRadius: Brand.stripRadius, style: .continuous)
+                            .stroke(isActive ? Brand.accentOrange : Brand.cardBorder,
+                                    lineWidth: isActive ? 1.5 : 1)
                     )
             )
         }
@@ -317,12 +350,11 @@ struct CrosswindKeypadView: View {
                         resetDragState()
                     }
             )
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
+            .padding(.horizontal, 18)
+            .padding(.top, 10)
             .padding(.bottom, 16)
         }
         .frame(maxHeight: .infinity)
-        .background(Color(red: 0.06, green: 0.07, blue: 0.11))
     }
 
     private func dragDigitCell(digit: String, coordSpace: String) -> some View {
@@ -330,23 +362,19 @@ struct CrosswindKeypadView: View {
         let isStart = dragStartDigit == digit
         let isCurrent = dragCurrentDigit == digit && dragStartDigit != nil && dragCurrentDigit != dragStartDigit
 
+        let highlight = isStart || isCurrent
         return Text(digit)
-            .font(.system(size: 32, weight: .bold, design: .rounded))
-            .foregroundColor(!enabled ? Color(white: 0.2) :
-                            isStart ? (activeField?.color ?? .white) :
-                            isCurrent ? (activeField?.color ?? .white) :
-                            .white)
-            .frame(maxWidth: .infinity, minHeight: 52, maxHeight: .infinity)
+            .font(.brandMono(21, weight: .semibold))
+            .foregroundColor(!enabled ? Brand.cloud.opacity(0.25)
+                             : (highlight ? Brand.accentOrange : Brand.cloud))
+            .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
             .background(
                 GeometryReader { geo in
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(!enabled ? Color(white: 0.06) :
-                              isStart ? (activeField?.color ?? .white).opacity(0.25) :
-                              isCurrent ? (activeField?.color ?? .white).opacity(0.15) :
-                              Color(white: 0.12))
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(highlight ? Brand.accentOrange.opacity(0.18) : Color.white.opacity(0.03))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(isStart || isCurrent ? (activeField?.color ?? .white).opacity(0.6) : Color.clear, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .stroke(highlight ? Brand.accentOrange.opacity(0.6) : Brand.cardBorder, lineWidth: 1)
                         )
                         .onAppear {
                             DispatchQueue.main.async {
@@ -374,13 +402,15 @@ struct CrosswindKeypadView: View {
 
     private var backspaceButton: some View {
         Button(action: { backspacePressed() }) {
-            Image(systemName: "delete.left.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(inputBuffer.isEmpty ? Color(white: 0.25) : .white)
-                .frame(maxWidth: .infinity, minHeight: 52, maxHeight: .infinity)
+            Image(systemName: "delete.left")
+                .font(.system(size: 19, weight: .regular))
+                .foregroundColor(inputBuffer.isEmpty ? Brand.slate.opacity(0.5) : Brand.slate)
+                .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(white: 0.08))
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Color.white.opacity(0.02))
+                        .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .stroke(Brand.cardBorder, lineWidth: 1))
                 )
         }
         .disabled(inputBuffer.isEmpty)
@@ -403,15 +433,16 @@ struct CrosswindKeypadView: View {
             }
         }) {
             Text(hasInput ? "OK" : (isGustField ? "NONE" : "OK"))
-                .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                .tracking(1)
-                .foregroundColor(hasInput ? .black : (noneAvailable ? .black : Color(white: 0.5)))
-                .frame(maxWidth: .infinity, minHeight: 52, maxHeight: .infinity)
+                .font(.avenir(16, .heavy))
+                .tracking(0.6)
+                .foregroundColor(Brand.navy)
+                .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(hasInput ? (activeField?.color ?? .white) : (noneAvailable ? KeypadField.gust.color.opacity(0.7) : Color(white: 0.08)))
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Brand.accentOrange)
                 )
         }
+        .opacity(noneAvailable ? 0.9 : 1)
     }
 
     // MARK: - Input Logic

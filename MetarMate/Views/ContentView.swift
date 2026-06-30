@@ -8,6 +8,33 @@ struct ContentView: View {
 
     init() {
         _selectedTab = State(initialValue: LayoutPreferences.shared.startingTab.tabIndex)
+        ContentView.applyBrandAppearance()
+    }
+
+    /// Brand chrome (visual refresh): navy nav bars, dark translucent tab bar with the
+    /// single orange accent on the active item. Configured once via appearance proxies.
+    static func applyBrandAppearance() {
+        let tab = UITabBarAppearance()
+        tab.configureWithDefaultBackground()
+        tab.backgroundColor = UIColor(Brand.bezel).withAlphaComponent(0.82)
+        for item in [tab.stackedLayoutAppearance, tab.inlineLayoutAppearance, tab.compactInlineLayoutAppearance] {
+            item.selected.iconColor = UIColor(Brand.accentOrange)
+            item.selected.titleTextAttributes = [.foregroundColor: UIColor(Brand.accentOrange)]
+            item.normal.iconColor = UIColor(Brand.slate)
+            item.normal.titleTextAttributes = [.foregroundColor: UIColor(Brand.slate)]
+        }
+        UITabBar.appearance().standardAppearance = tab
+        UITabBar.appearance().scrollEdgeAppearance = tab
+
+        let nav = UINavigationBarAppearance()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = UIColor(Brand.navy)
+        nav.shadowColor = .clear
+        nav.titleTextAttributes = [.foregroundColor: UIColor(Brand.cloud)]
+        nav.largeTitleTextAttributes = [.foregroundColor: UIColor(Brand.cloud)]
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
     }
 
     var body: some View {
@@ -45,6 +72,7 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
+        .tint(Brand.accentOrange)
         .preferredColorScheme(.dark)
         .onAppear {
             locationService.requestPermission()

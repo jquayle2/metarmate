@@ -109,81 +109,83 @@ func quickWeatherSummary(metar: Metar) -> String {
     return parts.joined(separator: " · ")
 }
 
-// MARK: - AirportRowView
+// MARK: - AirportRowView (Visual Refresh — badge 3A)
 struct AirportRowView: View {
     let airport: Airport
     let metar: Metar?
     let distance: String?
 
-    private var categoryColor: Color {
-        guard airport.hasMetar else { return .orange }
-        return metar?.flightCategory.swiftUIColor ?? .gray
+    private var railColor: Color {
+        ColorRules.railColor(hasMetar: airport.hasMetar,
+                             category: metar?.flightCategory ?? .unknown)
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Left-edge flight category strip
-            Rectangle()
-                .fill(categoryColor)
+        HStack(spacing: 14) {
+            // Status rail — flight-category color, full row height.
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(railColor)
                 .frame(width: 3)
-                .clipShape(RoundedRectangle(cornerRadius: 1.5))
-                .padding(.vertical, 6)
+                .frame(maxHeight: .infinity)
 
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    // ICAO prominent, IATA small and secondary
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(airport.icao)
-                            .font(.system(.headline, design: .default).weight(.bold))
-                            .foregroundColor(.primary)
-                        if let iata = airport.iata, !iata.isEmpty {
-                            Text(iata)
-                                .font(.caption2)
-                                .foregroundColor(.secondary.opacity(0.7))
-                        }
+            VStack(alignment: .leading, spacing: 2) {
+                // Line 1: ICAO + IATA · distance + chevron
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(airport.icao)
+                        .font(.avenir(19, .heavy))
+                        .tracking(0.4)
+                        .foregroundColor(Brand.cloud)
+                    if let iata = airport.iata, !iata.isEmpty {
+                        Text(iata)
+                            .font(.avenir(11, .bold))
+                            .tracking(1.1)
+                            .foregroundColor(Brand.monoDim)
                     }
-
-                    Text(airport.name)
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-
-                    if !airport.hasMetar {
-                        Text("Advisory weather only")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    } else if let metar = metar {
-                        airportWeatherSummaryRow(metar: metar)
-                    } else {
-                        Text("METAR unavailable")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    Spacer(minLength: 8)
+                    if let distance = distance {
+                        Text(distance)
+                            .font(.brandMono(13, weight: .medium))
+                            .foregroundColor(Brand.slate)
                     }
+                    Text("›")
+                        .font(.system(size: 16))
+                        .foregroundColor(Brand.monoDim2)
                 }
 
-                Spacer()
+                // Line 2: airport name
+                Text(airport.name)
+                    .font(.avenir(14.5, .demibold))
+                    .foregroundColor(Brand.fog2)
+                    .lineLimit(1)
 
-                // Distance — visually secondary
-                if let distance = distance {
-                    Text(distance)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary.opacity(0.6))
-                        .fontWeight(.regular)
-                }
+                // Line 3: mono conditions strip / advisory
+                conditionsLine
+                    .padding(.top, 4)
             }
-            .padding(.leading, 10)
-            .padding(.vertical, 5)
         }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 6)
+        .contentShape(Rectangle())
     }
 
-    // Wind color for airport list — orange/red only, matching detail view thresholds
-    private func airportWindColor(_ wind: Wind) -> Color? {
-        let speed = wind.speed
-        let gust = wind.gust ?? 0
-        let spread = gust - speed
-        if gust >= 20 || speed >= 25 || spread >= 15 { return .red }
-        if gust >= 15 || speed >= 20 || spread >= 10 { return .orange }
-        return nil
+    @ViewBuilder
+    private var conditionsLine: some View {
+        if !airport.hasMetar {
+            Text("Advisory weather only")
+                .font(.avenir(12.5, .bold))
+                .foregroundColor(Brand.cautionOrange)
+        } else if let metar = metar {
+            (Text("\(skyVisString(metar: metar)) · ")
+                .foregroundColor(Brand.monoDim)
+             + Text(windToken(metar.wind))
+                .foregroundColor(ColorRules.windCodeColor(metar.wind)))
+                .font(.brandMono(13, weight: .medium))
+                .lineLimit(1)
+        } else {
+            Text("METAR unavailable")
+                .font(.brandMono(13, weight: .medium))
+                .foregroundColor(Brand.monoDim2)
+        }
     }
 
     private func skyVisString(metar: Metar) -> String {
@@ -200,38 +202,11 @@ struct AirportRowView: View {
         return parts.joined(separator: " · ")
     }
 
-    private func windString(wind: Wind) -> String {
-        if wind.speed == 0 { return "Calm" }
+    /// Wind token for the mono strip — CALM (green), or DDD@spd[Ggust] colored by gust rule.
+    private func windToken(_ wind: Wind) -> String {
+        if wind.speed == 0 { return "CALM" }
         let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
         if let gust = wind.gust { return "\(dir)@\(wind.speed)G\(gust)" }
         return "\(dir)@\(wind.speed)"
-    }
-
-    private func airportWeatherSummaryRow(metar: Metar) -> some View {
-        let skyVis = skyVisString(metar: metar)
-        let windStr = windString(wind: metar.wind)
-        let windColor = airportWindColor(metar.wind)
-
-        return HStack(spacing: 0) {
-            Text(skyVis)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-            if let color = windColor {
-                Text(" · ")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                Text(windStr)
-                    .font(.subheadline)
-                    .foregroundColor(color)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-            } else {
-                Text(" · \(windStr)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-        }
     }
 }
