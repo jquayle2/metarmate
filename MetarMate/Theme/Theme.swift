@@ -262,6 +262,8 @@ struct TrackedLabel: View {
             .font(.avenir(size, .heavy))
             .tracking(tracking)
             .foregroundColor(color)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
     }
 }
 

@@ -72,7 +72,7 @@ struct CrosswindReadout: View {
                 .padding(.top, 9)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.vertical, 10)
         .brandCard()
     }
 

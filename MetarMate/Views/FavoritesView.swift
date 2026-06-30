@@ -51,13 +51,14 @@ struct FavoritesView: View {
                                     distance: nil
                                 )
                             }
-                            .listRowBackground(Color(.systemGray6).opacity(0.2))
+                            .listRowBackground(Color.clear)
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
                         }
                         .onDelete(perform: deleteFavorites)
                         .onMove(perform: moveFavorites)
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .environment(\.editMode, $editMode)
                     .refreshable {
                         await fetchMetars()
@@ -69,6 +70,7 @@ struct FavoritesView: View {
                     }
                 }
             }
+            .background(IsobarBackground())
             .navigationTitle("Favorites")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

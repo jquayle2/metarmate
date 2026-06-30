@@ -38,7 +38,7 @@ struct SearchView: View {
                                                           metar: historyMetars[entry.icao],
                                                           distance: nil)
                                         }
-                                        .listRowBackground(Color(.systemGray6).opacity(0.2))
+                                        .listRowBackground(Color.clear)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
                                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                             let isFav = favorites.contains(where: { $0.icao == airport.icao })
@@ -76,6 +76,7 @@ struct SearchView: View {
                             }
                         }
                         .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                         .task(id: airportVM.searchHistory.map(\.icao).joined()) {
                             await loadHistoryMetars()
                         }
@@ -99,12 +100,14 @@ struct SearchView: View {
                                           metar: airportVM.searchMetars[airport.icao],
                                           distance: nil)
                         }
-                        .listRowBackground(Color(.systemGray6).opacity(0.2))
+                        .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
                     }
                     .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
             }
+            .background(IsobarBackground())
             .navigationTitle("Search")
             .searchable(text: $searchText, prompt: "ICAO, IATA, or airport name")
             .onChange(of: searchText) {

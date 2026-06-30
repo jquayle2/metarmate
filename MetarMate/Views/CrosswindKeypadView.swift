@@ -119,7 +119,7 @@ struct CrosswindKeypadView: View {
         VStack(spacing: 0) {
             header
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 CrosswindReadout(
                     crosswind: crosswind,
                     gustCrosswind: gustSpeed > windSpeed ? gustCrosswind : nil,
@@ -147,7 +147,7 @@ struct CrosswindKeypadView: View {
 
             keypadSection
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(IsobarBackground())
         .animation(.easeInOut(duration: 0.2), value: activeField)
     }
@@ -261,7 +261,7 @@ struct CrosswindKeypadView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 64)
+            .frame(height: 56)
             .padding(.horizontal, 14)
             .background(
                 RoundedRectangle(cornerRadius: Brand.stripRadius, style: .continuous)
@@ -351,8 +351,9 @@ struct CrosswindKeypadView: View {
                     }
             )
             .padding(.horizontal, 18)
-            .padding(.top, 10)
-            .padding(.bottom, 16)
+            .padding(.top, 8)
+            // Clear the iOS 26 floating tab bar so the bottom key row never underlaps it.
+            .padding(.bottom, 24)
         }
         .frame(maxHeight: .infinity)
     }
@@ -367,7 +368,7 @@ struct CrosswindKeypadView: View {
             .font(.brandMono(21, weight: .semibold))
             .foregroundColor(!enabled ? Brand.cloud.opacity(0.25)
                              : (highlight ? Brand.accentOrange : Brand.cloud))
-            .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)
             .background(
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
@@ -405,7 +406,7 @@ struct CrosswindKeypadView: View {
             Image(systemName: "delete.left")
                 .font(.system(size: 19, weight: .regular))
                 .foregroundColor(inputBuffer.isEmpty ? Brand.slate.opacity(0.5) : Brand.slate)
-                .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .fill(Color.white.opacity(0.02))
@@ -436,7 +437,7 @@ struct CrosswindKeypadView: View {
                 .font(.avenir(16, .heavy))
                 .tracking(0.6)
                 .foregroundColor(Brand.navy)
-                .frame(maxWidth: .infinity, minHeight: 50, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .fill(Brand.accentOrange)

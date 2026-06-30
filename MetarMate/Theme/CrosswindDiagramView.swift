@@ -145,7 +145,7 @@ struct CrosswindDiagramView: View {
                               CGPoint(x: twEnd.x + 5, y: twEnd.y + 11)], Brand.dangerRed)
             }
         }
-        .frame(width: 152, height: 156)
+        .frame(width: 134, height: 138)
         .accessibilityLabel(
             "Crosswind \(crosswind) knots from the \(sideRight ? "right" : "left"), "
             + (headwind >= 0 ? "headwind \(headwind) knots" : "tailwind \(-headwind) knots"))

@@ -63,15 +63,17 @@ struct AlertsView: View {
                                     }
                                 }
                                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 16))
-                                .listRowBackground(Color(.systemGray6).opacity(0.2))
+                                .listRowBackground(Color.clear)
                             }
                             .onDelete(perform: deleteWatches)
                         }
                         .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                         .refreshable { await vm.refresh(watches, in: context) }   // pull-to-refresh
                     }
                 }
             }
+            .background(IsobarBackground())
             .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
