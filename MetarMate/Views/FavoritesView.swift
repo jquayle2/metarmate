@@ -74,6 +74,7 @@ struct FavoritesView: View {
             }
             .background(IsobarBackground())
             .navigationTitle("Favorites")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !favorites.isEmpty {

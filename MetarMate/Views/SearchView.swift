@@ -112,7 +112,9 @@ struct SearchView: View {
             }
             .background(IsobarBackground())
             .navigationTitle("Search")
-            .searchable(text: $searchText, prompt: "ICAO, IATA, or airport name")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "ICAO, IATA, or airport name")
             .onChange(of: searchText) {
                 airportVM.searchText = searchText
             }

@@ -48,7 +48,8 @@ struct AddWatchView: View {
                     .listStyle(.plain)
                 }
             }
-            .searchable(text: $searchText, prompt: "ICAO, IATA, or airport name")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always),
+                        prompt: "ICAO, IATA, or airport name")
             .autocorrectionDisabled()
             .textInputAutocapitalization(.characters)
             .navigationTitle("Add Airport")
