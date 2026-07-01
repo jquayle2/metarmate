@@ -372,7 +372,7 @@ struct SynopticCloudLayer: Sendable {
 
 // MARK: - Raw API Response Models
 
-private struct SynopticAPIResponse: Decodable {
+nonisolated private struct SynopticAPIResponse: Decodable {
     let summary: SynopticSummary
     let station: [SynopticStation]?
     let units: [String: String]?
@@ -384,7 +384,7 @@ private struct SynopticAPIResponse: Decodable {
     }
 }
 
-private struct SynopticSummary: Decodable {
+nonisolated private struct SynopticSummary: Decodable {
     let responseCode: Int
     let responseMessage: String
 
@@ -420,7 +420,7 @@ struct SynopticStation: Decodable, Sendable {
 //   TimeSeries: { "air_temp_set_1": [72.3, 71.1, ...] }
 //   Also:       { "date_time": ["2026-...", "2026-...", ...] }
 
-enum SynopticValue: Decodable, Sendable {
+nonisolated enum SynopticValue: Decodable, Sendable {
     case singleObject(value: Double?, dateTime: String?)
     case arrayOfDoubles([Double?])
     case arrayOfStrings([String])
@@ -491,7 +491,7 @@ enum SynopticValue: Decodable, Sendable {
     }
 }
 
-private struct LatestValueObject: Decodable {
+nonisolated private struct LatestValueObject: Decodable {
     let value: Double?
     let dateTime: String?
 
@@ -535,7 +535,7 @@ enum SynopticError: LocalizedError {
 // MARK: - Safe array subscript
 
 private extension Array {
-    subscript(safe index: Index) -> Element? {
+    nonisolated subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
 }
