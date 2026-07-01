@@ -784,30 +784,29 @@ struct WeatherDetailView: View {
     // Cloud layer: per-layer color based on coverage + altitude + CB
     private func cloudLayerColor(_ layer: CloudLayer) -> Color {
         let altFt = layer.altitude * 100
-        if layer.isCumulonimbus { return .orange }
+        if layer.isCumulonimbus { return Brand.cautionOrange }
         switch layer.coverage {
         case .few, .scattered:
-            if altFt < 3000 { return Color(red: 1.0, green: 0.6, blue: 0.0) } // amber — low FEW/SCT
-            return .green                                                        // high FEW/SCT benign
+            if altFt < 3000 { return Brand.cautionOrange }  // low FEW/SCT — caution
+            return Brand.vfrGreen                            // high FEW/SCT benign
         case .broken, .overcast, .verticalVisibility:
-            if altFt < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) } // LIFR magenta
-            if altFt < 1000 { return .red }                                      // IFR
-            if altFt < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }  // MVFR blue
-            return .green
+            if altFt < 500  { return Brand.lifrMagenta }     // LIFR
+            if altFt < 1000 { return Brand.valueRed }        // IFR
+            if altFt < 3000 { return Brand.mvfrBlue }        // MVFR
+            return Brand.vfrGreen                            // VFR
         case .clear, .skyClear:
-            return .green
+            return Brand.vfrGreen
         }
     }
 
     private func cloudSeverityRank(_ color: Color) -> Int {
-        switch color {
-        case .orange: return 5
-        case .red: return 4
-        case _ where color == Color(red: 0.75, green: 0.0, blue: 0.75): return 3 // magenta
-        case _ where color == Color(red: 0.2, green: 0.5, blue: 1.0): return 2   // MVFR blue
-        case .green: return 1
-        default: return 0
-        }
+        // LIFR (magenta) is the worst ceiling; CB/low-cloud caution outranks it visually.
+        if color == Brand.cautionOrange { return 5 }
+        if color == Brand.lifrMagenta   { return 4 }
+        if color == Brand.valueRed      { return 3 }
+        if color == Brand.mvfrBlue      { return 2 }
+        if color == Brand.vfrGreen      { return 1 }
+        return 0
     }
 
     private func cloudsView(_ layers: [CloudLayer]) -> some View {

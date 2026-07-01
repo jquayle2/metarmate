@@ -70,6 +70,11 @@ enum Brand {
     static let valueRed      = Color(hex: "#FF5A50") // danger values in text (IFR, sub-min vis)
     static let ifrBadgeBG    = Color(hex: "#E0453D") // solid fill behind white "IFR"
 
+    // Flight-category axis (VFR/MVFR/IFR/LIFR) — reserved ONLY for category signaling.
+    // Brightened for cockpit legibility on the navy ground.
+    static let mvfrBlue      = Color(hex: "#4FA3F0") // MVFR
+    static let lifrMagenta   = Color(hex: "#E06AD0") // LIFR (aviation magenta)
+
     // VFR pill
     static let vfrPillFill   = Color(red: 84/255, green: 177/255, blue: 122/255).opacity(0.16)
     static let vfrPillBorder = Color(red: 84/255, green: 177/255, blue: 122/255).opacity(0.40)
@@ -122,14 +127,14 @@ enum AvenirWeight {
 
 enum ColorRules {
 
-    /// flightCategoryColor(cat) → green | orange | red.
-    /// Red is rationed to genuine danger (IFR/LIFR); MVFR reads as caution.
+    /// flightCategoryColor(cat) — the aviation four-way axis, used ONLY for category:
+    /// VFR green · MVFR blue · IFR red · LIFR magenta. (Never re-used for non-category signals.)
     static func flightCategoryColor(_ cat: FlightCategory) -> Color {
         switch cat {
         case .vfr:     return Brand.vfrGreen
-        case .mvfr:    return Brand.cautionOrange
+        case .mvfr:    return Brand.mvfrBlue
         case .ifr:     return Brand.valueRed
-        case .lifr:    return Brand.dangerRed
+        case .lifr:    return Brand.lifrMagenta
         case .unknown: return Brand.slate
         }
     }
@@ -155,19 +160,22 @@ enum ColorRules {
         inHg < 29.80 ? Brand.accentOrange : Brand.fog
     }
 
-    /// Visibility (statute miles): < 3 SM is sub-minimum danger (value red);
-    /// 3–5 SM marginal (caution); ≥ 5 good (green).
+    /// Visibility (statute miles) on the flight-category axis:
+    /// < 1 LIFR magenta · < 3 IFR red · < 5 MVFR blue · ≥ 5 VFR green.
     static func visibilityColor(_ sm: Double) -> Color {
-        if sm < 3  { return Brand.valueRed }
-        if sm < 5  { return Brand.cautionOrange }
+        if sm < 1 { return Brand.lifrMagenta }
+        if sm < 3 { return Brand.valueRed }
+        if sm < 5 { return Brand.mvfrBlue }
         return Brand.vfrGreen
     }
 
-    /// Ceiling (feet AGL, nil = unlimited): < 1000 IFR danger; < 3000 marginal; else good.
+    /// Ceiling (feet AGL, nil = unlimited) on the flight-category axis:
+    /// < 500 LIFR magenta · < 1000 IFR red · < 3000 MVFR blue · else VFR green.
     static func ceilingColor(_ feet: Int?) -> Color {
         guard let feet = feet else { return Brand.vfrGreen }
+        if feet < 500  { return Brand.lifrMagenta }
         if feet < 1000 { return Brand.valueRed }
-        if feet < 3000 { return Brand.cautionOrange }
+        if feet < 3000 { return Brand.mvfrBlue }
         return Brand.vfrGreen
     }
 
@@ -324,6 +332,8 @@ struct StatusPill: View {
     let category: FlightCategory
 
     var body: some View {
+        let color = ColorRules.flightCategoryColor(category)
+        // IFR/LIFR get a solid alarming pill; VFR/MVFR a translucent outline.
         let solid = (category == .ifr || category == .lifr)
         return HStack(spacing: 6) {
             Circle().frame(width: 6, height: 6)
@@ -331,16 +341,16 @@ struct StatusPill: View {
         }
         .font(.avenir(13, .heavy))
         .tracking(1.0)
-        .foregroundColor(solid ? .white : Brand.vfrGreen)
+        .foregroundColor(solid ? .white : color)
         .padding(.horizontal, 13)
         .padding(.vertical, 5)
         .background(
             RoundedRectangle(cornerRadius: Brand.chipRadius, style: .continuous)
-                .fill(solid ? Brand.ifrBadgeBG : Brand.vfrPillFill)
+                .fill(solid ? color : color.opacity(0.16))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Brand.chipRadius, style: .continuous)
-                .stroke(solid ? .clear : Brand.vfrPillBorder, lineWidth: 1)
+                .stroke(solid ? .clear : color.opacity(0.4), lineWidth: 1)
         )
     }
 }
