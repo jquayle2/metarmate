@@ -211,7 +211,7 @@ struct AirportRowView: View {
         if adv.windSpeedKtRounded == 0 {
             parts.append("CALM")
         } else {
-            let dir = adv.windDirectionDeg.map { String(format: "%03d", $0) } ?? "VRB"
+            let dir = adv.windDirectionRounded10.map { String(format: "%03d", $0) } ?? "VRB"
             if let g = adv.windGustKtRounded, g > adv.windSpeedKtRounded {
                 parts.append("\(dir)@\(adv.windSpeedKtRounded)G\(g)")
             } else {

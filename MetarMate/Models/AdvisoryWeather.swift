@@ -51,6 +51,13 @@ struct AdvisoryForecastHour: Codable, Identifiable {
     var pressureInHg:    Double?  { pressureHpa.map { $0 * 0.02953 } }
     var windSpeedKtRounded: Int   { Int(windSpeedKt.rounded()) }
     var windGustKtRounded:  Int?  { windGustKt.map { Int($0.rounded()) } }
+    /// Direction snapped to nearest 10° (METAR convention; north = 360, not 000).
+    var windDirectionRounded10: Int? {
+        windDirectionDeg.map { d in
+            let r = ((d + 5) / 10) * 10 % 360
+            return r == 0 ? 360 : r
+        }
+    }
     var cloudCoverDescription: String { AdvisoryWeather.cloudCoverDesc(cloudCoverPercent) }
     var precipDescription:     String { AdvisoryWeather.precipDesc(precipitationMm) }
 
@@ -135,6 +142,16 @@ struct AdvisoryWeather: Codable {
 
     nonisolated var windSpeedKtRounded: Int  { Int(windSpeedKt.rounded()) }
     nonisolated var windGustKtRounded:  Int? { windGustKt.map { Int($0.rounded()) } }
+
+    /// Advisory wind direction snapped to the nearest 10° (METAR convention;
+    /// north shows 360, never 000). Sources like Open-Meteo report to the exact
+    /// degree (e.g. 212°), which looks out of place next to real METARs.
+    nonisolated var windDirectionRounded10: Int? {
+        windDirectionDeg.map { d in
+            let r = ((d + 5) / 10) * 10 % 360
+            return r == 0 ? 360 : r
+        }
+    }
 
     var cloudCoverDescription: String { AdvisoryWeather.cloudCoverDesc(cloudCoverPercent) }
     var precipDescription:     String { AdvisoryWeather.precipDesc(precipitationMm) }

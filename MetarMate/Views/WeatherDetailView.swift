@@ -2542,7 +2542,7 @@ struct WeatherDetailView: View {
             let advisoryWindText: String = {
                 let spd = wx.windSpeedKtRounded
                 if spd < 3 { return "Calm" }
-                let dir = wx.windDirectionDeg.map { String(format: "%03d°", (($0 + 5) / 10) * 10 % 360 == 0 ? 360 : (($0 + 5) / 10) * 10 % 360) } ?? "Variable"
+                let dir = wx.windDirectionRounded10.map { String(format: "%03d°", $0) } ?? "Variable"
                 var text = "\(dir)  \(spd) kt"
                 if let gust = wx.windGustKtRounded, gust - spd >= 10 {
                     text += " G\(gust) kt"
@@ -2964,7 +2964,7 @@ struct WeatherDetailView: View {
         let fcstWindText: String = {
             let spd = hour.windSpeedKtRounded
             if spd < 3 { return "Calm" }
-            let dir = hour.windDirectionDeg.map { String(format: "%03d°", (($0 + 5) / 10) * 10 % 360 == 0 ? 360 : (($0 + 5) / 10) * 10 % 360) } ?? "Variable"
+            let dir = hour.windDirectionRounded10.map { String(format: "%03d°", $0) } ?? "Variable"
             var t = "\(dir)  \(spd) kt"
             if let gust = hour.windGustKtRounded, gust - spd >= 10 { t += " G\(gust) kt" }
             return t
