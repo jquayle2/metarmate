@@ -9,6 +9,18 @@ actor WeatherService {
 
     private init() {}
 
+    /// NOAA `ids=` candidate for a US identifier that isn't already a 4-letter ICAO.
+    /// 3-char FAA LIDs — letters AND/OR digits (CMA, 36K, 1G4, 06C) — publish under a
+    /// K-prefixed pseudo-ICAO (KCMA, K36K, K1G4). Returns nil when no normalization
+    /// applies (already 4-char ICAO, or already K-prefixed). This is the fix for numeric
+    /// LIDs that were mis-routed to advisory because the old gate required all-letters.
+    static func noaaCandidate(for icao: String) -> String? {
+        let u = icao.uppercased()
+        guard u.count == 3, !u.hasPrefix("K"),
+              u.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        return "K" + u
+    }
+
     // MARK: - METAR
     func fetchMetar(for icao: String) async throws -> Metar {
         let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "2"])

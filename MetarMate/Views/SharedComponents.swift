@@ -116,8 +116,12 @@ struct AirportRowView: View {
     let distance: String?
 
     private var railColor: Color {
-        ColorRules.railColor(hasMetar: airport.hasMetar,
-                             category: metar?.flightCategory ?? .unknown)
+        // A resolved METAR (incl. numeric LIDs like 36K→K36K) drives the category color;
+        // only genuinely station-less airports get the advisory (caution-orange) rail.
+        if let metar = metar {
+            return ColorRules.flightCategoryColor(metar.flightCategory)
+        }
+        return ColorRules.railColor(hasMetar: airport.hasMetar, category: .unknown)
     }
 
     var body: some View {
@@ -170,17 +174,19 @@ struct AirportRowView: View {
 
     @ViewBuilder
     private var conditionsLine: some View {
-        if !airport.hasMetar {
-            Text("Advisory weather only")
-                .font(.avenir(12.5, .bold))
-                .foregroundColor(Brand.cautionOrange)
-        } else if let metar = metar {
+        // METAR-first: a fetched METAR (including a resolved numeric LID) always wins over
+        // the airport's static hasMetar flag, so 36K→K36K shows real conditions.
+        if let metar = metar {
             (Text("\(skyVisString(metar: metar)) · ")
                 .foregroundColor(Brand.monoDim)
              + Text(windToken(metar.wind))
                 .foregroundColor(ColorRules.windCodeColor(metar.wind)))
                 .font(.brandMono(13, weight: .medium))
                 .lineLimit(1)
+        } else if !airport.hasMetar {
+            Text("Advisory weather only")
+                .font(.avenir(12.5, .bold))
+                .foregroundColor(Brand.cautionOrange)
         } else {
             Text("METAR unavailable")
                 .font(.brandMono(13, weight: .medium))

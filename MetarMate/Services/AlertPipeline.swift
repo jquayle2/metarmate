@@ -85,12 +85,24 @@ enum AlertPipeline {
     // ASOS. Per station, a successful Synoptic fetch IS the "station has ASOS" check; any
     // failure falls back to the batch METAR for that station.
     private static func fetchConditions(for icaos: [String]) async -> [String: AlertConditions] {
-        let metars = (try? await WeatherService.shared.fetchMetars(for: icaos)) ?? [:]
+        // Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K), then map back
+        // to the watch's own id so numeric-LID stations are actually evaluated.
+        var noaaToOriginal: [String: String] = [:]
+        let noaaIds = icaos.map { code -> String in
+            let id = WeatherService.noaaCandidate(for: code) ?? code
+            noaaToOriginal[id] = code
+            return id
+        }
+        let metarsByNoaa = (try? await WeatherService.shared.fetchMetars(for: noaaIds)) ?? [:]
+        var metars: [String: Metar] = [:]
+        for (key, m) in metarsByNoaa { metars[noaaToOriginal[key] ?? key] = m }
+
         let useLiveAsos = StoreManager.shared.isAsosUser && useLiveAsosForAlerts
 
         var result: [String: AlertConditions] = [:]
         for icao in icaos {
-            if useLiveAsos, let obs = try? await SynopticService.shared.fetchLatest(for: icao) {
+            let stationId = WeatherService.noaaCandidate(for: icao) ?? icao
+            if useLiveAsos, let obs = try? await SynopticService.shared.fetchLatest(for: stationId) {
                 result[icao] = AlertConditions(from: obs)        // live ASOS
             } else if let metar = metars[icao] {
                 result[icao] = AlertConditions(from: metar)      // METAR fallback

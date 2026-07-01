@@ -48,10 +48,10 @@ class WeatherViewModel: ObservableObject {
         synopticError = nil
 
         if !airport.hasMetar {
-            // Before falling back to advisory, try K-prefix for 3-letter FAA codes (CMA → KCMA)
-            let upper = airport.icao.uppercased()
-            if upper.count == 3, upper.allSatisfy({ $0.isLetter }) {
-                let kIcao = "K\(upper)"
+            // Numeric/short US LIDs (36K→K36K, CMA→KCMA) can still publish a real METAR;
+            // try the K-prefixed ICAO against NOAA before falling back to advisory. Only
+            // fall back after this genuinely misses.
+            if let kIcao = WeatherService.noaaCandidate(for: airport.icao) {
                 await loadMETAR(icao: kIcao)
                 if metar != nil {
                     isLoading = false
@@ -62,14 +62,8 @@ class WeatherViewModel: ObservableObject {
             }
             await loadAdvisory(airport: airport)
         } else {
-            // For 3-letter FAA codes, use K-prefix for NOAA lookup (CMA → KCMA)
-            let icaoForFetch: String
-            let upper = airport.icao.uppercased()
-            if upper.count == 3, upper.allSatisfy({ $0.isLetter }), !upper.hasPrefix("K") {
-                icaoForFetch = "K\(upper)"
-            } else {
-                icaoForFetch = airport.icao
-            }
+            // For 3-char FAA LIDs, use the K-prefixed ICAO for NOAA lookup (CMA → KCMA)
+            let icaoForFetch = WeatherService.noaaCandidate(for: airport.icao) ?? airport.icao
             await loadMETAR(icao: icaoForFetch)
             if noWeatherReporting || (metar == nil && error != nil) {
                 isMetarFallback = true
@@ -105,10 +99,8 @@ class WeatherViewModel: ObservableObject {
             let fetchedTaf = await tafResult
 
             if fetchedHistory.isEmpty {
-                // For 3-letter FAA codes (CMA, SNA, etc.), try K-prefix (KCMA, KSNA)
-                let upper = icao.uppercased()
-                if upper.count == 3, upper.allSatisfy({ $0.isLetter }) {
-                    let kIcao = "K\(upper)"
+                // For 3-char FAA LIDs (CMA, 36K, 1G4, …), try the K-prefixed ICAO (KCMA, K36K)
+                if let kIcao = WeatherService.noaaCandidate(for: icao) {
                     if let retryHistory = try? await weatherService.fetchMetarHistory(for: kIcao, hours: 6),
                        !retryHistory.isEmpty {
                         metarHistory = retryHistory

@@ -99,7 +99,8 @@ class AirportViewModel: ObservableObject {
     }
 
     private func fetchSearchMetars() async {
-        let metarAirports = searchResults.filter { $0.hasMetar }
+        // Official stations AND short/numeric LIDs that may publish under a K-ICAO (36K→K36K).
+        let metarAirports = searchResults.filter { $0.hasMetar || WeatherService.noaaCandidate(for: $0.icao) != nil }
         guard !metarAirports.isEmpty else { return }
 
         // Build lookup: NOAA ICAO -> original airport ICAO (e.g. KCMA -> CMA)
@@ -107,14 +108,9 @@ class AirportViewModel: ObservableObject {
         var noaaIds: [String] = []
         for airport in metarAirports {
             let code = airport.icao.uppercased()
-            if code.count == 3, code.allSatisfy({ $0.isLetter }), !code.hasPrefix("K") {
-                let kCode = "K\(code)"
-                noaaIds.append(kCode)
-                noaaToOriginal[kCode] = code
-            } else {
-                noaaIds.append(code)
-                noaaToOriginal[code] = code
-            }
+            let id = WeatherService.noaaCandidate(for: code) ?? code
+            noaaIds.append(id)
+            noaaToOriginal[id] = code
         }
 
         if let metars = try? await weatherService.fetchMetars(for: noaaIds) {
@@ -140,19 +136,14 @@ class AirportViewModel: ObservableObject {
 
         // Fetch METARs only for airports with official reporting stations
         // K-prefix 3-letter FAA codes for NOAA lookup, then map results back
-        let metarNearby = nearestAirports.filter { $0.hasMetar }
+        let metarNearby = nearestAirports.filter { $0.hasMetar || WeatherService.noaaCandidate(for: $0.icao) != nil }
         var nearNoaaToOrig: [String: String] = [:]
         var nearNoaaIds: [String] = []
         for airport in metarNearby {
             let code = airport.icao.uppercased()
-            if code.count == 3, code.allSatisfy({ $0.isLetter }), !code.hasPrefix("K") {
-                let kCode = "K\(code)"
-                nearNoaaIds.append(kCode)
-                nearNoaaToOrig[kCode] = code
-            } else {
-                nearNoaaIds.append(code)
-                nearNoaaToOrig[code] = code
-            }
+            let id = WeatherService.noaaCandidate(for: code) ?? code
+            nearNoaaIds.append(id)
+            nearNoaaToOrig[id] = code
         }
         if let metars = try? await weatherService.fetchMetars(for: nearNoaaIds) {
             var mapped: [String: Metar] = [:]
