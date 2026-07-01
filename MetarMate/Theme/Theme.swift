@@ -100,12 +100,27 @@ enum Brand {
 // MARK: - Typography (Avenir Next display + SF Mono data)
 
 extension Font {
-    /// Avenir Next at an explicit PostScript weight (guaranteed present on iOS).
+    /// Global display type scale. The redesign shipped a base-size bump that read too
+    /// large on-device; this pulls the default back to a comfortable size. The XW Calc
+    /// screen opts out (uses the *Unscaled helpers below) — its legibility is handled
+    /// separately, so its sizing is left exactly as-is.
+    static let brandTypeScale: CGFloat = 0.85
+
+    /// Avenir Next at an explicit PostScript weight (guaranteed present on iOS), base-scaled.
     static func avenir(_ size: CGFloat, _ weight: AvenirWeight = .regular) -> Font {
+        .custom(weight.psName, size: size * brandTypeScale)
+    }
+    /// Monospaced data type — SF Mono via the system monospaced design, base-scaled.
+    static func brandMono(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
+        .system(size: size * brandTypeScale, weight: weight, design: .monospaced)
+    }
+
+    /// Unscaled variants — used ONLY by the XW Calc screen, which is excluded from the
+    /// base-size revert.
+    static func avenirUnscaled(_ size: CGFloat, _ weight: AvenirWeight = .regular) -> Font {
         .custom(weight.psName, size: size)
     }
-    /// Monospaced data type — SF Mono via the system monospaced design.
-    static func brandMono(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
+    static func brandMonoUnscaled(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
 }
@@ -264,10 +279,11 @@ struct TrackedLabel: View {
     var color: Color = Brand.slate
     var size: CGFloat = 10.5
     var tracking: CGFloat = 2.6   // ≈ 0.28em at this size
+    var scaled: Bool = true       // XW Calc passes false (excluded from base-size revert)
 
     var body: some View {
         Text(text.uppercased())
-            .font(.avenir(size, .heavy))
+            .font(scaled ? .avenir(size, .heavy) : .avenirUnscaled(size, .heavy))
             .tracking(tracking)
             .foregroundColor(color)
             .lineLimit(1)
