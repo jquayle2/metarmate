@@ -668,8 +668,8 @@ struct WeatherDetailView: View {
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
             }
-            conditionRow("thermometer", "Temp / Dewpoint",
-                         "\(metar.temperature)°C / \(metar.dewpoint)°C  (spread \(metar.temperature - metar.dewpoint)°)",
+            conditionRow("thermometer", "Temp / Dew",
+                         "\(metar.temperature)°C / \(metar.dewpoint)°C · Δ\(metar.temperature - metar.dewpoint)",
                          color: tempDewConditionColor(temp: metar.temperature, dew: metar.dewpoint))
             conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", metar.altimeter),
                          color: altimeterConditionColor(metar.altimeter))
@@ -678,12 +678,8 @@ struct WeatherDetailView: View {
                              WeatherDecoder.decodeAll(metar.weatherPhenomena),
                              color: wxPhenomenaConditionColor(metar.weatherPhenomena))
             }
-            densityAltitudeRow(DensityAltitude.calculate(
-                temperatureC: Double(metar.temperature),
-                dewpointC: Double(metar.dewpoint),
-                altimeterInHg: metar.altimeter,
-                fieldElevationFt: airport.elevation
-            ))
+            // Density Altitude lives in the dedicated Performance section (figure + band +
+            // power-loss consequences); not duplicated here. (C2 de-dupe.)
         }
         .padding()
         .background(cardBackground)
@@ -772,12 +768,14 @@ struct WeatherDetailView: View {
                 .foregroundColor(isNeutral ? Brand.slate : color)
                 .frame(width: 20)
             Text(label)
-                .font(.avenir(16, .demibold))
+                .font(.avenir(15.5, .demibold))
                 .foregroundColor(Brand.fog2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1)
+                .frame(width: 112, alignment: .leading)
             Text(value)
                 .font(.avenir(16, isNeutral ? .demibold : .heavy))
                 .foregroundColor(color)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -810,15 +808,16 @@ struct WeatherDetailView: View {
     }
 
     private func cloudsView(_ layers: [CloudLayer]) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            let worstColor = layers.map { cloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Color.primary
+        HStack(alignment: .top, spacing: 13) {
+            let worstColor = layers.map { cloudLayerColor($0) }.max(by: { cloudSeverityRank($0) < cloudSeverityRank($1) }) ?? Brand.vfrGreen
             Image(systemName: "cloud.fill")
-                .foregroundColor(worstColor == .primary ? .secondary : worstColor.opacity(0.8))
+                .font(.system(size: 17, weight: .regular))
+                .foregroundColor(worstColor)
                 .frame(width: 20)
             Text("Clouds")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
+                .font(.avenir(15.5, .demibold))
+                .foregroundColor(Brand.fog2)
+                .frame(width: 112, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(layers.indices, id: \.self) { i in
                     let layer = layers[i]

@@ -103,8 +103,11 @@ struct CrosswindDiagramView: View {
             let hb1 = pt2(from: windInner, bearing: perp, dist: 5, base: windHeadBase)
             let hb2 = pt2(from: windInner, bearing: perp + 180, dist: 5, base: windHeadBase)
             fillTriangle([windInner, hb1, hb2], Brand.cautionOrange)
-            // Wind label just outside the ring.
-            let windLabelAt = pt(bearing: angleOff, radius: 84)
+            // Wind label just outside the ring — clamped inside the viewBox so the full
+            // value (e.g. "200°") never clips at the canvas edge for any wind bearing.
+            var windLabelAt = pt(bearing: angleOff, radius: 84)
+            windLabelAt.x = min(max(windLabelAt.x, 20), box.width - 20)
+            windLabelAt.y = min(max(windLabelAt.y, 12), box.height - 12)
             ctx.draw(Text("\(windDirDeg)°").font(.brandMono(10, weight: .bold))
                         .foregroundColor(Brand.cautionOrange),
                      at: P(windLabelAt), anchor: .center)
