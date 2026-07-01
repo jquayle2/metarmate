@@ -26,6 +26,13 @@ EXPAND = {
 KEEP_UPPER = {'AFB', 'ANGB', 'ARB', 'NAS', 'NALF', 'AAF', 'AHP', 'MCAS',
               'CGAS', 'USAF', 'US', 'AF', 'II', 'III', 'IV'}
 
+# Genuine "Mac<Capital>" surnames seen in NASR ARPT_NAME. Only these get the
+# letter after "Mac" capitalized; everything else ("Macon", "Macomb", "Machias",
+# "Machado", "Macho", "Mackall") stays plain "Mac...". Add real names here as
+# the 28-day NASR refresh surfaces them.
+MAC_NAMES = {'macdill', 'mackinac', 'mackay', 'mackie', 'macmillin',
+             'macmillan', 'macdonald', 'macarthur', 'macgregor'}
+
 # Split a token on internal separators, KEEPING the separators, so each
 # alpha run gets its own capitalization: "HARTSFIELD/JACKSON" -> the '/' is
 # preserved and "JACKSON" is capitalized independently. Fixes O'HARE, slashes,
@@ -39,17 +46,20 @@ def cap_word(w):
 
     ForeFlight (verified via NASR + FF screenshots) titleizes whatever NASR
     stores and does NOT normalize spacing: closed-up "MCKINNEY" -> "McKinney",
-    "MCMINN" -> "McMinn"; but spaced "MC CLELLAN"/"MC MAHON" stay two tokens and
-    render "Mc Clellan"/"Mc Mahon". So the only special case is a closed-up
-    Mc/Mac prefix inside a single token; the spaced form is handled by normal
-    per-run capitalization.
+    "MCMINN" -> "McMinn"; spaced "MC CLELLAN"/"MC MAHON" stay two tokens and
+    render "Mc Clellan"/"Mc Mahon".
+
+    "Mc" is safe to auto-capitalize the next letter: nearly every closed-up
+    "MC____" in NASR is a real McSomething surname. "Mac" is NOT safe -- it
+    collides with ordinary words (MACON, MACOMB, MACHIAS, MACKALL), so we only
+    capitalize after "Mac" for a known allow-list of genuine Mac- surnames.
     """
     if not w:
         return w
     low = w.lower()
     if len(low) > 2 and low.startswith('mc') and low[2:].isalpha():
         return 'Mc' + low[2].upper() + low[3:]
-    if len(low) > 3 and low.startswith('mac') and low[3:].isalpha():
+    if low in MAC_NAMES:
         return 'Mac' + low[3].upper() + low[4:]
     return w[:1].upper() + w[1:].lower()
 
