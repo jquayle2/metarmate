@@ -58,9 +58,11 @@ enum Brand {
     static let cloud   = Color(hex: "#F6F4F1")   // headlines, ICAO, primary values
     static let fog     = Color(hex: "#DBDDE3")   // strong body text
     static let fog2    = Color(hex: "#C4CCD6")   // row labels
-    static let slate   = Color(hex: "#8A97A8")   // secondary labels, distances
-    static let monoDim  = Color(hex: "#6B7C92")  // raw METAR strings
-    static let monoDim2 = Color(hex: "#5B6B80")  // chevrons / dimmest mono
+    // Neutral text greys — brightened for cockpit legibility (contrast pass, B5).
+    // These are non-semantic; the category/caution/go-no-go color axes are unchanged.
+    static let slate   = Color(hex: "#9EABBB")   // secondary labels, distances
+    static let monoDim  = Color(hex: "#8695A9")  // raw METAR strings
+    static let monoDim2 = Color(hex: "#7A8A9E")  // chevrons / dimmest mono
 
     // Semantic (use ONLY for the documented meaning)
     static let accentOrange  = Color(hex: "#FF4E00") // brand accent; caution-low altimeter; trend-up
