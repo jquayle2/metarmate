@@ -3009,16 +3009,19 @@ struct WeatherDetailView: View {
                     Label("\(Int(hour.temperatureC.rounded()))°C", systemImage: "thermometer")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    if hour.precipitationMm >= 0.1 {
-                        Label(hour.precipDescription, systemImage: "drop.fill")
-                            .font(.caption)
-                            .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
-                    }
                     if let pHpa = hour.pressureHpa {
                         Label(String(format: "~%.2f inHg", pHpa * 0.02953), systemImage: "gauge")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
+                }
+                // Precip gets its own full-width row so the description reflows as whole
+                // words instead of stacking one letter per line in a cramped cell.
+                if hour.precipitationMm >= 0.1 {
+                    Label(hour.precipDescription, systemImage: "drop.fill")
+                        .font(.caption)
+                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer()
