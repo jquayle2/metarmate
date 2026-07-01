@@ -170,7 +170,7 @@ struct CrosswindKeypadView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { idx, line in
                         Text(line)
-                            .font(.avenirUnscaled(idx == 0 ? 14 : 13, idx == 0 ? .bold : .demibold))
+                            .font(.avenir(idx == 0 ? 14 : 13, idx == 0 ? .bold : .demibold))
                             .foregroundColor(idx == 0 ? Brand.cloud : Brand.fog)
                     }
                 }
@@ -193,16 +193,16 @@ struct CrosswindKeypadView: View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 5) {
                 TrackedLabel(text: "Crosswind Calc · \(title)", color: Brand.accentOrange,
-                             size: 10, tracking: 3.0, scaled: false)
+                             size: 10, tracking: 3.0)
                 Text("Runway \(String(format: "%02d", runway))")
-                    .font(.avenirUnscaled(26, .heavy))
+                    .font(.avenir(26, .heavy))
                     .foregroundColor(Brand.cloud)
             }
             Spacer()
             if let onDone {
                 Button(action: onDone) {
                     Text("Done")
-                        .font(.avenirUnscaled(17, .demibold))
+                        .font(.avenir(17, .demibold))
                         .foregroundColor(Brand.accentOrange)
                 }
             }
@@ -239,24 +239,24 @@ struct CrosswindKeypadView: View {
         }) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(field.title)
-                    .font(.avenirUnscaled(9.5, .heavy))
+                    .font(.avenir(9.5, .heavy))
                     .tracking(1.8)
                     .foregroundColor(labelColor)
 
                 if isActive {
                     Text(inputBuffer.isEmpty ? displayValue : inputBuffer)
-                        .font(.brandMonoUnscaled(22, weight: .bold))
+                        .font(.brandMono(22, weight: .bold))
                         .foregroundColor(inputBuffer.isEmpty ? Brand.cloud.opacity(0.4) : valueColor)
                         .offset(x: shakeOffset)
                 } else {
                     Text(displayValue)
-                        .font(.brandMonoUnscaled(22, weight: .bold))
+                        .font(.brandMono(22, weight: .bold))
                         .foregroundColor(valueColor)
                 }
 
                 if isActive, let error = errorMessage {
                     Text(error)
-                        .font(.brandMonoUnscaled(10, weight: .bold))
+                        .font(.brandMono(10, weight: .bold))
                         .foregroundColor(Brand.valueRed)
                 }
             }
@@ -365,7 +365,7 @@ struct CrosswindKeypadView: View {
 
         let highlight = isStart || isCurrent
         return Text(digit)
-            .font(.brandMonoUnscaled(21, weight: .semibold))
+            .font(.brandMono(21, weight: .semibold))
             .foregroundColor(!enabled ? Brand.cloud.opacity(0.25)
                              : (highlight ? Brand.accentOrange : Brand.cloud))
             .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)
@@ -434,7 +434,7 @@ struct CrosswindKeypadView: View {
             }
         }) {
             Text(hasInput ? "OK" : (isGustField ? "NONE" : "OK"))
-                .font(.avenirUnscaled(16, .heavy))
+                .font(.avenir(16, .heavy))
                 .tracking(0.6)
                 .foregroundColor(Brand.navy)
                 .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)

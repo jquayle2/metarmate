@@ -44,6 +44,8 @@ struct WeatherDetailView: View {
                 }
             }
             .padding()
+            // Clear the iOS 26 floating tab bar so the last section isn't hidden under it.
+            .padding(.bottom, 56)
         }
         .background(IsobarBackground())
         .navigationTitle(airport.icao)
@@ -762,7 +764,11 @@ struct WeatherDetailView: View {
     // Neutral values (Fog) render unremarkable; signal colors get heavier weight.
     private func conditionRow(_ icon: String, _ label: String, _ value: String, color: Color = Brand.fog) -> some View {
         let isNeutral = (color == Brand.fog)
-        return HStack(spacing: 13) {
+        // Fixed label column keeps values on a consistent left edge; the label WRAPS to
+        // multiple lines at large Dynamic Type sizes rather than truncating or shrinking
+        // (a label must never render smaller than the value beside it). Top-aligned so
+        // wrapped labels and values read cleanly.
+        return HStack(alignment: .top, spacing: 13) {
             Image(systemName: icon)
                 .font(.system(size: 17, weight: .regular))
                 .foregroundColor(isNeutral ? Brand.slate : color)
@@ -770,11 +776,12 @@ struct WeatherDetailView: View {
             Text(label)
                 .font(.avenir(15.5, .demibold))
                 .foregroundColor(Brand.fog2)
-                .lineLimit(1)
-                .frame(width: 112, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 118, alignment: .leading)
             Text(value)
                 .font(.avenir(16, isNeutral ? .demibold : .heavy))
                 .foregroundColor(color)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -817,7 +824,8 @@ struct WeatherDetailView: View {
             Text("Clouds")
                 .font(.avenir(15.5, .demibold))
                 .foregroundColor(Brand.fog2)
-                .frame(width: 112, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 118, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(layers.indices, id: \.self) { i in
                     let layer = layers[i]

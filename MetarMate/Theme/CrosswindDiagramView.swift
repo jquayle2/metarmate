@@ -86,10 +86,10 @@ struct CrosswindDiagramView: View {
               color: Brand.accentOrange.opacity(0.35), w: 2, dash: [6, 9])
 
             // Threshold labels.
-            ctx.draw(Text(runwayIdent).font(.brandMonoUnscaled(12, weight: .bold))
+            ctx.draw(Text(runwayIdent).font(.brandMono(12, weight: .bold))
                         .foregroundColor(Brand.fog),
                      at: P(CGPoint(x: 78, y: 124)), anchor: .center)
-            ctx.draw(Text(reciprocalIdent).font(.brandMonoUnscaled(9, weight: .bold))
+            ctx.draw(Text(reciprocalIdent).font(.brandMono(9, weight: .bold))
                         .foregroundColor(Brand.monoDim2),
                      at: P(CGPoint(x: 78, y: 22)), anchor: .center)
 
@@ -108,7 +108,7 @@ struct CrosswindDiagramView: View {
             var windLabelAt = pt(bearing: angleOff, radius: 84)
             windLabelAt.x = min(max(windLabelAt.x, 20), box.width - 20)
             windLabelAt.y = min(max(windLabelAt.y, 12), box.height - 12)
-            ctx.draw(Text("\(windDirDeg)°").font(.brandMonoUnscaled(10, weight: .bold))
+            ctx.draw(Text("\(windDirDeg)°").font(.brandMono(10, weight: .bold))
                         .foregroundColor(Brand.cautionOrange),
                      at: P(windLabelAt), anchor: .center)
 

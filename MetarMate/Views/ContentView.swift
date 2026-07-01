@@ -73,6 +73,10 @@ struct ContentView: View {
                 .tag(4)
         }
         .tint(Brand.accentOrange)
+        // Guardrail against total layout breakage at the largest accessibility sizes. The
+        // goal is that the normal range through .accessibility1 reflows cleanly — this cap is
+        // a floor, not a substitute for that. FUTURE: support sizes beyond .accessibility1.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .preferredColorScheme(.dark)
         .onAppear {
             locationService.requestPermission()

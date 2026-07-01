@@ -23,7 +23,7 @@ struct CrosswindReadout: View {
         VStack(spacing: 0) {
             // Header: WIND COMPONENTS · front-line · Flip chip
             HStack(spacing: 10) {
-                TrackedLabel(text: "Wind Components", color: Brand.slate, size: 10, tracking: 2.4, scaled: false)
+                TrackedLabel(text: "Wind Components", color: Brand.slate, size: 10, tracking: 2.4)
                 FrontLine()
                 if let onFlipRunway {
                     Button(action: onFlipRunway) {
@@ -31,7 +31,7 @@ struct CrosswindReadout: View {
                             Image(systemName: "arrow.left.arrow.right")
                             Text("Flip")
                         }
-                        .font(.avenirUnscaled(11, .bold))
+                        .font(.avenir(11, .bold))
                         .foregroundColor(Brand.slate)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
@@ -66,7 +66,7 @@ struct CrosswindReadout: View {
             // Footer: mono runway + wind recap
             Rectangle().fill(Brand.hairline).frame(height: 1).padding(.top, 10)
             Text("RWY \(String(format: "%02d", runway)) · \(String(format: "%03d", windDirDisplay))@\(windSpeed)\(gustSpeed.map { "G\($0)" } ?? "")")
-                .font(.brandMonoUnscaled(11.5, weight: .medium))
+                .font(.brandMono(11.5, weight: .medium))
                 .foregroundColor(Brand.monoDim2)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 9)
@@ -79,10 +79,10 @@ struct CrosswindReadout: View {
     private var crosswindReadout: some View {
         VStack(alignment: .leading, spacing: 3) {
             TrackedLabel(text: "Crosswind \(sideRight ? "←" : "→")", color: Brand.slate,
-                         size: 10, tracking: 1.8, scaled: false)
+                         size: 10, tracking: 1.8)
             crosswindValue
             Text(side == "L" ? "from left" : (side == "R" ? "from right" : "aligned"))
-                .font(.avenirUnscaled(11, .demibold))
+                .font(.avenir(11, .demibold))
                 .foregroundColor(Brand.slate)
         }
     }
@@ -90,11 +90,11 @@ struct CrosswindReadout: View {
     private var crosswindValue: some View {
         var t = Text("\(crosswind)").foregroundColor(Brand.valueRed)
         if let g = gustCrosswind, g > crosswind {
-            t = t + Text("G").font(.brandMonoUnscaled(16, weight: .bold)).foregroundColor(Brand.cautionOrange)
+            t = t + Text("G").font(.brandMono(16, weight: .bold)).foregroundColor(Brand.cautionOrange)
                   + Text("\(g)").foregroundColor(Brand.valueRed)
         }
-        return (t + Text(" kt").font(.brandMonoUnscaled(13, weight: .medium)).foregroundColor(Brand.slate))
-            .font(.brandMonoUnscaled(27, weight: .bold))
+        return (t + Text(" kt").font(.brandMono(13, weight: .medium)).foregroundColor(Brand.slate))
+            .font(.brandMono(27, weight: .bold))
     }
 
     @ViewBuilder
@@ -102,12 +102,12 @@ struct CrosswindReadout: View {
         let isTailwind = headwind < 0
         VStack(alignment: .leading, spacing: 3) {
             TrackedLabel(text: isTailwind ? "Tailwind ↑" : "Headwind ↓", color: Brand.slate,
-                         size: 10, tracking: 1.8, scaled: false)
+                         size: 10, tracking: 1.8)
             (Text("\(abs(headwind))").foregroundColor(isTailwind ? Brand.dangerRed : Brand.vfrGreen)
-             + Text(" kt").font(.brandMonoUnscaled(13, weight: .medium)).foregroundColor(Brand.slate))
-                .font(.brandMonoUnscaled(27, weight: .bold))
+             + Text(" kt").font(.brandMono(13, weight: .medium)).foregroundColor(Brand.slate))
+                .font(.brandMono(27, weight: .bold))
             Text(isTailwind ? "unfavorable" : "favorable")
-                .font(.avenirUnscaled(11, .demibold))
+                .font(.avenir(11, .demibold))
                 .foregroundColor(Brand.slate)
         }
     }
