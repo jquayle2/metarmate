@@ -24,7 +24,12 @@ EXPAND = {
     'NATL': 'National', 'NTL': 'National',
 }
 KEEP_UPPER = {'AFB', 'ANGB', 'ARB', 'NAS', 'NALF', 'AAF', 'AHP', 'MCAS',
-              'CGAS', 'USAF', 'US', 'AF', 'II', 'III', 'IV'}
+              'CGAS', 'USAF', 'US', 'AF', 'II', 'III', 'IV',
+              # embedded initialisms / legal suffixes that must stay uppercase.
+              # Kept tight on purpose: only unambiguous ones that don't collide
+              # with real words in a facility name (unlike ELK/RED/SAN/OLD/ULM,
+              # which are words and must title-case normally).
+              'MBS', 'OKC', 'LLC'}
 
 # Genuine "Mac<Capital>" surnames seen in NASR ARPT_NAME. Only these get the
 # letter after "Mac" capitalized; everything else ("Macon", "Macomb", "Machias",
