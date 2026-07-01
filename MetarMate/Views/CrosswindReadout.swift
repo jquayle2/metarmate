@@ -1,114 +1,136 @@
 import SwiftUI
 
-/// Wind-components hero (visual refresh — badge 4A): a runway/wind vector diagram beside
-/// a stacked component readout, under a "WIND COMPONENTS" front-line header with a Flip chip,
-/// and a mono footer recapping the runway + wind. The result is a *diagram*, not a lone number.
+/// The 8A/8B BIG readout — the glanceable answer, kept large on purpose (usable in
+/// turbulence): a centered "CROSSWIND" label, a thick left/right arrow + the crosswind
+/// number `17`G`24` in mono at ~66px (sustained value-red, the gust `G24` caution-orange),
+/// then either the favorable HEADWIND (green) or, on a tailwind, an unmissable red
+/// TAILWIND banner with the readout border flipped to danger red.
 struct CrosswindReadout: View {
     let crosswind: Int
-    let gustCrosswind: Int?
-    let headwind: Int
-    let side: String
-    let color: Color
+    let gustCrosswind: Int?      // nil when steady (no G part)
+    let headwind: Int           // signed: positive = headwind, negative = tailwind
+    let side: String            // "R", "L", or "" (aligned)
     let runway: Int
-    let windDirection: Int
+    let windDirDisplay: Int     // already rounded to tens
     let windSpeed: Int
     let gustSpeed: Int?
     var onFlipRunway: (() -> Void)? = nil
 
-    private var sideRight: Bool { side != "L" }   // "" (aligned) and "R" draw to the right
-    private var reciprocal: Int { runway > 18 ? runway - 18 : runway + 18 }
-    private var windDirDisplay: Int { windDirection == 0 ? 360 : windDirection }
+    private var isTailwind: Bool { headwind < 0 }
+    private var sideRight: Bool { side != "L" }
+    private var sideText: String {
+        side == "L" ? "from the left" : (side == "R" ? "from the right" : "aligned")
+    }
+    private var windRecap: String {
+        "RWY \(String(format: "%02d", runway)) · \(String(format: "%03d", windDirDisplay))@\(windSpeed)\(gustSpeed.map { "G\($0)" } ?? "")"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header: WIND COMPONENTS · front-line · Flip chip
-            HStack(spacing: 10) {
-                TrackedLabel(text: "Wind Components", color: Brand.slate, size: 10, tracking: 2.4)
-                FrontLine()
-                if let onFlipRunway {
-                    Button(action: onFlipRunway) {
-                        HStack(spacing: 5) {
-                            Image(systemName: "arrow.left.arrow.right")
-                            Text("Flip")
-                        }
-                        .font(.avenir(11, .bold))
-                        .foregroundColor(Brand.slate)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color(red: 219/255, green: 221/255, blue: 227/255).opacity(0.06)))
-                    }
-                    .buttonStyle(.plain)
-                }
+            TrackedLabel(text: "Crosswind", color: Brand.slate, size: 11, tracking: 3.0)
+
+            // Big crosswind number, flanked by an arrow on the wind's source side pointing
+            // the way it pushes you: from the left → "→ 12"; from the right → "12 ←".
+            HStack(alignment: .center, spacing: 14) {
+                if crosswind > 0 && !sideRight { sideArrow(pointsRight: true) }
+                crosswindNumber
+                if crosswind > 0 && sideRight { sideArrow(pointsRight: false) }
             }
-            .padding(.bottom, 8)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .padding(.top, 8)
 
-            // Body: vector diagram + stacked component readout
-            HStack(alignment: .center, spacing: 10) {
-                CrosswindDiagramView(
-                    runwayIdent: String(format: "%02d", runway),
-                    reciprocalIdent: String(format: "%02d", reciprocal),
-                    windDirDeg: windDirDisplay,
-                    runwayHeadingDeg: runway * 10,
-                    crosswind: crosswind,
-                    headwind: headwind,
-                    sideRight: sideRight
-                )
-
-                VStack(alignment: .leading, spacing: 9) {
-                    crosswindReadout
-                    Rectangle().fill(Brand.cardBorder).frame(height: 1)
-                    alongReadout
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            // Footer: mono runway + wind recap
-            Rectangle().fill(Brand.hairline).frame(height: 1).padding(.top, 10)
-            Text("RWY \(String(format: "%02d", runway)) · \(String(format: "%03d", windDirDisplay))@\(windSpeed)\(gustSpeed.map { "G\($0)" } ?? "")")
-                .font(.brandMono(11.5, weight: .medium))
-                .foregroundColor(Brand.monoDim2)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 9)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .brandCard()
-    }
-
-    private var crosswindReadout: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            TrackedLabel(text: "Crosswind \(sideRight ? "←" : "→")", color: Brand.slate,
-                         size: 10, tracking: 1.8)
-            crosswindValue
-            Text(side == "L" ? "from left" : (side == "R" ? "from right" : "aligned"))
-                .font(.avenir(11, .demibold))
+            Text("kt · \(sideText)")
+                .font(.avenir(13, .demibold))
                 .foregroundColor(Brand.slate)
-        }
-    }
+                .padding(.top, 8)
 
-    private var crosswindValue: some View {
-        var t = Text("\(crosswind)").foregroundColor(Brand.valueRed)
-        if let g = gustCrosswind, g > crosswind {
-            t = t + Text("G").font(.brandMono(16, weight: .bold)).foregroundColor(Brand.cautionOrange)
-                  + Text("\(g)").foregroundColor(Brand.valueRed)
+            if isTailwind {
+                tailwindBanner
+                Text(windRecap)
+                    .font(.brandMono(12, weight: .medium))
+                    .foregroundColor(Brand.monoDim2)
+                    .padding(.top, 14)
+            } else {
+                Rectangle().fill(Brand.hairline)
+                    .frame(height: 1)
+                    .padding(.vertical, 12)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    TrackedLabel(text: "Headwind", color: Brand.slate, size: 13, tracking: 2.6)
+                    Text("\(headwind)")
+                        .font(.brandMono(40, weight: .bold))
+                        .foregroundColor(Brand.vfrGreen)
+                    Text("kt")
+                        .font(.avenir(15, .bold))
+                        .foregroundColor(Brand.slate)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            }
         }
-        return (t + Text(" kt").font(.brandMono(13, weight: .medium)).foregroundColor(Brand.slate))
-            .font(.brandMono(27, weight: .bold))
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 14)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color.black.opacity(0.22)))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .stroke(isTailwind ? Brand.dangerRed.opacity(0.35) : Brand.cardBorder,
+                    lineWidth: isTailwind ? 1.5 : 1))
+        .overlay(alignment: .topTrailing) { flipHint }
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .onTapGesture { onFlipRunway?() }
+        .padding(.horizontal, 18)
     }
 
     @ViewBuilder
-    private var alongReadout: some View {
-        let isTailwind = headwind < 0
-        VStack(alignment: .leading, spacing: 3) {
-            TrackedLabel(text: isTailwind ? "Tailwind ↑" : "Headwind ↓", color: Brand.slate,
-                         size: 10, tracking: 1.8)
-            (Text("\(abs(headwind))").foregroundColor(isTailwind ? Brand.dangerRed : Brand.vfrGreen)
-             + Text(" kt").font(.brandMono(13, weight: .medium)).foregroundColor(Brand.slate))
-                .font(.brandMono(27, weight: .bold))
-            Text(isTailwind ? "unfavorable" : "favorable")
-                .font(.avenir(11, .demibold))
-                .foregroundColor(Brand.slate)
+    private var flipHint: some View {
+        if onFlipRunway != nil {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
+                Text("FLIP").font(.avenir(9.5, .heavy)).tracking(1.0)
+            }
+            .foregroundColor(Brand.slate)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(Color.white.opacity(0.06)))
+            .padding(10)
         }
+    }
+
+    private func sideArrow(pointsRight: Bool) -> some View {
+        Image(systemName: pointsRight ? "arrow.right" : "arrow.left")
+            .font(.system(size: 38, weight: .bold))
+            .foregroundColor(Brand.valueRed)
+    }
+
+    private var crosswindNumber: Text {
+        var t = Text("\(crosswind)").font(.brandMono(66, weight: .bold)).foregroundColor(Brand.valueRed)
+        if let g = gustCrosswind, g > crosswind {
+            t = t
+                + Text("G").font(.brandMono(32, weight: .bold)).foregroundColor(Brand.cautionOrange)
+                + Text("\(g)").font(.brandMono(66, weight: .bold)).foregroundColor(Brand.valueRed)
+        }
+        return t
+    }
+
+    private var tailwindBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(Brand.dangerRed)
+            Text("TAILWIND \(abs(headwind)) kt")
+                .font(.avenir(22, .heavy))
+                .tracking(0.5)
+                .foregroundColor(Brand.valueRed)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 11)
+        .padding(.horizontal, 16)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(Brand.dangerRed.opacity(0.16)))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .stroke(Brand.dangerRed.opacity(0.6), lineWidth: 1.5))
+        .padding(.top, 12)
     }
 }

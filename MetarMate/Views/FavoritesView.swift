@@ -27,7 +27,7 @@ struct FavoritesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if !store.isProUser {
+                if FeatureFlags.favoritesRequirePro && !store.isProUser {
                     proRequiredView
                 } else if favorites.isEmpty {
                     VStack(spacing: 12) {

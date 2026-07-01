@@ -149,12 +149,19 @@ enum ColorRules {
         return flightCategoryColor(category)
     }
 
-    /// windCodeColor(windString) → orange if it gusts, green if calm, nil (neutral) otherwise.
-    /// Used for the mono wind codes in the Nearest list — keeps the eye on what's moving.
+    /// Whole-wind-token color for the airport lists — real METAR and advisory rows alike, so
+    /// the two read the same. Matches the airport-detail orange rule (gust, strong ≥ 20 kt, or
+    /// wide gust spread ≥ 10 → caution); CALM reads good; light steady stays neutral.
+    static func windColor(speedKt: Int, gustKt: Int?) -> Color {
+        if speedKt == 0 { return Brand.vfrGreen }       // CALM, muted green
+        let spread = (gustKt ?? speedKt) - speedKt
+        if gustKt != nil || speedKt >= 20 || spread >= 10 { return Brand.cautionOrange }
+        return Brand.monoDim                            // steady light → neutral mono
+    }
+
+    /// Convenience over `windColor` for a parsed METAR `Wind`.
     static func windCodeColor(_ wind: Wind) -> Color {
-        if wind.speed == 0 { return Brand.vfrGreen }   // CALM, muted green
-        if wind.gust != nil { return Brand.cautionOrange }
-        return Brand.monoDim                            // steady → neutral mono
+        windColor(speedKt: wind.speed, gustKt: wind.gust)
     }
 
     // valueColor(metric, value): neutral unless out-of-range. Per-metric below.
@@ -276,6 +283,9 @@ struct TrackedLabel: View {
             .foregroundColor(color)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
+            // Decorative tracked caps (kickers/section headers): cap growth so a long,
+            // widely-tracked label can't run past the screen edge at accessibility sizes.
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 }
 
@@ -356,5 +366,6 @@ struct StatusPill: View {
             RoundedRectangle(cornerRadius: Brand.chipRadius, style: .continuous)
                 .stroke(solid ? .clear : color.opacity(0.4), lineWidth: 1)
         )
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)   // category pill is fixed chrome
     }
 }

@@ -2,14 +2,14 @@
 //  CrosswindDiagramView.swift
 //  MetarMate
 //
-//  The refresh's big move: the crosswind result is a *diagram*, not just a number.
-//  A compass ring, the selected runway drawn pointing up, the wind as a dashed
-//  caution-orange arrow at its relative bearing, and the decomposed components as
-//  solid arrows from the aircraft node — crosswind (red, across) and headwind
-//  (green, favorable) / tailwind (red, up).
+//  The 8B "done" result: the crosswind answer drawn as a diagram. Two faint compass
+//  rings + an "N" mark, the selected runway pointing up (dark strip, dashed grey
+//  centerline, threshold labels), the wind as a dashed caution-orange arrow at its
+//  relative bearing, and the decomposed components from the aircraft node — crosswind
+//  (red, across, "XW") and headwind (green, favorable, "HW") / tailwind (red, up).
 //
-//  Faithful port of the handoff SVG (viewBox 0 0 156 160). The geometry is static
-//  in spirit but driven by the live crosswind math so it reflects real inputs.
+//  Faithful port of the handoff SVG (viewBox 0 0 300 300, rendered ~272pt). The
+//  geometry is static in spirit but driven by the live crosswind math.
 //
 
 import SwiftUI
@@ -23,10 +23,14 @@ struct CrosswindDiagramView: View {
     var headwind: Int              // signed: positive = headwind, negative = tailwind
     var sideRight: Bool            // true = wind from the right
 
-    // viewBox space
-    private let box = CGSize(width: 156, height: 160)
-    private let center = CGPoint(x: 78, y: 78)
-    private let ringR: CGFloat = 68
+    // viewBox space (matches the handoff SVG).
+    private let box = CGSize(width: 300, height: 300)
+    private let center = CGPoint(x: 150, y: 150)
+    private let outerR: CGFloat = 132
+    private let innerR: CGFloat = 90
+
+    // Rendered size (the keypad-replacing result; kept tight so the whole screen fits).
+    private let renderSize: CGFloat = 226
 
     /// Wind bearing relative to the runway-up frame, normalized to -180…180.
     private var angleOff: Double {
@@ -63,100 +67,112 @@ struct CrosswindDiagramView: View {
                 path.closeSubpath()
                 ctx.fill(path, with: .color(color))
             }
+            func ring(_ radius: CGFloat, _ color: Color, w: CGFloat = 1, dash: [CGFloat] = []) {
+                let rect = CGRect(x: (center.x - radius) * sx, y: (center.y - radius) * sy,
+                                  width: radius * 2 * sx, height: radius * 2 * sy)
+                ctx.stroke(Path(ellipseIn: rect), with: .color(color),
+                           style: StrokeStyle(lineWidth: w * sx, dash: dash.map { $0 * sx }))
+            }
 
             let ringTint = Color(red: 219/255, green: 221/255, blue: 227/255)
 
-            // Compass ring — solid faint + dashed faint.
-            let ringRect = CGRect(x: (center.x - ringR) * sx, y: (center.y - ringR) * sy,
-                                  width: ringR * 2 * sx, height: ringR * 2 * sy)
-            ctx.stroke(Path(ellipseIn: ringRect), with: .color(ringTint.opacity(0.12)),
-                       lineWidth: 1)
-            ctx.stroke(Path(ellipseIn: ringRect), with: .color(ringTint.opacity(0.06)),
-                       style: StrokeStyle(lineWidth: 1, dash: [2 * sx, 6 * sx]))
+            // Two concentric compass rings — solid + dashed outer, faint inner.
+            ring(outerR, ringTint.opacity(0.10), w: 1)
+            ring(outerR, ringTint.opacity(0.05), w: 1, dash: [2, 8])
+            ring(innerR, ringTint.opacity(0.06), w: 1)
+
+            // North mark.
+            ctx.draw(Text("N").font(.brandMono(11, weight: .bold))
+                        .foregroundColor(Brand.monoDim2),
+                     at: P(CGPoint(x: 150, y: 28)), anchor: .center)
 
             // Runway strip (points up).
-            let stripRect = CGRect(x: 66 * sx, y: 16 * sy, width: 24 * sx, height: 124 * sy)
-            ctx.fill(Path(roundedRect: stripRect, cornerRadius: 4 * sx),
+            let stripRect = CGRect(x: 132 * sx, y: 44 * sy, width: 36 * sx, height: 212 * sy)
+            ctx.fill(Path(roundedRect: stripRect, cornerRadius: 6 * sx),
                      with: .color(Color(hex: "#0C2034")))
-            ctx.stroke(Path(roundedRect: stripRect, cornerRadius: 4 * sx),
-                       with: .color(ringTint.opacity(0.16)), lineWidth: 1)
+            ctx.stroke(Path(roundedRect: stripRect, cornerRadius: 6 * sx),
+                       with: .color(ringTint.opacity(0.18)), lineWidth: 1.5 * sx)
 
-            // Dashed-orange centerline.
-            L(CGPoint(x: 78, y: 26), CGPoint(x: 78, y: 130),
-              color: Brand.accentOrange.opacity(0.35), w: 2, dash: [6, 9])
+            // Dashed grey centerline (provenance-neutral: NOT orange).
+            L(CGPoint(x: 150, y: 62), CGPoint(x: 150, y: 238),
+              color: ringTint.opacity(0.3), w: 2.5, dash: [10, 12])
 
             // Threshold labels.
-            ctx.draw(Text(runwayIdent).font(.brandMono(12, weight: .bold))
-                        .foregroundColor(Brand.fog),
-                     at: P(CGPoint(x: 78, y: 124)), anchor: .center)
-            ctx.draw(Text(reciprocalIdent).font(.brandMono(9, weight: .bold))
+            ctx.draw(Text(runwayIdent).font(.brandMono(15, weight: .heavy))
+                        .foregroundColor(Brand.cloud),
+                     at: P(CGPoint(x: 150, y: 246)), anchor: .center)
+            ctx.draw(Text(reciprocalIdent).font(.brandMono(12, weight: .bold))
                         .foregroundColor(Brand.monoDim2),
-                     at: P(CGPoint(x: 78, y: 22)), anchor: .center)
+                     at: P(CGPoint(x: 150, y: 52)), anchor: .center)
 
-            // Wind arrow: dashed caution-orange, from the ring inward to the aircraft.
-            let windOuter = pt(bearing: angleOff, radius: 70)
-            let windInner = pt(bearing: angleOff, radius: 30)
-            L(windOuter, windInner, color: Brand.cautionOrange, w: 3, dash: [3, 6])
+            // Wind arrow: dashed caution-orange, from the outer ring inward to the aircraft.
+            let windOuter = pt(bearing: angleOff, radius: 128)
+            let windInner = pt(bearing: angleOff, radius: 40)
+            L(windOuter, windInner, color: Brand.cautionOrange, w: 4, dash: [5, 7])
             // Arrowhead at the inner end, pointing toward center.
-            let windHeadBase = pt(bearing: angleOff, radius: 38)
+            let windHeadBase = pt(bearing: angleOff, radius: 52)
             let perp = angleOff + 90
-            let hb1 = pt2(from: windInner, bearing: perp, dist: 5, base: windHeadBase)
-            let hb2 = pt2(from: windInner, bearing: perp + 180, dist: 5, base: windHeadBase)
+            let hb1 = pt2(bearing: perp, dist: 7, base: windHeadBase)
+            let hb2 = pt2(bearing: perp + 180, dist: 7, base: windHeadBase)
             fillTriangle([windInner, hb1, hb2], Brand.cautionOrange)
             // Wind label just outside the ring — clamped inside the viewBox so the full
             // value (e.g. "200°") never clips at the canvas edge for any wind bearing.
-            var windLabelAt = pt(bearing: angleOff, radius: 84)
-            windLabelAt.x = min(max(windLabelAt.x, 20), box.width - 20)
-            windLabelAt.y = min(max(windLabelAt.y, 12), box.height - 12)
-            ctx.draw(Text("\(windDirDeg)°").font(.brandMono(10, weight: .bold))
+            var windLabelAt = pt(bearing: angleOff, radius: 150)
+            windLabelAt.x = min(max(windLabelAt.x, 26), box.width - 26)
+            windLabelAt.y = min(max(windLabelAt.y, 16), box.height - 16)
+            ctx.draw(Text("\(windDirDeg)°").font(.brandMono(13, weight: .bold))
                         .foregroundColor(Brand.cautionOrange),
                      at: P(windLabelAt), anchor: .center)
 
             // Aircraft node.
-            let nodeR: CGFloat = 4
+            let nodeR: CGFloat = 6
             ctx.fill(Path(ellipseIn: CGRect(x: (center.x - nodeR) * sx, y: (center.y - nodeR) * sy,
                                             width: nodeR * 2 * sx, height: nodeR * 2 * sy)),
                      with: .color(Brand.cloud))
 
-            // Component scale (≈ 2.8 px/kt, matching the mock), capped to the ring.
-            let scale: CGFloat = 2.8
-            func len(_ kt: Int) -> CGFloat { min(CGFloat(abs(kt)) * scale, 60) }
+            // Component scale (px per kt in viewBox space), capped near the inner ring.
+            let scale: CGFloat = 4.2
+            func len(_ kt: Int) -> CGFloat { min(CGFloat(abs(kt)) * scale, 84) }
+
+            // Thin shaft + a long, narrow arrowhead. The shaft stops at the arrowhead base so
+            // the round line-cap never pokes past the tip (which blunted the old arrows).
+            let shaftW: CGFloat = 4      // thinner
+            let ahLen: CGFloat = 15      // pointier: long…
+            let ahHalf: CGFloat = 5      // …and narrow
+            /// Draw a component arrow from center toward `tip` along a unit vector (ux, uy).
+            func arrow(_ tip: CGPoint, ux: CGFloat, uy: CGFloat, _ color: Color) {
+                let base = CGPoint(x: tip.x - ux * ahLen, y: tip.y - uy * ahLen)
+                L(center, base, color: color, w: shaftW)
+                // Perpendicular to the arrow direction for the two base corners.
+                let px = -uy, py = ux
+                fillTriangle([tip,
+                              CGPoint(x: base.x + px * ahHalf, y: base.y + py * ahHalf),
+                              CGPoint(x: base.x - px * ahHalf, y: base.y - py * ahHalf)], color)
+            }
 
             // Crosswind — horizontal, red. Wind from right pushes left, and vice-versa.
             let xwLen = len(crosswind)
-            let xwEnd = CGPoint(x: sideRight ? center.x - xwLen : center.x + xwLen, y: center.y)
-            L(center, xwEnd, color: Brand.dangerRed, w: 4)
-            if sideRight {
-                fillTriangle([xwEnd, CGPoint(x: xwEnd.x + 11, y: xwEnd.y - 5),
-                              CGPoint(x: xwEnd.x + 11, y: xwEnd.y + 5)], Brand.dangerRed)
-            } else {
-                fillTriangle([xwEnd, CGPoint(x: xwEnd.x - 11, y: xwEnd.y - 5),
-                              CGPoint(x: xwEnd.x - 11, y: xwEnd.y + 5)], Brand.dangerRed)
+            if crosswind > 0 {
+                let dirX: CGFloat = sideRight ? -1 : 1
+                arrow(CGPoint(x: center.x + dirX * xwLen, y: center.y), ux: dirX, uy: 0, Brand.dangerRed)
             }
 
             // Along-runway — vertical. Headwind points down (green); tailwind up (red).
             let hwLen = len(headwind)
-            if headwind >= 0 {
-                let hwEnd = CGPoint(x: center.x, y: center.y + hwLen)
-                L(center, hwEnd, color: Brand.vfrGreen, w: 4)
-                fillTriangle([hwEnd, CGPoint(x: hwEnd.x - 5, y: hwEnd.y - 11),
-                              CGPoint(x: hwEnd.x + 5, y: hwEnd.y - 11)], Brand.vfrGreen)
-            } else {
-                let twEnd = CGPoint(x: center.x, y: center.y - hwLen)
-                L(center, twEnd, color: Brand.dangerRed, w: 4)
-                fillTriangle([twEnd, CGPoint(x: twEnd.x - 5, y: twEnd.y + 11),
-                              CGPoint(x: twEnd.x + 5, y: twEnd.y + 11)], Brand.dangerRed)
+            if headwind > 0 {
+                arrow(CGPoint(x: center.x, y: center.y + hwLen), ux: 0, uy: 1, Brand.vfrGreen)
+            } else if headwind < 0 {
+                arrow(CGPoint(x: center.x, y: center.y - hwLen), ux: 0, uy: -1, Brand.dangerRed)
             }
         }
-        .frame(width: 134, height: 138)
+        .frame(width: renderSize, height: renderSize)
         .accessibilityLabel(
             "Crosswind \(crosswind) knots from the \(sideRight ? "right" : "left"), "
             + (headwind >= 0 ? "headwind \(headwind) knots" : "tailwind \(-headwind) knots"))
     }
 
-    /// Helper for arrowhead base points: a point `dist` from `from` along `bearing`,
-    /// anchored near `base`.
-    private func pt2(from: CGPoint, bearing: Double, dist: CGFloat, base: CGPoint) -> CGPoint {
+    /// Helper for arrowhead base points: a point `dist` from `base` along `bearing`.
+    private func pt2(bearing: Double, dist: CGFloat, base: CGPoint) -> CGPoint {
         let r = bearing * .pi / 180
         return CGPoint(x: base.x + dist * CGFloat(sin(r)), y: base.y - dist * CGFloat(cos(r)))
     }
@@ -164,7 +180,7 @@ struct CrosswindDiagramView: View {
 
 #Preview {
     CrosswindDiagramView(runwayIdent: "07", reciprocalIdent: "25",
-                         windDirDeg: 123, runwayHeadingDeg: 70,
+                         windDirDeg: 120, runwayHeadingDeg: 70,
                          crosswind: 17, headwind: 13, sideRight: true)
         .padding(40)
         .background(Brand.navy)

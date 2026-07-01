@@ -46,6 +46,7 @@ struct FlightCategoryBadge: View {
             .background(category.swiftUIColor)
             .clipShape(Capsule())
             .fixedSize()
+            .dynamicTypeSize(...DynamicTypeSize.xLarge)   // inline chrome pill
     }
 }
 
@@ -109,6 +110,21 @@ func quickWeatherSummary(metar: Metar) -> String {
     return parts.joined(separator: " · ")
 }
 
+/// A vertical dashed rail — the structural "estimated/advisory" cue for station-less
+/// airports (Rule 5: provenance is shown with shape, not a semantic color).
+struct DashedRail: View {
+    var color: Color
+    var body: some View {
+        GeometryReader { geo in
+            Path { p in
+                p.move(to: CGPoint(x: geo.size.width / 2, y: 1))
+                p.addLine(to: CGPoint(x: geo.size.width / 2, y: geo.size.height - 1))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: geo.size.width, lineCap: .round, dash: [4, 5]))
+        }
+    }
+}
+
 // MARK: - AirportRowView (Visual Refresh — badge 3A)
 struct AirportRowView: View {
     let airport: Airport
@@ -118,21 +134,30 @@ struct AirportRowView: View {
     var advisory: AdvisoryWeather? = nil
 
     private var railColor: Color {
-        // A resolved METAR (incl. numeric LIDs like 36K→K36K) drives the category color;
-        // only genuinely station-less airports get the advisory (caution-orange) rail.
+        // A resolved METAR (incl. numeric LIDs like 36K→K36K) drives the category color.
         if let metar = metar {
             return ColorRules.flightCategoryColor(metar.flightCategory)
         }
         return ColorRules.railColor(hasMetar: airport.hasMetar, category: .unknown)
     }
 
+    /// Genuinely station-less airport running on estimated (Open-Meteo) data. Provenance is
+    /// shown structurally (dashed rail + ~ tilde), NOT with a semantic color (Rule 5).
+    private var isAdvisory: Bool { metar == nil && !airport.hasMetar }
+
     var body: some View {
         HStack(spacing: 14) {
-            // Status rail — flight-category color, full row height.
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(railColor)
-                .frame(width: 3)
-                .frame(maxHeight: .infinity)
+            // Status rail — solid flight-category color for a real METAR; a dashed neutral
+            // rail marks estimated/advisory airports (never painted orange).
+            Group {
+                if isAdvisory {
+                    DashedRail(color: Brand.slate)
+                } else {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(railColor)
+                }
+            }
+            .frame(width: 3)
+            .frame(maxHeight: .infinity)
 
             VStack(alignment: .leading, spacing: 2) {
                 // Line 1: ICAO + IATA · distance + chevron
@@ -141,12 +166,6 @@ struct AirportRowView: View {
                         .font(.avenir(19, .heavy))
                         .tracking(0.4)
                         .foregroundColor(Brand.cloud)
-                    if let iata = airport.iata, !iata.isEmpty {
-                        Text(iata)
-                            .font(.avenir(11, .bold))
-                            .tracking(1.1)
-                            .foregroundColor(Brand.monoDim)
-                    }
                     Spacer(minLength: 8)
                     if let distance = distance {
                         Text(distance)
@@ -163,6 +182,7 @@ struct AirportRowView: View {
                     .font(.avenir(14.5, .demibold))
                     .foregroundColor(Brand.fog2)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 // Line 3: mono conditions strip / advisory
                 conditionsLine
@@ -185,16 +205,18 @@ struct AirportRowView: View {
                 .foregroundColor(ColorRules.windCodeColor(metar.wind)))
                 .font(.brandMono(13, weight: .medium))
                 .lineLimit(1)
+                .minimumScaleFactor(0.6)
         } else if let adv = advisory {
-            // Estimated conditions — leading "~" marks the whole strip as advisory.
-            Text(advisorySummary(adv))
+            // Estimated conditions read neutral (leading "~" + the dashed rail carry the
+            // "advisory" meaning); only the gust portion goes orange (Rule 5).
+            advisoryConditions(adv)
                 .font(.brandMono(13, weight: .medium))
-                .foregroundColor(Brand.cautionOrange)
                 .lineLimit(1)
+                .minimumScaleFactor(0.6)
         } else if !airport.hasMetar {
             Text("Advisory weather only")
                 .font(.avenir(12.5, .bold))
-                .foregroundColor(Brand.cautionOrange)
+                .foregroundColor(Brand.slate)
         } else {
             Text("METAR unavailable")
                 .font(.brandMono(13, weight: .medium))
@@ -202,23 +224,24 @@ struct AirportRowView: View {
         }
     }
 
-    /// "~SCT · ~9SM · ~130@10G18" — estimated summary from Open-Meteo advisory data.
-    private func advisorySummary(_ adv: AdvisoryWeather) -> String {
-        var parts: [String] = [adv.cloudCoverDescription]
+    /// "~SCT · ~9SM · ~130@10G18" — estimated Open-Meteo data. Sky/vis read neutral (the ~
+    /// tilde + dashed rail carry "estimated"); the whole wind token is colored by the same
+    /// wind rule as a real METAR row, so advisory and station rows read identically.
+    private func advisoryConditions(_ adv: AdvisoryWeather) -> Text {
+        var t = Text("~\(adv.cloudCoverDescription)").foregroundColor(Brand.monoDim)
         if let mi = adv.visibilityMiles {
-            parts.append(mi >= 10 ? "10+SM" : "\(Int(mi.rounded()))SM")
+            let v = mi >= 10 ? "10+SM" : "\(Int(mi.rounded()))SM"
+            t = t + Text(" · ~\(v)").foregroundColor(Brand.monoDim)
         }
+        let windText: String
         if adv.windSpeedKtRounded == 0 {
-            parts.append("CALM")
+            windText = "~CALM"
         } else {
             let dir = adv.windDirectionRounded10.map { String(format: "%03d", $0) } ?? "VRB"
-            if let g = adv.windGustKtRounded, g > adv.windSpeedKtRounded {
-                parts.append("\(dir)@\(adv.windSpeedKtRounded)G\(g)")
-            } else {
-                parts.append("\(dir)@\(adv.windSpeedKtRounded)")
-            }
+            windText = "~\(dir)@\(adv.windSpeedKtRounded)" + (adv.reportableGustKt.map { "G\($0)" } ?? "")
         }
-        return "~" + parts.joined(separator: " · ~")
+        let windColor = ColorRules.windColor(speedKt: adv.windSpeedKtRounded, gustKt: adv.reportableGustKt)
+        return t + Text(" · \(windText)").foregroundColor(windColor)
     }
 
     private func skyVisString(metar: Metar) -> String {

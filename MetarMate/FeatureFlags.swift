@@ -9,4 +9,9 @@ enum FeatureFlags {
     /// (decodedASOSSection, SynopticService, StoreManager ASOS logic) is kept intact behind this
     /// flag; flip to `true` to bring the offer back. See XW_REVERT_TOGGLE_BRIEF.
     static let asosAvailable = false
+
+    /// Favorites pro-gate. The subscription products were dropped, so Favorites is free for now
+    /// (no paywall). The gating code in FavoritesView is kept intact — flip to `true` to put
+    /// Favorites back behind a pro purchase.
+    static let favoritesRequirePro = false
 }

@@ -234,7 +234,10 @@ struct WeatherDetailView: View {
                 StatusPill(category: vm.flightCategory)
                 if let metar = vm.metar {
                     observationTimeView(metar)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
+                Spacer(minLength: 0)
             }
             .padding(.top, 14)
             if airport.elevation != 0 {
@@ -1252,9 +1255,13 @@ struct WeatherDetailView: View {
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Text(value)
                 .font(.subheadline.bold())
                 .foregroundColor(valueColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 
@@ -2544,7 +2551,7 @@ struct WeatherDetailView: View {
                 if spd < 3 { return "Calm" }
                 let dir = wx.windDirectionRounded10.map { String(format: "%03d°", $0) } ?? "Variable"
                 var text = "\(dir)  \(spd) kt"
-                if let gust = wx.windGustKtRounded, gust - spd >= 10 {
+                if let gust = wx.reportableGustKt {
                     text += " G\(gust) kt"
                 }
                 return text
@@ -2966,7 +2973,7 @@ struct WeatherDetailView: View {
             if spd < 3 { return "Calm" }
             let dir = hour.windDirectionRounded10.map { String(format: "%03d°", $0) } ?? "Variable"
             var t = "\(dir)  \(spd) kt"
-            if let gust = hour.windGustKtRounded, gust - spd >= 10 { t += " G\(gust) kt" }
+            if let gust = hour.reportableGustKt { t += " G\(gust) kt" }
             return t
         }()
         let visStr = hour.visibilityMiles.map { $0 >= 10 ? "~10+ SM" : "~\(Int($0.rounded())) SM" } ?? "—"

@@ -16,8 +16,7 @@ struct CrosswindTabView: View {
             runway: $runway,
             windDirection: $windDirection,
             windSpeed: $windSpeed,
-            gustSpeed: $gustSpeed,
-            title: "MANUAL"
+            gustSpeed: $gustSpeed
         )
     }
 }

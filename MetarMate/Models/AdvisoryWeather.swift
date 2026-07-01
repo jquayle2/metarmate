@@ -51,6 +51,11 @@ struct AdvisoryForecastHour: Codable, Identifiable {
     var pressureInHg:    Double?  { pressureHpa.map { $0 * 0.02953 } }
     var windSpeedKtRounded: Int   { Int(windSpeedKt.rounded()) }
     var windGustKtRounded:  Int?  { windGustKt.map { Int($0.rounded()) } }
+    /// Gust per METAR/FAA convention — reported only when ≥ 10 kt above the sustained wind.
+    var reportableGustKt: Int? {
+        guard let g = windGustKtRounded, g - windSpeedKtRounded >= 10 else { return nil }
+        return g
+    }
     /// Direction snapped to nearest 10° (METAR convention; north = 360, not 000).
     var windDirectionRounded10: Int? {
         windDirectionDeg.map { d in
@@ -142,6 +147,14 @@ struct AdvisoryWeather: Codable {
 
     nonisolated var windSpeedKtRounded: Int  { Int(windSpeedKt.rounded()) }
     nonisolated var windGustKtRounded:  Int? { windGustKt.map { Int($0.rounded()) } }
+
+    /// Gust per METAR/FAA convention — reported only when the peak exceeds the sustained wind
+    /// by ≥ 10 kt (peak-to-lull). Open-Meteo always returns a max-instantaneous gust, so below
+    /// that threshold it is NOT a reportable gust. nil = no gust.
+    nonisolated var reportableGustKt: Int? {
+        guard let g = windGustKtRounded, g - windSpeedKtRounded >= 10 else { return nil }
+        return g
+    }
 
     /// Advisory wind direction snapped to the nearest 10° (METAR convention;
     /// north shows 360, never 000). Sources like Open-Meteo report to the exact
