@@ -114,6 +114,8 @@ struct AirportRowView: View {
     let airport: Airport
     let metar: Metar?
     let distance: String?
+    /// Estimated (Open-Meteo) conditions for genuinely station-less airports.
+    var advisory: AdvisoryWeather? = nil
 
     private var railColor: Color {
         // A resolved METAR (incl. numeric LIDs like 36K→K36K) drives the category color;
@@ -183,6 +185,12 @@ struct AirportRowView: View {
                 .foregroundColor(ColorRules.windCodeColor(metar.wind)))
                 .font(.brandMono(13, weight: .medium))
                 .lineLimit(1)
+        } else if let adv = advisory {
+            // Estimated conditions — leading "~" marks the whole strip as advisory.
+            Text(advisorySummary(adv))
+                .font(.brandMono(13, weight: .medium))
+                .foregroundColor(Brand.cautionOrange)
+                .lineLimit(1)
         } else if !airport.hasMetar {
             Text("Advisory weather only")
                 .font(.avenir(12.5, .bold))
@@ -192,6 +200,25 @@ struct AirportRowView: View {
                 .font(.brandMono(13, weight: .medium))
                 .foregroundColor(Brand.monoDim2)
         }
+    }
+
+    /// "~SCT · ~9SM · ~130@10G18" — estimated summary from Open-Meteo advisory data.
+    private func advisorySummary(_ adv: AdvisoryWeather) -> String {
+        var parts: [String] = [adv.cloudCoverDescription]
+        if let mi = adv.visibilityMiles {
+            parts.append(mi >= 10 ? "10+SM" : "\(Int(mi.rounded()))SM")
+        }
+        if adv.windSpeedKtRounded == 0 {
+            parts.append("CALM")
+        } else {
+            let dir = adv.windDirectionDeg.map { String(format: "%03d", $0) } ?? "VRB"
+            if let g = adv.windGustKtRounded, g > adv.windSpeedKtRounded {
+                parts.append("\(dir)@\(adv.windSpeedKtRounded)G\(g)")
+            } else {
+                parts.append("\(dir)@\(adv.windSpeedKtRounded)")
+            }
+        }
+        return "~" + parts.joined(separator: " · ~")
     }
 
     private func skyVisString(metar: Metar) -> String {

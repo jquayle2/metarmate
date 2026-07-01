@@ -7,6 +7,7 @@ struct SearchView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var historyMetars: [String: Metar] = [:]
+    @State private var historyAdvisories: [String: AdvisoryWeather] = [:]
 
     var body: some View {
         NavigationStack {
@@ -36,7 +37,8 @@ struct SearchView: View {
                                         ) {
                                             AirportRowView(airport: airport,
                                                           metar: historyMetars[entry.icao],
-                                                          distance: nil)
+                                                          distance: nil,
+                                                          advisory: historyAdvisories[entry.icao])
                                         }
                                         .listRowBackground(Color.clear)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
@@ -98,7 +100,8 @@ struct SearchView: View {
                         ) {
                             AirportRowView(airport: airport,
                                           metar: airportVM.searchMetars[airport.icao],
-                                          distance: nil)
+                                          distance: nil,
+                                          advisory: airportVM.searchAdvisories[airport.icao])
                         }
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
@@ -117,13 +120,31 @@ struct SearchView: View {
     }
 
     private func loadHistoryMetars() async {
-        let icaos = airportVM.searchHistory
+        let airports = airportVM.searchHistory
             .compactMap { AirportService.shared.airport(icao: $0.icao) }
-            .filter { $0.hasMetar }
-            .map { $0.icao }
-        guard !icaos.isEmpty else { return }
-        if let metars = try? await WeatherService.shared.fetchMetars(for: icaos) {
-            historyMetars = metars
+
+        // METARs for reporting stations + resolvable LIDs (36K→K36K), mapped back to the id.
+        var noaaToOriginal: [String: String] = [:]
+        var noaaIds: [String] = []
+        for a in airports where a.hasMetar || WeatherService.noaaCandidate(for: a.icao) != nil {
+            let id = WeatherService.noaaCandidate(for: a.icao) ?? a.icao
+            noaaIds.append(id); noaaToOriginal[id] = a.icao
+        }
+        if !noaaIds.isEmpty, let metars = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
+            var mapped: [String: Metar] = [:]
+            for (k, m) in metars { mapped[noaaToOriginal[k] ?? k] = m }
+            historyMetars = mapped
+        }
+
+        // Advisory estimates for the genuinely station-less recents.
+        let advisoryTargets = airports.filter { historyMetars[$0.icao] == nil && !$0.hasMetar }
+        historyAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
+            for a in advisoryTargets {
+                group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
+            }
+            var result: [String: AdvisoryWeather] = [:]
+            for await (icao, adv) in group { if let adv { result[icao] = adv } }
+            return result
         }
     }
 }

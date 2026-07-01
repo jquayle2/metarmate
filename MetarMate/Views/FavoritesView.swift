@@ -20,6 +20,7 @@ struct FavoritesView: View {
     }
     @Environment(\.modelContext) private var modelContext
     @State private var favMetars: [String: Metar] = [:]
+    @State private var favAdvisories: [String: AdvisoryWeather] = [:]
     @State private var isLoading = false
     @State private var editMode: EditMode = .inactive
 
@@ -48,7 +49,8 @@ struct FavoritesView: View {
                                 AirportRowView(
                                     airport: airport,
                                     metar: favMetars[airport.icao],
-                                    distance: nil
+                                    distance: nil,
+                                    advisory: favAdvisories[airport.icao]
                                 )
                             }
                             .listRowBackground(Color.clear)
@@ -95,10 +97,29 @@ struct FavoritesView: View {
     private func fetchMetars() async {
         guard !favorites.isEmpty else { return }
         isLoading = true
-        let icaos = favorites.filter { $0.hasMetar }.map { $0.icao }
-        guard !icaos.isEmpty else { isLoading = false; return }
-        if let metars = try? await WeatherService.shared.fetchMetars(for: icaos) {
-            favMetars = metars
+
+        // METARs for reporting stations + resolvable LIDs (36K→K36K), mapped back to the id.
+        var noaaToOriginal: [String: String] = [:]
+        var noaaIds: [String] = []
+        for fav in favorites where fav.hasMetar || WeatherService.noaaCandidate(for: fav.icao) != nil {
+            let id = WeatherService.noaaCandidate(for: fav.icao) ?? fav.icao
+            noaaIds.append(id); noaaToOriginal[id] = fav.icao
+        }
+        if !noaaIds.isEmpty, let metars = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
+            var mapped: [String: Metar] = [:]
+            for (k, m) in metars { mapped[noaaToOriginal[k] ?? k] = m }
+            favMetars = mapped
+        }
+
+        // Advisory estimates for genuinely station-less favorites.
+        let advisoryTargets = favorites.filter { favMetars[$0.icao] == nil && !$0.hasMetar }.map { $0.asAirport }
+        favAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
+            for a in advisoryTargets {
+                group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
+            }
+            var result: [String: AdvisoryWeather] = [:]
+            for await (icao, adv) in group { if let adv { result[icao] = adv } }
+            return result
         }
         isLoading = false
     }

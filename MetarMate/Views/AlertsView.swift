@@ -198,9 +198,16 @@ private struct WatchRow: View {
     private var conditions: AlertConditions? { display?.conditions }
     private var verdict: Verdict? { display?.verdict }
 
-    // CATEGORY axis — left strip color (falls back to gray when conditions are unknown).
+    // A station-less airport we've already tried (display present) with no METAR: advisory-only.
+    // A GO/NO-GO verdict on estimated data would be misleading, so we mark & suppress it.
+    private var isAdvisoryOnly: Bool {
+        airport?.hasMetar == false && conditions == nil && display != nil
+    }
+
+    // CATEGORY axis — left strip color (advisory orange for station-less, gray when unknown).
     private var categoryColor: Color {
-        conditions?.flightCategory.swiftUIColor ?? Color(.systemGray3)
+        if isAdvisoryOnly { return Brand.cautionOrange }
+        return conditions?.flightCategory.swiftUIColor ?? Color(.systemGray3)
     }
 
     var body: some View {
@@ -240,6 +247,10 @@ private struct WatchRow: View {
                     // Conditions summary ("CLR · 10+SM · 180@19G30") or a status placeholder.
                     if let c = conditions {
                         conditionsSummary(c)
+                    } else if isAdvisoryOnly {
+                        Text("Advisory weather only")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(Brand.cautionOrange)
                     } else if display == nil {
                         Text("Checking…")
                             .font(.subheadline)
@@ -278,7 +289,15 @@ private struct WatchRow: View {
 
     // VERDICT axis — must stay distinct from the category strip.
     @ViewBuilder private var verdictBadge: some View {
-        if let v = verdict {
+        if isAdvisoryOnly {
+            // Neutral "verify" affordance — never a GO/NO-GO verdict on estimated data.
+            Text("ADVISORY")
+                .font(.caption2.bold())
+                .foregroundColor(Brand.cautionOrange)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .overlay(Capsule().stroke(Brand.cautionOrange.opacity(0.5), lineWidth: 1))
+        } else if let v = verdict {
             let isNoGo = v.newSide == .noGo
             Text(isNoGo ? "NO-GO" : "GO")
                 .font(.caption.bold())

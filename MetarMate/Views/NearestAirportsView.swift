@@ -90,7 +90,8 @@ struct NearestAirportsView: View {
                         AirportRowView(
                             airport: airport,
                             metar: airportVM.nearestMetars[airport.icao],
-                            distance: airportVM.distance(to: airport)
+                            distance: airportVM.distance(to: airport),
+                            advisory: airportVM.nearestAdvisories[airport.icao]
                         )
                     }
                     .buttonStyle(.plain)

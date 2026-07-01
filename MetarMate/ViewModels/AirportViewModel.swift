@@ -16,6 +16,9 @@ class AirportViewModel: ObservableObject {
     @Published var isLoadingNearest = false
     @Published var nearestMetars: [String: Metar] = [:]
     @Published var searchMetars: [String: Metar] = [:]
+    // Estimated conditions for genuinely station-less (advisory) airports.
+    @Published var nearestAdvisories: [String: AdvisoryWeather] = [:]
+    @Published var searchAdvisories: [String: AdvisoryWeather] = [:]
 
     // MARK: - Search History
     private static let historyKey = "searchHistory"
@@ -125,6 +128,21 @@ class AirportViewModel: ObservableObject {
             }
             searchMetars = mapped
         }
+        let advisoryTargets = searchResults.filter { searchMetars[$0.icao] == nil && !$0.hasMetar }
+        searchAdvisories = await fetchAdvisories(for: advisoryTargets)
+    }
+
+    /// Fetch Open-Meteo advisory conditions for station-less airports, in parallel.
+    private func fetchAdvisories(for airports: [Airport]) async -> [String: AdvisoryWeather] {
+        guard !airports.isEmpty else { return [:] }
+        return await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
+            for a in airports {
+                group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
+            }
+            var result: [String: AdvisoryWeather] = [:]
+            for await (icao, adv) in group { if let adv { result[icao] = adv } }
+            return result
+        }
     }
 
     // MARK: - Nearest Airports
@@ -152,6 +170,8 @@ class AirportViewModel: ObservableObject {
             }
             nearestMetars = mapped
         }
+        let advisoryTargets = nearestAirports.filter { nearestMetars[$0.icao] == nil && !$0.hasMetar }
+        nearestAdvisories = await fetchAdvisories(for: advisoryTargets)
         isLoadingNearest = false
     }
 
