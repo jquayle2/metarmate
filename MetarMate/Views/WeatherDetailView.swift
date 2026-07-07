@@ -1277,8 +1277,6 @@ struct WeatherDetailView: View {
     @State private var trendPulse = false
     @State private var showForecastDetail = false
     @State private var historyExpanded = false
-    @State private var rawTafExpanded = false
-
     private func trendSection(_ trend: WeatherTrend, verification: TafVerification?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Trend")
@@ -1971,34 +1969,18 @@ struct WeatherDetailView: View {
             // Self-hides when there are no notes.
             tafPilotNotesSection(taf)
 
-            // Raw TAF — separate card below the periods
+            // Raw TAF — separate card below the periods. Mirrors Raw METAR: always shown
+            // inline when the user has enabled the section (no disclosure to fight with).
             if showRaw {
-                VStack(alignment: .leading, spacing: 0) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { rawTafExpanded.toggle() }
-                    } label: {
-                        HStack {
-                            Text("Raw TAF")
-                                .font(.avenir(13, .demibold))
-                                .foregroundColor(Brand.slate)
-                            Spacer()
-                            Image(systemName: rawTafExpanded ? "chevron.down" : "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(Brand.slate)
-                        }
-                        .padding()
-                    }
-                    .buttonStyle(.plain)
-                    if rawTafExpanded {
-                        Divider().padding(.horizontal)
-                        Text(taf.rawText)
-                            .font(.brandMono(12, weight: .medium))
-                            .foregroundColor(Brand.monoDim)
-                            .textSelection(.enabled)
-                            .padding()
-                    }
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionHeader("Raw TAF")
+                    Text(taf.rawText)
+                        .font(.brandMono(11.5, weight: .medium))
+                        .foregroundColor(Brand.monoDim)
+                        .textSelection(.enabled)
+                        .lineSpacing(2)
                 }
-                .fixedSize(horizontal: false, vertical: true)
+                .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(cardBackground)
             }
