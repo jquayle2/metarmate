@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import Combine
 
 // MARK: - Deep Link Router
 // Bridges the widget's `.widgetURL(metarmate://airport/<ICAO>)` tap into a modal presentation
