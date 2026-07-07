@@ -4,6 +4,7 @@ import SwiftData
 struct FavoritesView: View {
     @Query(sort: \AirportFavorite.addedDate, order: .forward) private var favorites: [AirportFavorite]
     @ObservedObject private var store = StoreManager.shared
+    @EnvironmentObject private var weatherCache: WeatherCache
     @State private var showProSheet = false
 
     private var sortedFavorites: [AirportFavorite] {
@@ -63,7 +64,7 @@ struct FavoritesView: View {
                     .scrollContentBackground(.hidden)
                     .environment(\.editMode, $editMode)
                     .refreshable {
-                        await fetchMetars()
+                        await fetchMetars(force: true)
                     }
                     .overlay {
                         if isLoading && favMetars.isEmpty {
@@ -95,26 +96,47 @@ struct FavoritesView: View {
         }
     }
 
-    private func fetchMetars() async {
+    /// Read-through the shared cache: seed the render dicts from fresh cached weather, fetch only
+    /// the misses, then write the fetched results back. `force` (pull-to-refresh) skips the cache
+    /// seed so every favorite is re-fetched and the cache overwritten.
+    private func fetchMetars(force: Bool = false) async {
         guard !favorites.isEmpty else { return }
         isLoading = true
 
-        // METARs for reporting stations + resolvable LIDs (36K→K36K), mapped back to the id.
+        // 1. Seed render dicts from fresh cache (makes a tab revisit instant, no fetch).
+        var metars: [String: Metar] = [:]
+        var advisories: [String: AdvisoryWeather] = [:]
+        if !force {
+            for fav in favorites {
+                if let m = weatherCache.freshMetar(for: fav.icao) { metars[fav.icao] = m }
+                if let a = weatherCache.freshAdvisory(for: fav.icao) { advisories[fav.icao] = a }
+            }
+            favMetars = metars
+            favAdvisories = advisories
+        }
+
+        // 2. METARs for the misses among reporting stations + resolvable LIDs (36K→K36K),
+        //    mapped back to the id. On force, `metars` is empty so all are fetched.
         var noaaToOriginal: [String: String] = [:]
         var noaaIds: [String] = []
         for fav in favorites where fav.hasMetar || WeatherService.noaaCandidate(for: fav.icao) != nil {
+            if metars[fav.icao] != nil { continue }   // fresh cached METAR — skip
             let id = WeatherService.noaaCandidate(for: fav.icao) ?? fav.icao
             noaaIds.append(id); noaaToOriginal[id] = fav.icao
         }
-        if !noaaIds.isEmpty, let metars = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
+        if !noaaIds.isEmpty, let fetched = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
             var mapped: [String: Metar] = [:]
-            for (k, m) in metars { mapped[noaaToOriginal[k] ?? k] = m }
-            favMetars = mapped
+            for (k, m) in fetched { mapped[noaaToOriginal[k] ?? k] = m }
+            weatherCache.store(metars: mapped)
+            for (k, m) in mapped { metars[k] = m }
         }
+        favMetars = metars
 
-        // Advisory estimates for genuinely station-less favorites.
-        let advisoryTargets = favorites.filter { favMetars[$0.icao] == nil && !$0.hasMetar }.map { $0.asAirport }
-        favAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
+        // 3. Advisory estimates for genuinely station-less favorites still lacking any weather.
+        let advisoryTargets = favorites
+            .filter { metars[$0.icao] == nil && advisories[$0.icao] == nil && !$0.hasMetar }
+            .map { $0.asAirport }
+        let fetchedAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
             for a in advisoryTargets {
                 group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
             }
@@ -122,6 +144,11 @@ struct FavoritesView: View {
             for await (icao, adv) in group { if let adv { result[icao] = adv } }
             return result
         }
+        if !fetchedAdvisories.isEmpty {
+            weatherCache.store(advisories: fetchedAdvisories)
+            for (k, v) in fetchedAdvisories { advisories[k] = v }
+        }
+        favAdvisories = advisories
         isLoading = false
     }
 
