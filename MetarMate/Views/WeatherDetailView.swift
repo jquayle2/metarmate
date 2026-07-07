@@ -2259,13 +2259,13 @@ struct WeatherDetailView: View {
         return parts.joined(separator: " · ")
     }
 
-    // Compact METAR-style wind token, e.g. "190° 11G18", "CALM", "VRB 6".
+    // Compact METAR-style wind token, e.g. "190° at 11G18", "CALM", "VRB at 6".
     private func tafCompactWind(_ wind: Wind?) -> String {
         guard let wind = wind else { return "—" }
         if wind.speed == 0 { return "CALM" }
         let dir = wind.isVariable ? "VRB" : String(format: "%03d°", wind.direction ?? 0)
         let gustPart = wind.gust.map { "G\($0)" } ?? ""
-        return "\(dir) \(wind.speed)\(gustPart)"
+        return "\(dir) at \(wind.speed)\(gustPart)"
     }
 
     // Local "h:mm a" clock for a forecast time (Zulu → local).
