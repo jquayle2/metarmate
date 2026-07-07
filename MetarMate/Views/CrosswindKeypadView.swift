@@ -226,9 +226,9 @@ struct CrosswindKeypadView: View {
             inputBuffer = ""
             errorMessage = nil
         }) {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 Text(field.title)
-                    .font(.avenir(9, .heavy))
+                    .font(.avenir(10, .heavy))
                     .tracking(1.3)
                     .foregroundColor(isActive ? Brand.accentOrange : Brand.slate)
                     .lineLimit(1)
@@ -236,7 +236,7 @@ struct CrosswindKeypadView: View {
 
                 HStack(spacing: 1) {
                     Text(isActive && !inputBuffer.isEmpty ? inputBuffer : fieldDisplay(field))
-                        .font(.brandMono(19, weight: .bold))
+                        .font(.brandMono(30, weight: .bold))
                         .foregroundColor(valueColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
@@ -251,11 +251,11 @@ struct CrosswindKeypadView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 16)
             .padding(.horizontal, 4)
-            .background(RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isActive ? Brand.accentOrange.opacity(0.10) : Color.white.opacity(0.03)))
-            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(isActive ? Brand.accentOrange : Brand.cardBorder,
                         lineWidth: isActive ? 1.5 : 1))
         }

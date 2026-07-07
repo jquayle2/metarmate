@@ -18,9 +18,6 @@ struct CrosswindReadout: View {
 
     private var isTailwind: Bool { headwind < 0 }
     private var sideRight: Bool { side != "L" }
-    private var sideText: String {
-        side == "L" ? "from the left" : (side == "R" ? "from the right" : "aligned")
-    }
     private var windRecap: String {
         "RWY \(String(format: "%02d", runway)) · \(String(format: "%03d", windDirDisplay))@\(windSpeed)\(gustSpeed.map { "G\($0)" } ?? "")"
     }
@@ -39,11 +36,6 @@ struct CrosswindReadout: View {
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .padding(.top, 8)
-
-            Text("kt · \(sideText)")
-                .font(.avenir(13, .demibold))
-                .foregroundColor(Brand.slate)
-                .padding(.top, 8)
 
             if isTailwind {
                 tailwindBanner
