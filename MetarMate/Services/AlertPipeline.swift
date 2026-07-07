@@ -27,7 +27,9 @@ enum AlertPipeline {
         }
 
         let icaos = Array(Set(watches.map { $0.icao }))
-        let conditions = await fetchConditions(for: icaos)
+        // Background checks always fetch fresh (force) so notification verdicts never ride on a
+        // stale cached METAR; the fetch still warms the shared cache for the UI.
+        let conditions = await fetchConditions(for: icaos, force: true)
 
         var fired = 0
         for watch in watches {
@@ -64,10 +66,12 @@ enum AlertPipeline {
         let verdict: Verdict?
     }
 
-    static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext) async -> [String: WatchDisplay] {
+    // `force` (pull-to-refresh) bypasses the shared cache's freshness window; the auto/appear
+    // refresh reads through it so a tab revisit within 5 min doesn't re-fetch.
+    static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext, force: Bool = false) async -> [String: WatchDisplay] {
         guard !watches.isEmpty, let profile = ActiveMinimumsProfile.resolve(in: context) else { return [:] }
         let icaos = Array(Set(watches.map { $0.icao }))
-        let conditions = await fetchConditions(for: icaos)
+        let conditions = await fetchConditions(for: icaos, force: force)
         var result: [String: WatchDisplay] = [:]
         for watch in watches {
             let c = conditions[watch.icao]
@@ -84,18 +88,30 @@ enum AlertPipeline {
     // the single source of truth, not re-invented here) AND the user has alerts opted into live
     // ASOS. Per station, a successful Synoptic fetch IS the "station has ASOS" check; any
     // failure falls back to the batch METAR for that station.
-    private static func fetchConditions(for icaos: [String]) async -> [String: AlertConditions] {
-        // Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K), then map back
-        // to the watch's own id so numeric-LID stations are actually evaluated.
+    private static func fetchConditions(for icaos: [String], force: Bool = false) async -> [String: AlertConditions] {
+        // Read-through the shared cache for METARs: keep fresh cached values, and only fetch the
+        // misses. Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K) for the fetch,
+        // then map back to the watch's own id so numeric-LID stations are actually evaluated.
+        // (The live-ASOS branch below is never cached — it stays as-is.)
+        var metars: [String: Metar] = [:]
         var noaaToOriginal: [String: String] = [:]
-        let noaaIds = icaos.map { code -> String in
+        var noaaIds: [String] = []
+        for code in icaos {
+            if !force, let cached = WeatherCache.shared.freshMetar(for: code) {
+                metars[code] = cached
+                continue
+            }
             let id = WeatherService.noaaCandidate(for: code) ?? code
             noaaToOriginal[id] = code
-            return id
+            noaaIds.append(id)
         }
-        let metarsByNoaa = (try? await WeatherService.shared.fetchMetars(for: noaaIds)) ?? [:]
-        var metars: [String: Metar] = [:]
-        for (key, m) in metarsByNoaa { metars[noaaToOriginal[key] ?? key] = m }
+        if !noaaIds.isEmpty {
+            let metarsByNoaa = (try? await WeatherService.shared.fetchMetars(for: noaaIds)) ?? [:]
+            var fetched: [String: Metar] = [:]
+            for (key, m) in metarsByNoaa { fetched[noaaToOriginal[key] ?? key] = m }
+            WeatherCache.shared.store(metars: fetched)
+            for (k, m) in fetched { metars[k] = m }
+        }
 
         let useLiveAsos = StoreManager.shared.isAsosUser && useLiveAsosForAlerts
 

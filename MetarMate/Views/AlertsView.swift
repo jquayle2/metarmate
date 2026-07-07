@@ -9,8 +9,8 @@ import Combine
 final class AlertsViewModel: ObservableObject {
     @Published var displays: [String: AlertPipeline.WatchDisplay] = [:]
 
-    func refresh(_ watches: [AirportWatch], in context: ModelContext) async {
-        displays = await AlertPipeline.evaluateForDisplay(watches, in: context)
+    func refresh(_ watches: [AirportWatch], in context: ModelContext, force: Bool = false) async {
+        displays = await AlertPipeline.evaluateForDisplay(watches, in: context, force: force)
     }
 }
 
@@ -69,7 +69,7 @@ struct AlertsView: View {
                         }
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
-                        .refreshable { await vm.refresh(watches, in: context) }   // pull-to-refresh
+                        .refreshable { await vm.refresh(watches, in: context, force: true) }   // pull-to-refresh: bypass cache freshness
                     }
                 }
             }
