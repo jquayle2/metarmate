@@ -2015,6 +2015,16 @@ struct WeatherDetailView: View {
         }
         guard let worst = bases.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
               tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
+            // Category is steady across the period. Still surface a wind story if any period
+            // gusts at or above the caution threshold (15 kt) — otherwise the hero would claim
+            // "no significant changes" while the Pilot Notes card flags gusts/crosswind (amber axis).
+            let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
+            if let gusty = firstGusty {
+                return Text("\(first.flightCategory.rawValue) throughout, ")
+                    .foregroundColor(Brand.cloud)
+                    + Text("but gusty periods \(tafCoarseWhen(gusty.fromTime)).")
+                        .foregroundColor(Brand.cautionOrange)
+            }
             return Text("\(first.flightCategory.rawValue) the entire forecast period. ")
                 .foregroundColor(Brand.cloud)
                 + Text("No significant changes expected.").foregroundColor(Brand.slate)
@@ -2300,6 +2310,25 @@ struct WeatherDetailView: View {
     // (day suffix keyed off the window start).
     private func tafWindowLabel(from: Date, to: Date) -> String {
         "\(tafLocalClock(from))–\(tafLocalClock(to)) local\(tafDaySuffix(from))"
+    }
+
+    // Coarse time-of-day phrasing for the hero wind-caution tail, e.g. "midday tomorrow",
+    // "this afternoon", "tomorrow morning". Deliberately vague (Option B) — the exact gust
+    // number and time live in the TAF Pilot Notes card below.
+    private func tafCoarseWhen(_ date: Date) -> String {
+        let hour = Calendar.current.component(.hour, from: date)
+        let partOfDay: String
+        switch hour {
+        case 5..<11:  partOfDay = "morning"
+        case 11..<14: partOfDay = "midday"
+        case 14..<18: partOfDay = "afternoon"
+        case 18..<22: partOfDay = "evening"
+        default:      partOfDay = "overnight"
+        }
+        let suffix = tafDaySuffix(date).trimmingCharacters(in: .whitespaces)
+        if suffix.isEmpty { return "this \(partOfDay)" }
+        if suffix == "tomorrow" { return "\(partOfDay) tomorrow" }
+        return "\(partOfDay) \(suffix)"
     }
 
     // MARK: - TAF Pilot Notes
