@@ -2312,7 +2312,7 @@ struct WeatherDetailView: View {
             // Today: "this morning/afternoon/evening" reads naturally, but "this midday"
             // and "this overnight" don't — those stand alone.
             switch partOfDay {
-            case "midday":    return "around midday"
+            case "midday":    return "midday"
             case "overnight": return "overnight"
             default:          return "this \(partOfDay)"
             }
