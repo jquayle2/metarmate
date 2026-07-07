@@ -129,7 +129,8 @@ enum GoNoGoEvaluator {
             factors.append(Factor(
                 label: "category", value: curOrd, limit: minOrd, deadband: Deadband.categoryStep,
                 worseWhenHigher: true,
-                failureText: "\(conditions.flightCategory.rawValue) below \(minCat.rawValue) minimum"))
+                failureText: "\(conditions.flightCategory.rawValue) below \(minCat.rawValue) minimum",
+                floor: 0))   // VFR (0) is the best possible ordinal — see hardClear() below
         }
 
         // Aggregate side with hysteresis: from GO, any factor hard-failing -> NO_GO; from NO_GO,
@@ -196,11 +197,27 @@ private struct Factor {
     let deadband: Double
     let worseWhenHigher: Bool
     let failureText: String
+    // Theoretical best-case bound for quantized scales (e.g. category ordinal 0 = VFR). Only
+    // set for factors whose value can bottom out at a known floor; nil means "no floor, unbounded
+    // like wind/vis/ceiling" so their hardClear math is untouched.
+    var floor: Double? = nil
 
     // Past the limit at all (no deadband) — first-eval baseline and the failing-factor list.
     func bareFail() -> Bool { worseWhenHigher ? value > limit : value < limit }
     // Past the limit by the full deadband — flips GO -> NO_GO.
     func hardFail() -> Bool { worseWhenHigher ? value > limit + deadband : value < limit - deadband }
     // Inside the limit by the full deadband — required (for ALL factors) to flip NO_GO -> GO.
-    func hardClear() -> Bool { worseWhenHigher ? value < limit - deadband : value > limit + deadband }
+    //
+    // When the limit already sits at (or within a deadband of) the floor, "limit - deadband" asks
+    // for a value below the floor, which is impossible — e.g. a VFR (ordinal 0) minimum with a 0.5
+    // deadband would require ordinal < -0.5 forever, permanently stranding the watch on NO-GO even
+    // once conditions are genuinely fine. In that case, sitting at the floor IS as clear as it can
+    // get, so treat it as satisfied.
+    func hardClear() -> Bool {
+        if worseWhenHigher {
+            if let floor, limit - deadband <= floor { return value <= floor }
+            return value < limit - deadband
+        }
+        return value > limit + deadband
+    }
 }
