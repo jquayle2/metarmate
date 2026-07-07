@@ -61,6 +61,14 @@ private func ageString(_ date: Date) -> String {
     return "\(Int(secs / 3600))h ago"
 }
 
+/// Deep link opened by MetarMateApp.onOpenURL to jump straight to this airport's detail page —
+/// a tap outside the widget's interactive buttons follows this instead of just opening the app
+/// to wherever it was last left.
+private func detailURL(for snapshot: WidgetWeatherSnapshot?) -> URL? {
+    guard let snapshot else { return nil }
+    return URL(string: "metarmate://airport/\(snapshot.icao)")
+}
+
 // SelectAirportIntent is defined in MetarMate/Intents/SelectAirportIntent.swift
 
 // MARK: - Timeline Entry
@@ -415,6 +423,12 @@ struct HomeScreenSmallView: View {
                             .padding(.vertical, 2)
                             .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
                         Spacer()
+                        Button(intent: RefreshWidgetIntent()) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     // Wind
@@ -546,6 +560,7 @@ struct MetarMateHomeSmall: Widget {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
             HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.fill.tertiary, for: .widget)
+                .widgetURL(detailURL(for: entry.snapshot))
         }
         .configurationDisplayName("Airport Weather")
         .description("Wind, category, and trend for a selected airport.")
@@ -704,6 +719,18 @@ struct HomeScreenMediumView: View {
                             .foregroundStyle(.red.opacity(0.8))
                     }
                 }
+
+                // Its own fixed-width slot, not an overlay, so it can't sit on top of the trend
+                // headline that's already anchored at this row's top-trailing corner.
+                VStack(spacing: 0) {
+                    Button(intent: RefreshWidgetIntent()) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer(minLength: 0)
+                }
             }
         } else {
             VStack(spacing: 8) {
@@ -752,6 +779,7 @@ struct MetarMateHomeMedium: Widget {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
             HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
                 .containerBackground(.fill.tertiary, for: .widget)
+                .widgetURL(detailURL(for: entry.snapshot))
         }
         .configurationDisplayName("Airport Weather Detail")
         .description("Wind, trend, forecast deviation, and TAF accuracy.")

@@ -2,9 +2,19 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
+// MARK: - Deep Link Router
+// Bridges the widget's `.widgetURL(metarmate://airport/<ICAO>)` tap into a modal presentation
+// of that airport's detail page. A plain @Published property (not a NavigationPath) because the
+// target is a fullScreenCover from the app root, independent of whichever tab/stack is active.
+@MainActor
+final class DeepLinkRouter: ObservableObject {
+    @Published var requestedAirport: Airport?
+}
+
 @main
 struct MetarMateApp: App {
     @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var deepLinkRouter = DeepLinkRouter()
 
     init() {
         // App-wide default for the global crosswind alert minimum (knots). Registered at
@@ -50,6 +60,23 @@ struct MetarMateApp: App {
                     // starts considering the task). Safe to call repeatedly; it replaces the
                     // pending request for the same identifier.
                     if phase == .background { AlertScheduler.schedule() }
+                }
+                .onOpenURL { url in
+                    // metarmate://airport/<ICAO> — sent by the home screen widget's widgetURL.
+                    guard url.scheme == "metarmate", url.host == "airport" else { return }
+                    let icao = url.lastPathComponent.uppercased()
+                    guard let airport = AirportService.shared.airport(icao: icao) else { return }
+                    deepLinkRouter.requestedAirport = airport
+                }
+                .fullScreenCover(item: $deepLinkRouter.requestedAirport) { airport in
+                    NavigationStack {
+                        WeatherDetailView(airport: airport)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarLeading) {
+                                    Button("Close") { deepLinkRouter.requestedAirport = nil }
+                                }
+                            }
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
