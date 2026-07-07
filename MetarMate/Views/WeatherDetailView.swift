@@ -1652,9 +1652,13 @@ struct WeatherDetailView: View {
                 Text(String(format: "%.2f", pressure.currentAltimeter))
                     .font(.brandMono(30, weight: .bold))
                     .foregroundColor(Brand.cloud)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 Text(deltaText)
                     .font(.brandMono(13, weight: .bold))
                     .foregroundColor(accent)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 Spacer()
                 if pressure.sparklineValues.count >= 2 {
                     PressureSparkline(values: pressure.sparklineValues, color: accent)
