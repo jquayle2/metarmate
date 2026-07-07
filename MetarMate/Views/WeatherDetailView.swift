@@ -131,10 +131,6 @@ struct WeatherDetailView: View {
             Double($0.categoryAccuracyPct) / 100.0 < 0.60 || $0.significantMisses > 0
         } ?? false
 
-        let worstStats = worstRecentStats(vm.metarHistory)
-        let worstAmber = worstStats != nil && (worstStats!.hasAmber || worstStats!.hasRed)
-        let worstRed   = worstStats?.hasRed ?? false
-
         ForEach(prefs.metarSections) { config in
             switch config.id {
             case .conditions:
@@ -202,17 +198,10 @@ struct WeatherDetailView: View {
                     if showVer { tafVerificationSection(verification) }
                 }
             case .worstRecent:
-                if let stats = worstStats, vm.metarHistory.count >= 2 {
-                    let showWorst: Bool = {
-                        switch config.visibility {
-                        case .always:        return true
-                        case .amberAndAbove: return worstAmber || worstRed
-                        case .redOnly:       return worstRed
-                        default:             return false
-                        }
-                    }()
-                    if showWorst { worstRecentSection(stats) }
-                }
+                // Folded into the METAR History trend brief (historyTrendBrief) — the
+                // standalone card is retired; the SectionID/prefs surface is kept (mirrors
+                // the .rawTaf no-op precedent) so nothing about a user's saved layout breaks.
+                EmptyView()
             default:
                 EmptyView()
             }
@@ -1523,58 +1512,285 @@ struct WeatherDetailView: View {
         let defaultShown = 3
         let totalCount = metars.count
         let displayed = Array(metars.prefix(historyExpanded ? totalCount : defaultShown))
+        let pressure = HistoryRules.pressureTrend(from: metars)
+
         return VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: 8) {
                 sectionHeader("METAR History")
                 Spacer()
+                Text(historyWindowTag(metars))
+                    .font(.brandMono(10.5, weight: .bold))
+                    .foregroundColor(Brand.monoDim2)
                 if totalCount > defaultShown {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { historyExpanded.toggle() }
                     } label: {
                         Image(systemName: historyExpanded ? "chevron.down" : "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Brand.slate)
                     }
                 }
             }
-            ForEach(Array(displayed.enumerated()), id: \.element.id) { index, metar in
-                HStack(alignment: .top, spacing: 10) {
-                    FlightCategoryBadge(category: metar.flightCategory)
-                        .frame(width: 50)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(historyTimeLabel(metar))
-                                .font(.caption.bold())
-                                .foregroundColor(index == 0 ? .yellow : .primary)
-                            if index == 0 {
-                                Text("LATEST")
-                                    .font(.caption2.bold())
-                                    .foregroundColor(.yellow)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .overlay(Capsule().stroke(Color.yellow, lineWidth: 1))
-                            }
+
+            historyTrendBrief(metars, pressure: pressure)
+                .font(.avenir(18, .heavy))
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let pressure = pressure {
+                pressureTrendCard(pressure)
+            }
+
+            if metars.count >= 2 {
+                windHistoryStrip(metars)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                TrackedLabel(text: "Observations", size: 10.5, tracking: 2.4)
+                    .padding(.bottom, 2)
+                ForEach(Array(displayed.enumerated()), id: \.element.id) { index, metar in
+                    historyObsRow(metar, isLatest: index == 0)
+                    if index < displayed.count - 1 {
+                        HStack {
+                            Rectangle()
+                                .fill(Brand.rowDivider)
+                                .frame(width: 1, height: 12)
+                                .padding(.leading, 12)
+                            Spacer()
                         }
-                        Text(historyConditionLine(metar))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.vertical, 2)
-                if index < displayed.count - 1 {
-                    HStack {
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.2))
-                            .frame(width: 1, height: 12)
-                            .padding(.leading, 24)
-                        Spacer()
                     }
                 }
             }
         }
         .padding()
         .background(cardBackground)
+    }
+
+    private func historyWindowTag(_ metars: [Metar]) -> String {
+        guard metars.count >= 2,
+              let newest = metars.first?.observationTime,
+              let oldest = metars.last?.observationTime else { return "—" }
+        let hrs = max(1, Int((newest.timeIntervalSince(oldest) / 3600).rounded()))
+        return "\(hrs) HR"
+    }
+
+    // Plain-English recent-trend lead: a falling-pressure lead (amber, or red if rapid) takes
+    // priority since it's the earliest hint of deterioration; otherwise a neutral category
+    // lead. The worst-recent extreme folds in as a trailing clause only when the current
+    // sample no longer reflects it (Decision 6).
+    private func historyTrendBrief(_ metars: [Metar], pressure: PressureTrend?) -> Text {
+        guard let latest = metars.first else {
+            return Text("No recent observations.").foregroundColor(Brand.slate)
+        }
+
+        let lead: Text
+        if let pressure = pressure, pressure.state == .falling {
+            let label = pressure.isRapid ? "Pressure falling rapidly. " : "Pressure falling. "
+            lead = Text(label).foregroundColor(pressure.isRapid ? Brand.dangerRed : Brand.cautionOrange)
+        } else {
+            lead = Text("\(latest.flightCategory.rawValue). ").foregroundColor(Brand.cloud)
+        }
+
+        var tail: String
+        if let oldest = metars.last,
+           oldest.wind.speed != latest.wind.speed || oldest.wind.gust != latest.wind.gust {
+            tail = "Wind \(tafCompactWind(oldest.wind)) to \(tafCompactWind(latest.wind)) over the last \(historyWindowPhrase(metars))."
+        } else {
+            tail = "Steady over the last \(historyWindowPhrase(metars))."
+        }
+
+        if let stats = worstRecentStats(metars), stats.hasRed || stats.hasAmber {
+            let stillCurrent = latest.wind.gust == stats.maxGust && latest.wind.speed == stats.maxSustained
+            if !stillCurrent {
+                if let gust = stats.maxGust, gust >= 15 {
+                    tail += " Gusts to \(gust) kt earlier."
+                } else if let ceil = stats.minCeilingFt, ceil < (latest.ceilingFeet ?? Int.max) {
+                    tail += " Ceiling as low as \(ceil.formatted()) ft earlier."
+                } else if stats.minVisSM < latest.visibility {
+                    tail += " Vis as low as \(String(format: "%g", stats.minVisSM)) SM earlier."
+                }
+            }
+        }
+
+        return lead + Text(tail).foregroundColor(Brand.slate)
+    }
+
+    private func historyWindowPhrase(_ metars: [Metar]) -> String {
+        guard let newest = metars.first?.observationTime, let oldest = metars.last?.observationTime else { return "period" }
+        let hrs = newest.timeIntervalSince(oldest) / 3600
+        return hrs < 1.5 ? "hour" : "\(Int(hrs.rounded())) hrs"
+    }
+
+    // MARK: - Pressure trend card (leading indicator)
+
+    private func pressureTrendCard(_ pressure: PressureTrend) -> some View {
+        let isFalling = pressure.state == .falling
+        let accent: Color = pressure.isRapid ? Brand.dangerRed
+            : (isFalling ? Brand.cautionOrange : (pressure.state == .rising ? Brand.vfrGreen : Brand.slate))
+        let stateLabel = pressure.isRapid ? "Falling rapidly" : (isFalling ? "Falling" : (pressure.state == .rising ? "Rising" : "Steady"))
+        let spanText = pressure.spanHours < 1
+            ? "\(Int((pressure.spanHours * 60).rounded())) min"
+            : "\(String(format: "%.1f", pressure.spanHours)) hr"
+        let sign = pressure.deltaInHg > 0 ? "+" : ""
+        let deltaText = "\(sign)\(String(format: "%.2f", pressure.deltaInHg)) / \(spanText)"
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 7) {
+                    Image(systemName: "gauge").font(.system(size: 13)).foregroundColor(accent)
+                    Text("Pressure")
+                        .font(.avenir(10.5, .heavy))
+                        .tracking(2.0)
+                        .foregroundColor(accent)
+                }
+                Spacer()
+                Text(stateLabel)
+                    .font(.avenir(12, .heavy))
+                    .foregroundColor(accent)
+            }
+            HStack(alignment: .lastTextBaseline, spacing: 14) {
+                Text(String(format: "%.2f", pressure.currentAltimeter))
+                    .font(.brandMono(30, weight: .bold))
+                    .foregroundColor(Brand.cloud)
+                Text(deltaText)
+                    .font(.brandMono(13, weight: .bold))
+                    .foregroundColor(accent)
+                Spacer()
+                if pressure.sparklineValues.count >= 2 {
+                    PressureSparkline(values: pressure.sparklineValues, color: accent)
+                        .frame(width: 84)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            Group {
+                if isFalling {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(LinearGradient(colors: [accent.opacity(0.08), accent.opacity(0.02)],
+                                             startPoint: .top, endPoint: .bottom))
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.black.opacity(0.22))
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isFalling ? accent.opacity(0.3) : Brand.cardBorder, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Wind adaptive strip (backward, matches the TAF hero's grammar — Decision 2)
+
+    private func windHistoryStrip(_ metars: [Metar]) -> some View {
+        // Oldest-first, capped to the most recent 6 samples, flowing into a highlighted NOW.
+        let ordered = Array(metars.reversed().suffix(6))
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 2) {
+                ForEach(Array(ordered.enumerated()), id: \.offset) { idx, metar in
+                    WindHistoryColumn(
+                        timeLabel: idx == ordered.count - 1 ? "Now" : historyStripTimeLabel(metar.observationTime),
+                        wind: metar.wind,
+                        isNow: idx == ordered.count - 1
+                    )
+                    if idx < ordered.count - 1 { Spacer(minLength: 0) }
+                }
+            }
+            CategoryRibbon(segments: ordered.enumerated().map { idx, metar in
+                CategoryRibbon.Segment(
+                    color: ColorRules.windCodeColor(metar.wind),
+                    weight: 1.0,
+                    isCurrent: idx == ordered.count - 1
+                )
+            })
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.black.opacity(0.22)))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Brand.cardBorder, lineWidth: 1))
+    }
+
+    private func historyStripTimeLabel(_ date: Date) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH'Z'"
+        fmt.timeZone = TimeZone(identifier: "UTC")
+        return fmt.string(from: date)
+    }
+
+    // Glyph + value + time column for the History wind strip — mirrors ForecastStripColumn's
+    // shape but is wind-only (no limitingFactor needed backward), driven by ColorRules.windColor.
+    private struct WindHistoryColumn: View {
+        let timeLabel: String
+        let wind: Wind
+        var isNow: Bool = false
+
+        var body: some View {
+            let color = ColorRules.windCodeColor(wind)
+            VStack(spacing: 4) {
+                WindBarbGlyph(directionDeg: (wind.isVariable || wind.speed == 0) ? nil : wind.direction,
+                             color: color, size: isNow ? 26 : 20)
+                Text(wind.speed == 0 ? "Calm" : "\(wind.speed)\(wind.gust.map { "G\($0)" } ?? "")")
+                    .font(.brandMono(isNow ? 13 : 12, weight: .semibold))
+                    .foregroundColor(isNow ? Brand.cloud : color)
+                Text(timeLabel.uppercased())
+                    .font(.avenir(9.5, .heavy))
+                    .tracking(0.6)
+                    .foregroundColor(isNow ? Brand.accentOrange : Brand.monoDim2)
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            }
+            .frame(minWidth: 44)
+        }
+    }
+
+    // MARK: - Raw observations list (unchanged data/logic, Brand-token chrome, altimeter added)
+
+    @ViewBuilder
+    private func historyObsRow(_ metar: Metar, isLatest: Bool) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Rectangle()
+                .fill(ColorRules.flightCategoryColor(metar.flightCategory).opacity(isLatest ? 1.0 : 0.5))
+                .frame(width: 3)
+                .clipShape(Capsule())
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(historyTimeLabel(metar))
+                        .font(.avenir(isLatest ? 14.5 : 13.5, isLatest ? .heavy : .bold))
+                        .foregroundColor(isLatest ? Brand.cloud : Brand.fog)
+                    if isLatest {
+                        Text("LATEST")
+                            .font(.avenir(9, .heavy))
+                            .tracking(0.6)
+                            .foregroundColor(Brand.accentOrange)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .overlay(Capsule().stroke(Brand.accentOrange.opacity(0.5), lineWidth: 1))
+                    }
+                    Spacer()
+                    if isLatest {
+                        Text(metar.flightCategory.rawValue)
+                            .font(.avenir(10.5, .heavy))
+                            .foregroundColor(ColorRules.flightCategoryColor(metar.flightCategory))
+                    }
+                }
+                Text(isLatest ? historyConditionLine(metar) : historyConditionLineCompact(metar))
+                    .font(.brandMono(12.5, weight: .medium))
+                    .foregroundColor(Brand.monoDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, isLatest ? 12 : 4)
+        .padding(.vertical, isLatest ? 10 : 4)
+        .background(
+            isLatest
+                ? AnyView(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Brand.accentOrange.opacity(0.06)))
+                : AnyView(Color.clear)
+        )
+        .overlay(
+            isLatest
+                ? AnyView(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(Brand.accentOrange.opacity(0.3), lineWidth: 1))
+                : AnyView(EmptyView())
+        )
     }
 
     private func historyTimeLabel(_ metar: Metar) -> String {
@@ -1587,6 +1803,7 @@ struct WeatherDetailView: View {
         return "\(localFmt.string(from: metar.observationTime))  (\(utcFmt.string(from: metar.observationTime)))"
     }
 
+    // Full decoded line for the latest observation: ceiling · vis · wind · altimeter.
     private func historyConditionLine(_ metar: Metar) -> String {
         var parts: [String] = []
         if let ceil = metar.ceilingFeet {
@@ -1596,20 +1813,27 @@ struct WeatherDetailView: View {
             parts.append("Clear")
         }
         parts.append("Vis \(visibilityText(metar.visibility))")
-        if metar.wind.speed == 0 {
-            parts.append("Calm")
-        } else {
-            let dir = metar.wind.isVariable ? "VRB" : String(format: "%03d°", metar.wind.direction ?? 0)
-            var w = "\(dir) \(metar.wind.speed) kt"
-            if let g = metar.wind.gust { w += " G\(g)" }
-            parts.append(w)
-        }
+        parts.append(tafCompactWind(metar.wind))
+        parts.append(metarAltimeterCode(metar.altimeter))
         return parts.joined(separator: " · ")
     }
 
+    // Compact line for older observations: wind · altimeter only, so a pressure drop is
+    // traceable (A2978 → A2985 → A2992) without repeating ceiling/vis every row.
+    private func historyConditionLineCompact(_ metar: Metar) -> String {
+        "\(tafCompactWind(metar.wind)) · \(metarAltimeterCode(metar.altimeter))"
+    }
+
+    // METAR-style altimeter group, e.g. 29.78 inHg -> "A2978".
+    private func metarAltimeterCode(_ inHg: Double) -> String {
+        "A" + String(format: "%04.0f", (inHg * 100).rounded())
+    }
+
     // MARK: - Worst Recent Conditions
-    // Scans METAR history for the extremes — answers "Has it been worse recently?"
-    // Only surfaces items that are operationally notable, not calm-VFR noise.
+    // Scans METAR history for the extremes — answers "Has it been worse recently?" Retained
+    // as a pure data source; the standalone card was retired (Decision 6) and its signal now
+    // folds into historyTrendBrief above. Only surfaces items that are operationally notable,
+    // not calm-VFR noise.
     private struct WorstRecentStats {
         let maxGust: Int?
         let maxSustained: Int
@@ -1654,65 +1878,6 @@ struct WeatherDetailView: View {
         return stats.hasNotableItems ? stats : nil
     }
 
-    private func worstRecentSection(_ stats: WorstRecentStats) -> some View {
-        let spanLabel = stats.spanHours < 1.5 ? "~1 hr" : "~\(Int(stats.spanHours)) hrs"
-        var items: [(icon: String, text: String, color: Color)] = []
-
-        if let gust = stats.maxGust, gust >= 15 {
-            let color: Color = gust >= 25 ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
-            items.append(("wind", "Max Gust: \(gust) kt", color))
-        } else if stats.maxSustained >= 15 {
-            let color: Color = stats.maxSustained >= 25 ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
-            items.append(("wind", "Max Wind: \(stats.maxSustained) kt", color))
-        }
-
-        if let ceil = stats.minCeilingFt, ceil < 3000 {
-            let color: Color
-            if ceil < 500 { color = Color(red: 0.75, green: 0.0, blue: 0.75) }
-            else if ceil < 1000 { color = .red }
-            else { color = Color(red: 0.2, green: 0.5, blue: 1.0) }
-            items.append(("cloud.fill", "Lowest Ceiling: \(ceil.formatted()) ft", color))
-        }
-
-        if stats.minVisSM < 5.0 {
-            let color: Color
-            if stats.minVisSM < 1 { color = Color(red: 0.75, green: 0.0, blue: 0.75) }
-            else if stats.minVisSM < 3 { color = .red }
-            else { color = Color(red: 0.2, green: 0.5, blue: 1.0) }
-            items.append(("eye.fill", "Lowest Vis: \(String(format: "%g", stats.minVisSM)) SM", color))
-        }
-
-        if stats.worstCategory != .vfr {
-            items.append(("exclamationmark.triangle", "Worst Category: \(stats.worstCategory.rawValue)", stats.worstCategory.swiftUIColor))
-        }
-
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "chart.bar.fill")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-                Text("WORST CONDITIONS IN LAST \(spanLabel)  ·  \(stats.obsCount) obs")
-                    .font(.caption2.bold())
-                    .foregroundColor(.secondary)
-                    .tracking(0.5)
-            }
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                HStack(spacing: 8) {
-                    Image(systemName: item.icon)
-                        .foregroundColor(item.color)
-                        .font(.caption)
-                        .frame(width: 16)
-                    Text(item.text)
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fontWeight(.medium)
-                }
-            }
-        }
-        .padding()
-        .background(cardBackground)
-    }
-
     private func categoryRank(_ cat: FlightCategory) -> Int {
         switch cat {
         case .vfr: return 0
@@ -1725,34 +1890,78 @@ struct WeatherDetailView: View {
 
     // MARK: - TAF
     private func tafSection(_ taf: Taf, showRaw: Bool = true) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let tafIsUpcoming = taf.validFrom > Date()
+        let validHours = max(1, Int(taf.validTo.timeIntervalSince(taf.validFrom) / 3600))
 
-            // TAF periods — own card
+        return VStack(alignment: .leading, spacing: 8) {
+
+            // Adaptive hero — brief, per-period limiting-factor row, category ribbon.
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    sectionHeader("TAF")
-                    if taf.validFrom > Date() {
-                        Text("UPCOMING")
-                            .font(.caption2.bold())
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .overlay(Capsule().stroke(Color.orange, lineWidth: 1))
-                    }
+                HStack(spacing: 8) {
+                    sectionHeader("Forecast · TAF")
                     Spacer()
+                    if tafIsUpcoming {
+                        Text("UPCOMING")
+                            .font(.avenir(9, .heavy))
+                            .tracking(1.0)
+                            .foregroundColor(Brand.cautionOrange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .overlay(Capsule().stroke(Brand.cautionOrange.opacity(0.5), lineWidth: 1))
+                    }
+                    Text("\(validHours) HR")
+                        .font(.brandMono(10.5, weight: .bold))
+                        .foregroundColor(Brand.monoDim2)
                 }
-                let tafIsUpcoming = taf.validFrom > Date()
-                // Decoded blocks cover ALL .base/.fm periods — the same set the notes generator
-                // walks (Fix 3), so blocks and notes never disagree on which periods exist.
-                // TEMPO/BECMG surface in TAF Pilot Notes, not here.
-                ForEach(taf.baseForecasts) { period in
-                    tafPeriodRow(period, isCurrent: period.id == taf.currentForecast?.id, isUpcoming: tafIsUpcoming)
+                tafHeroBrief(taf)
+                    .font(.avenir(18, .heavy))
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if !taf.baseForecasts.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 2) {
+                            ForEach(taf.baseForecasts) { period in
+                                ForecastStripColumn(
+                                    timeLabel: tafStripTimeLabel(period.fromTime),
+                                    factor: ForecastRules.limitingFactor(for: period),
+                                    isHighlighted: period.id == taf.currentForecast?.id
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 2)
+                    }
+
+                    CategoryRibbon(segments: taf.baseForecasts.map { period in
+                        let duration = max(period.toTime.timeIntervalSince(period.fromTime), 60)
+                        // Ribbon collapses to 3 colors (green/blue/red) — LIFR folds into IFR red.
+                        let ribbonCategory: FlightCategory = period.flightCategory == .lifr ? .ifr : period.flightCategory
+                        return CategoryRibbon.Segment(
+                            color: ColorRules.flightCategoryColor(ribbonCategory),
+                            weight: duration,
+                            isCurrent: period.id == taf.currentForecast?.id
+                        )
+                    })
+                    .padding(.top, 4)
                 }
             }
-            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
             .background(cardBackground)
+
+            // Delta cards — one per period, treatment keyed by category (Decision 4).
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(taf.baseForecasts.enumerated()), id: \.element.id) { idx, period in
+                    tafDeltaCard(
+                        period,
+                        previous: idx > 0 ? taf.baseForecasts[idx - 1] : nil,
+                        tag: tafRelativeTag(period,
+                                            isCurrent: period.id == taf.currentForecast?.id,
+                                            tafIsUpcoming: tafIsUpcoming)
+                    )
+                }
+            }
 
             // TAF Pilot Notes — forecast-oriented companion to the METAR Pilot Notes card.
             // Self-hides when there are no notes.
@@ -1766,12 +1975,12 @@ struct WeatherDetailView: View {
                     } label: {
                         HStack {
                             Text("Raw TAF")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .font(.avenir(13, .demibold))
+                                .foregroundColor(Brand.slate)
                             Spacer()
                             Image(systemName: rawTafExpanded ? "chevron.down" : "chevron.right")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Brand.slate)
                         }
                         .padding()
                     }
@@ -1779,8 +1988,8 @@ struct WeatherDetailView: View {
                     if rawTafExpanded {
                         Divider().padding(.horizontal)
                         Text(taf.rawText)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.primary)
+                            .font(.brandMono(12, weight: .medium))
+                            .foregroundColor(Brand.monoDim)
                             .textSelection(.enabled)
                             .padding()
                     }
@@ -1792,94 +2001,267 @@ struct WeatherDetailView: View {
         }
     }
 
-    // Decoded plain-English forecast block for a .base/.fm period.
-    // Left-edge strip in the period's flight-category color (4px, square corners — single-sided, no radius).
-    private func tafPeriodRow(_ period: TafForecast, isCurrent: Bool, isUpcoming: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                // Period header — match the decoded METAR card's prominent label (~17pt semibold, primary/white).
-                Text("From \(tafLocalClock(period.fromTime)) local")
-                    .font(.headline)
-                    .foregroundColor(isCurrent ? .yellow : .primary)
-                if isCurrent {
-                    Text(isUpcoming ? "NEXT" : "NOW")
-                        .font(.caption2.bold())
-                        .foregroundColor(isUpcoming ? .orange : .yellow)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .overlay(Capsule().stroke(isUpcoming ? Color.orange : Color.yellow, lineWidth: 1))
-                }
-                Spacer()
-                FlightCategoryBadge(category: period.flightCategory)
-            }
-            // Decoded sentence — match the METAR card body size (~16pt) and lift off the dim gray
-            // toward the METAR body color. Single flowing neutral sentence, no per-value coloring.
-            Text(tafForecastSentence(period))
-                .font(.callout)
-                .foregroundColor(.primary.opacity(0.85))
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
+    // MARK: - TAF hero brief
+    // Plain-English 1-2 line lead: an MVFR/IFR/LIFR onset within the window leads in its
+    // category color; a steady-good period reads as one quiet neutral line.
+    private func tafHeroBrief(_ taf: Taf) -> Text {
+        let bases = taf.baseForecasts
+        guard let first = bases.first else {
+            return Text("No forecast data.").foregroundColor(Brand.slate)
         }
-        .padding(.leading, 10)
-        .padding(.vertical, 5)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isCurrent ? Color.yellow.opacity(0.05) : Color.clear)
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(period.flightCategory.swiftUIColor)
-                .frame(width: 4)
+        guard let worst = bases.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
+              tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
+            return Text("\(first.flightCategory.rawValue) the entire forecast period. ")
+                .foregroundColor(Brand.cloud)
+                + Text("No significant changes expected.").foregroundColor(Brand.slate)
+        }
+
+        let isLow = worst.flightCategory == .ifr || worst.flightCategory == .lifr
+        let leadColor: Color = isLow ? Brand.valueRed : Brand.mvfrBlue
+        let lead = Text("\(worst.flightCategory.rawValue) by \(tafTimeLabel(worst.fromTime)). ")
+            .foregroundColor(leadColor)
+
+        var tailParts: [String] = []
+        if let c = ForecastRules.ceilingFeet(worst), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
+        if let v = worst.visibility, v < 5 { tailParts.append("visibility \(tafVisText(v))") }
+        if !worst.weatherPhenomena.isEmpty {
+            tailParts.append(WeatherDecoder.decodeAll(worst.weatherPhenomena).lowercased())
+        }
+        let tailText: String
+        if tailParts.isEmpty {
+            tailText = "Watch the trend through the period."
+        } else {
+            let joined = tailParts.joined(separator: ", ")
+            tailText = joined.prefix(1).uppercased() + joined.dropFirst() + "."
+        }
+        return lead + Text(tailText).foregroundColor(Brand.slate)
+    }
+
+    // Compact hero-strip time label, e.g. "5P", "8P", "11P", "12A".
+    private func tafStripTimeLabel(_ date: Date) -> String {
+        let hour24 = Calendar.current.component(.hour, from: date)
+        let isPM = hour24 >= 12
+        var hour12 = hour24 % 12
+        if hour12 == 0 { hour12 = 12 }
+        return "\(hour12)\(isPM ? "P" : "A")"
+    }
+
+    // "now" / "next" for the current period, else a relative-time tag ("in 3 hrs", "tomorrow").
+    private func tafRelativeTag(_ period: TafForecast, isCurrent: Bool, tafIsUpcoming: Bool) -> String {
+        if isCurrent { return tafIsUpcoming ? "next" : "now" }
+        let hours = period.fromTime.timeIntervalSinceNow / 3600
+        if hours < 0 { return "" }
+        if hours < 10 { return "in \(max(1, Int(hours.rounded()))) hrs" }
+        let suffix = tafDaySuffix(period.fromTime)
+        return suffix.isEmpty ? "later today" : suffix.trimmingCharacters(in: .whitespaces)
+    }
+
+    // Glyph + value + time column for the TAF hero row — one per period, its limiting factor.
+    private struct ForecastStripColumn: View {
+        let timeLabel: String
+        let factor: LimitingFactor
+        var isHighlighted: Bool = false
+
+        private var color: Color { ColorRules.flightCategoryColor(factor.category) }
+
+        var body: some View {
+            VStack(spacing: 4) {
+                glyph
+                valueText
+                    .font(.brandMono(12.5, weight: .semibold))
+                    .foregroundColor(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(timeLabel)
+                    .font(.avenir(10, .medium))
+                    .foregroundColor(Brand.slate)
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(minWidth: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isHighlighted ? Brand.accentOrange.opacity(0.08) : .clear)
+            )
+        }
+
+        @ViewBuilder private var glyph: some View {
+            switch factor.kind {
+            case .wind:
+                WindBarbGlyph(directionDeg: factor.windDirectionDeg, color: color, size: 22)
+            case .ceiling:
+                Image(systemName: "cloud.fill").font(.system(size: 17)).foregroundColor(color)
+                    .frame(width: 22, height: 22)
+            case .visibility:
+                Image(systemName: "eye.fill").font(.system(size: 17)).foregroundColor(color)
+                    .frame(width: 22, height: 22)
+            }
+        }
+
+        @ViewBuilder private var valueText: some View {
+            switch factor.kind {
+            case .wind:
+                if factor.windSpeedKt == 0 {
+                    Text("Calm")
+                } else {
+                    Text(factor.windGustKt.map { "\(factor.windSpeedKt)G\($0)" } ?? "\(factor.windSpeedKt)")
+                }
+            case .ceiling:
+                Text(factor.ceilingFeet.map { "\($0.formatted())" } ?? "CLR")
+            case .visibility:
+                if let v = factor.visibilitySM {
+                    Text(v >= 6 ? "6+" : String(format: "%g", v))
+                } else {
+                    Text("—")
+                }
+            }
         }
     }
 
-    // Decoded plain-English sentence for a forecast period — wind, visibility, weather, clouds.
-    private func tafForecastSentence(_ period: TafForecast) -> String {
-        var parts: [String] = []
+    // MARK: - TAF delta cards (per-period, category-keyed treatment — Decision 4)
 
-        if let wind = period.wind {
-            if wind.speed == 0 {
-                parts.append("winds calm")
-            } else {
-                let dir = wind.isVariable ? "variable" : String(format: "%03d°", wind.direction ?? 0)
-                var w = "wind \(dir) at \(wind.speed) kt"
-                if let gust = wind.gust { w += " gusting \(gust) kt" }
-                parts.append(w)
+    @ViewBuilder
+    private func tafDeltaCard(_ period: TafForecast, previous: TafForecast?, tag: String) -> some View {
+        switch period.flightCategory {
+        case .vfr, .unknown:
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Rectangle().fill(Brand.vfrGreen.opacity(0.5)).frame(width: 3).clipShape(Capsule())
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(spacing: 6) {
+                        Text(tafLocalClock(period.fromTime)).font(.avenir(14.5, .heavy)).foregroundColor(Brand.fog)
+                        if !tag.isEmpty {
+                            Text(tag).font(.avenir(11.5, .demibold)).foregroundColor(Brand.monoDim)
+                        }
+                    }
+                    Spacer()
+                    Text("\(tafCompactWind(period.wind)) · \(period.flightCategory.rawValue)")
+                        .font(.brandMono(12.5, weight: .semibold))
+                        .foregroundColor(Brand.slate)
+                }
+            }
+            .padding(.vertical, 3)
+            .padding(.horizontal, 14)
+
+        case .mvfr:
+            deltaCardShell(rail: Brand.mvfrBlue,
+                           wash: [Brand.mvfrBlue.opacity(0.08), Brand.mvfrBlue.opacity(0.02)],
+                           border: Brand.mvfrBlue.opacity(0.3), radius: 13) {
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(spacing: 6) {
+                        Text(tafLocalClock(period.fromTime)).font(.avenir(14.5, .heavy)).foregroundColor(Brand.cloud)
+                        if !tag.isEmpty {
+                            Text(tag).font(.avenir(11.5, .demibold)).foregroundColor(Brand.monoDim)
+                        }
+                    }
+                    Spacer()
+                    Text("MVFR").font(.avenir(10, .heavy)).tracking(0.6).foregroundColor(Brand.mvfrBlue)
+                }
+                Text(tafDeltaHeadline(period, previous: previous, includePhenomena: true))
+                    .font(.avenir(13.5, .bold))
+                    .foregroundColor(Brand.fog)
+                    .padding(.top, 3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+        case .ifr, .lifr:
+            deltaCardShell(rail: Brand.dangerRed,
+                           wash: [Brand.dangerRed.opacity(0.12), Brand.dangerRed.opacity(0.03)],
+                           border: Brand.dangerRed.opacity(0.5), radius: 14, thickBorder: true) {
+                HStack(alignment: .firstTextBaseline) {
+                    HStack(spacing: 8) {
+                        Text(tafLocalClock(period.fromTime)).font(.avenir(15.5, .heavy)).foregroundColor(Brand.cloud)
+                        if !tag.isEmpty {
+                            Text(tag).font(.avenir(10.5, .bold)).foregroundColor(Brand.slate)
+                        }
+                    }
+                    Spacer()
+                    StatusPill(category: period.flightCategory)
+                }
+                Text(tafDeltaHeadline(period, previous: previous, includePhenomena: false))
+                    .font(.avenir(14.5, .bold))
+                    .foregroundColor(Brand.cloud)
+                    .padding(.top, 5)
+                    .fixedSize(horizontal: false, vertical: true)
+                let subline = tafDeltaSubline(period)
+                if !subline.isEmpty {
+                    Text(subline)
+                        .font(.avenir(12, .demibold))
+                        .foregroundColor(Brand.slate)
+                        .padding(.top, 1)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func deltaCardShell<Content: View>(rail: Color, wash: [Color], border: Color, radius: CGFloat,
+                                               thickBorder: Bool = false,
+                                               @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Rectangle().fill(rail).frame(width: 3).clipShape(Capsule())
+            VStack(alignment: .leading, spacing: 0) { content() }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .fill(LinearGradient(colors: wash, startPoint: .top, endPoint: .bottom)))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .stroke(border, lineWidth: thickBorder ? 1.5 : 1))
+    }
+
+    // "Ceiling drops to 800 ft · vis 2 SM[ · light rain]" — leads with what changed from the
+    // previous period; collapses to a quiet placeholder when nothing material moved.
+    private func tafDeltaHeadline(_ period: TafForecast, previous: TafForecast?, includePhenomena: Bool) -> String {
+        let ceilingFt = ForecastRules.ceilingFeet(period)
+        let prevCeilingFt = previous.flatMap { ForecastRules.ceilingFeet($0) }
+
+        var parts: [String] = []
+        if ceilingFt != prevCeilingFt {
+            if let c = ceilingFt {
+                if let prev = prevCeilingFt {
+                    parts.append("Ceiling \(prev > c ? "drops to" : "lifts to") \(c.formatted()) ft")
+                } else {
+                    parts.append("Ceiling forms at \(c.formatted()) ft")
+                }
+            } else if previous != nil {
+                parts.append("Ceiling clears")
             }
         }
 
-        if let vis = period.visibility {
-            parts.append("visibility \(vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM")")
+        if period.visibility != previous?.visibility, let v = period.visibility {
+            parts.append("vis \(tafVisText(v))")
         }
 
-        if !period.weatherPhenomena.isEmpty {
+        if includePhenomena, !period.weatherPhenomena.isEmpty {
             parts.append(WeatherDecoder.decodeAll(period.weatherPhenomena).lowercased())
         }
 
-        if period.clouds.isEmpty {
-            parts.append("sky clear")
-        } else {
-            parts.append(period.clouds.map { tafCloudPhrase($0) }.joined(separator: ", "))
-        }
-
-        let sentence = parts.joined(separator: ", ")
-        guard let first = sentence.first else { return "No forecast data." }
-        return first.uppercased() + sentence.dropFirst() + "."
+        guard !parts.isEmpty else { return "— vis / sky unchanged" }
+        let joined = parts.joined(separator: " · ")
+        return joined.prefix(1).uppercased() + joined.dropFirst()
     }
 
-    // Plain-English cloud phrase, e.g. "broken at 2,500 ft", "scattered clouds at 4,000 ft".
-    private func tafCloudPhrase(_ layer: CloudLayer) -> String {
-        let word: String
-        switch layer.coverage {
-        case .few: word = "few clouds"
-        case .scattered: word = "scattered clouds"
-        case .broken: word = "broken"
-        case .overcast: word = "overcast"
-        case .clear, .skyClear: return "sky clear"
-        case .verticalVisibility:
-            return "vertical visibility \((layer.altitude * 100).formatted()) ft"
+    // Phenomena + wind subline for the IFR/LIFR delta card (phenomena lives here, not the
+    // headline, so the two never repeat the same information).
+    private func tafDeltaSubline(_ period: TafForecast) -> String {
+        var parts: [String] = []
+        if !period.weatherPhenomena.isEmpty {
+            parts.append(WeatherDecoder.decodeAll(period.weatherPhenomena))
         }
-        if layer.altitude == 0 { return word }
-        let cb = layer.isCumulonimbus ? " (CB)" : ""
-        return "\(word) at \((layer.altitude * 100).formatted()) ft\(cb)"
+        if let wind = period.wind, wind.speed > 0 {
+            parts.append("wind \(tafCompactWind(wind))")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    // Compact METAR-style wind token, e.g. "190° 11G18", "CALM", "VRB 6".
+    private func tafCompactWind(_ wind: Wind?) -> String {
+        guard let wind = wind else { return "—" }
+        if wind.speed == 0 { return "CALM" }
+        let dir = wind.isVariable ? "VRB" : String(format: "%03d°", wind.direction ?? 0)
+        let gustPart = wind.gust.map { "G\($0)" } ?? ""
+        return "\(dir) \(wind.speed)\(gustPart)"
     }
 
     // Local "h:mm a" clock for a forecast time (Zulu → local).
@@ -1935,11 +2317,10 @@ struct WeatherDetailView: View {
     private static let tafAmber = Color(red: 1.0, green: 0.6, blue: 0.0)
 
     // Ceiling (lowest BKN/OVC/VV layer) in feet for a forecast period, if any.
+    // Single source of truth lives in ForecastRules (WeatherStory.swift) — the TAF hero and
+    // delta cards call it directly; this thin wrapper keeps the Pilot Notes call sites unchanged.
     private func tafCeilingFeet(_ period: TafForecast) -> Int? {
-        period.clouds
-            .filter { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility }
-            .map { $0.altitude * 100 }
-            .min()
+        ForecastRules.ceilingFeet(period)
     }
 
     private func tafVisText(_ vis: Double) -> String {

@@ -221,34 +221,50 @@ enum ColorRules {
 // MARK: - Reusable chrome
 
 /// Faint concentric-contour ("isobar") wash on the navy ground — the brand's chart identity.
+/// Two offset "pressure centers" (upper-right + lower-left) so the contours curve and
+/// interfere across the whole screen, not a single near-horizontal set.
 struct IsobarBackground: View {
-    /// Relative origin of the contour rings (top-right by default, matching the mock).
-    var origin: UnitPoint = UnitPoint(x: 0.72, y: -0.04)
+    /// Relative origins of the contour rings. Defaults to two offset centers; per-origin
+    /// opacity is halved automatically so overlapping fields don't read twice as dense
+    /// where two rings cross.
+    var origins: [UnitPoint] = IsobarBackground.dualOrigin
     var tint: Color = Color(red: 219/255, green: 221/255, blue: 227/255)
     var opacity: Double = 0.045
+
+    static let dualOrigin: [UnitPoint] = [
+        UnitPoint(x: 0.72, y: -0.04),   // existing, unchanged — upper-right
+        UnitPoint(x: 0.18, y: 1.08),    // new — lower-left
+    ]
 
     var body: some View {
         Brand.navy.overlay(
             GeometryReader { geo in
                 Canvas { ctx, size in
-                    let cx = origin.x * size.width
-                    let cy = origin.y * size.height
-                    let maxR = hypot(size.width, size.height) * 1.2
-                    let step: CGFloat = 26
-                    var r: CGFloat = step
-                    while r < maxR {
-                        // Elliptical contours (wider than tall), echoing the CSS approximation.
-                        let rect = CGRect(x: cx - r * 1.5, y: cy - r * 0.8,
-                                          width: r * 3.0, height: r * 1.6)
-                        ctx.stroke(Path(ellipseIn: rect),
-                                   with: .color(tint.opacity(opacity)),
-                                   lineWidth: 1)
-                        r += step
+                    let perOriginOpacity = opacity / Double(max(origins.count, 1))
+                    for origin in origins {
+                        drawContours(ctx: ctx, size: size, origin: origin, opacity: perOriginOpacity)
                     }
                 }
             }
         )
         .ignoresSafeArea()
+    }
+
+    private func drawContours(ctx: GraphicsContext, size: CGSize, origin: UnitPoint, opacity: Double) {
+        let cx = origin.x * size.width
+        let cy = origin.y * size.height
+        let maxR = hypot(size.width, size.height) * 1.2
+        let step: CGFloat = 26
+        var r: CGFloat = step
+        while r < maxR {
+            // Elliptical contours (wider than tall), echoing the CSS approximation.
+            let rect = CGRect(x: cx - r * 1.5, y: cy - r * 0.8,
+                              width: r * 3.0, height: r * 1.6)
+            ctx.stroke(Path(ellipseIn: rect),
+                       with: .color(tint.opacity(opacity)),
+                       lineWidth: 1)
+            r += step
+        }
     }
 }
 
