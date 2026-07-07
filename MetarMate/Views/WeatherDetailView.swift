@@ -2308,7 +2308,15 @@ struct WeatherDetailView: View {
         default:      partOfDay = "overnight"
         }
         let suffix = tafDaySuffix(date).trimmingCharacters(in: .whitespaces)
-        if suffix.isEmpty { return "this \(partOfDay)" }
+        if suffix.isEmpty {
+            // Today: "this morning/afternoon/evening" reads naturally, but "this midday"
+            // and "this overnight" don't — those stand alone.
+            switch partOfDay {
+            case "midday":    return "around midday"
+            case "overnight": return "overnight"
+            default:          return "this \(partOfDay)"
+            }
+        }
         if suffix == "tomorrow" { return "\(partOfDay) tomorrow" }
         return "\(partOfDay) \(suffix)"
     }
