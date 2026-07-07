@@ -236,7 +236,7 @@ struct CrosswindKeypadView: View {
 
                 HStack(spacing: 1) {
                     Text(isActive && !inputBuffer.isEmpty ? inputBuffer : fieldDisplay(field))
-                        .font(.brandMono(30, weight: .bold))
+                        .font(.brandMono(36, weight: .bold))
                         .foregroundColor(valueColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
@@ -251,7 +251,8 @@ struct CrosswindKeypadView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 10)
             .padding(.horizontal, 4)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isActive ? Brand.accentOrange.opacity(0.10) : Color.white.opacity(0.03)))
