@@ -113,7 +113,10 @@ struct AdvisoryWeather: Codable {
         guard let hpa = pressureHpa else { return nil }
         let elevFt   = Double(airport.elevation)
         let stdTempC = 15.0 - (2.0 * elevFt / 1000.0)          // ISA std temp at elevation
-        let pressAltFt = elevFt + 145366.45 * (1.0 - pow(hpa / 1013.25, 0.190284))
+        // Open-Meteo `surface_pressure` is station pressure at field elevation, so the
+        // barometric formula already yields pressure altitude referenced to sea level —
+        // do NOT add elevFt again (that double-counts the field elevation).
+        let pressAltFt = 145366.45 * (1.0 - pow(hpa / 1013.25, 0.190284))
         return pressAltFt + 120.0 * (temperatureC - stdTempC)
     }
 
