@@ -85,6 +85,20 @@ nonisolated enum WidgetDataManager {
         return (try? JSONDecoder().decode([String: WidgetAirportConfig].self, from: data)) ?? [:]
     }
 
+    // MARK: - Cycle override (unconfigured "most recent" widgets only)
+    // Lets the widget's in-place "next airport" button step through cached airports without
+    // reconfiguring the widget. Only consulted by the provider when the widget has no explicit
+    // airportCode set — a widget pinned to one airport always shows that airport regardless.
+    private static let cycleOverrideKey = "widget.cycleOverrideICAO"
+
+    nonisolated static func saveCycleOverride(_ icao: String) {
+        sharedDefaults?.set(icao, forKey: cycleOverrideKey)
+    }
+
+    nonisolated static func loadCycleOverride() -> String? {
+        sharedDefaults?.string(forKey: cycleOverrideKey)
+    }
+
     // MARK: - Pro status (written by main app, read by widget extension)
 
     nonisolated static func saveProStatus(_ isPro: Bool) {
