@@ -418,9 +418,13 @@ struct CrosswindKeypadView: View {
         .disabled(inputBuffer.isEmpty)
     }
 
+    // On the GUST field with nothing typed, the primary key becomes "NONE" — a fast way to
+    // skip the gust (sets gust = sustained, so hasGust is false). Otherwise it's "DONE".
+    private var isGustSkip: Bool { activeField == .gust && inputBuffer.isEmpty }
+
     private var doneKey: some View {
         Button(action: donePressed) {
-            Text("DONE")
+            Text(isGustSkip ? "NONE" : "DONE")
                 .font(.avenir(16, .heavy))
                 .tracking(0.6)
                 .foregroundColor(Brand.navy)
@@ -469,6 +473,15 @@ struct CrosswindKeypadView: View {
 
     /// DONE — commit whatever's typed, then flip the bottom zone to the result diagram.
     private func donePressed() {
+        // "NONE" on the gust field with an empty buffer: skip the gust entirely.
+        if isGustSkip {
+            gustSpeed = windSpeed   // hasGust becomes false
+            inputBuffer = ""
+            errorMessage = nil
+            activeField = nil
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            return
+        }
         if !inputBuffer.isEmpty {
             commitCurrentField(advance: false)
             if errorMessage != nil { return }   // stay so the pilot can fix it
