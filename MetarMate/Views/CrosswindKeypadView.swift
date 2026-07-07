@@ -380,7 +380,7 @@ struct CrosswindKeypadView: View {
                         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(highlight ? Brand.accentOrange.opacity(0.6) : Brand.cardBorder, lineWidth: 1))
                         .onAppear { digitFrames[digit] = geo.frame(in: .named(keypadSpace)) }
-                        .onChange(of: geo.frame(in: .named(keypadSpace))) { digitFrames[digit] = $0 }
+                        .onChange(of: geo.frame(in: .named(keypadSpace))) { _, newFrame in digitFrames[digit] = newFrame }
                 }
             )
     }
