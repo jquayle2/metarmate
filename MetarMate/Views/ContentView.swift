@@ -4,6 +4,7 @@ import SwiftData
 struct ContentView: View {
     @StateObject private var airportVM = AirportViewModel()
     @StateObject private var locationService = LocationService.shared
+    @StateObject private var weatherCache = WeatherCache.shared
     @State private var selectedTab: Int
 
     init() {
@@ -72,6 +73,7 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
+        .environmentObject(weatherCache)
         .tint(Brand.accentOrange)
         // Guardrail against total layout breakage at the largest accessibility sizes. The
         // goal is that the normal range through .accessibility1 reflows cleanly — this cap is
