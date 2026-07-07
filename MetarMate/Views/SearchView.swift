@@ -3,6 +3,7 @@ import SwiftData
 
 struct SearchView: View {
     @EnvironmentObject private var airportVM: AirportViewModel
+    @EnvironmentObject private var weatherCache: WeatherCache
     @Query private var favorites: [AirportFavorite]
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
@@ -121,26 +122,44 @@ struct SearchView: View {
         }
     }
 
+    /// Read-through the shared cache for the history rows: seed from fresh cached weather, fetch
+    /// only the misses, write results back — so returning to Search shows history weather
+    /// instantly. (The live search itself is user-driven and fetches on demand, unchanged.)
     private func loadHistoryMetars() async {
         let airports = airportVM.searchHistory
             .compactMap { AirportService.shared.airport(icao: $0.icao) }
 
-        // METARs for reporting stations + resolvable LIDs (36K→K36K), mapped back to the id.
+        // Seed from fresh cache first.
+        var metars: [String: Metar] = [:]
+        var advisories: [String: AdvisoryWeather] = [:]
+        for a in airports {
+            if let m = weatherCache.freshMetar(for: a.icao) { metars[a.icao] = m }
+            if let adv = weatherCache.freshAdvisory(for: a.icao) { advisories[a.icao] = adv }
+        }
+        historyMetars = metars
+        historyAdvisories = advisories
+
+        // METARs for the misses among reporting stations + resolvable LIDs (36K→K36K).
         var noaaToOriginal: [String: String] = [:]
         var noaaIds: [String] = []
         for a in airports where a.hasMetar || WeatherService.noaaCandidate(for: a.icao) != nil {
+            if metars[a.icao] != nil { continue }   // fresh cached METAR — skip
             let id = WeatherService.noaaCandidate(for: a.icao) ?? a.icao
             noaaIds.append(id); noaaToOriginal[id] = a.icao
         }
-        if !noaaIds.isEmpty, let metars = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
+        if !noaaIds.isEmpty, let fetched = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
             var mapped: [String: Metar] = [:]
-            for (k, m) in metars { mapped[noaaToOriginal[k] ?? k] = m }
-            historyMetars = mapped
+            for (k, m) in fetched { mapped[noaaToOriginal[k] ?? k] = m }
+            weatherCache.store(metars: mapped)
+            for (k, m) in mapped { metars[k] = m }
         }
+        historyMetars = metars
 
-        // Advisory estimates for the genuinely station-less recents.
-        let advisoryTargets = airports.filter { historyMetars[$0.icao] == nil && !$0.hasMetar }
-        historyAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
+        // Advisory estimates for the genuinely station-less recents still lacking weather.
+        let advisoryTargets = airports.filter {
+            metars[$0.icao] == nil && advisories[$0.icao] == nil && !$0.hasMetar
+        }
+        let fetchedAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
             for a in advisoryTargets {
                 group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
             }
@@ -148,5 +167,10 @@ struct SearchView: View {
             for await (icao, adv) in group { if let adv { result[icao] = adv } }
             return result
         }
+        if !fetchedAdvisories.isEmpty {
+            weatherCache.store(advisories: fetchedAdvisories)
+            for (k, v) in fetchedAdvisories { advisories[k] = v }
+        }
+        historyAdvisories = advisories
     }
 }
