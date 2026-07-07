@@ -146,32 +146,59 @@ class AirportViewModel: ObservableObject {
     }
 
     // MARK: - Nearest Airports
-    func loadNearestAirports() async {
+    /// Read-through the shared cache: seed the published dicts from fresh cached weather, fetch
+    /// only the misses, then write results back. `force` (pull-to-refresh) skips the cache seed
+    /// so every nearby airport is re-fetched and the cache overwritten. GPS/location logic and
+    /// the LID-normalization untouched.
+    func loadNearestAirports(force: Bool = false) async {
         guard let location = locationService.currentLocation else { return }
         isLoadingNearest = true
 
         nearestAirports = airportService.nearest(to: location, count: 15)
 
-        // Fetch METARs only for airports with official reporting stations
-        // K-prefix 3-letter FAA codes for NOAA lookup, then map results back
+        // Seed from fresh cache first (instant on tab revisit).
+        var metars: [String: Metar] = [:]
+        var advisories: [String: AdvisoryWeather] = [:]
+        if !force {
+            for a in nearestAirports {
+                if let m = WeatherCache.shared.freshMetar(for: a.icao) { metars[a.icao] = m }
+                if let adv = WeatherCache.shared.freshAdvisory(for: a.icao) { advisories[a.icao] = adv }
+            }
+            nearestMetars = metars
+            nearestAdvisories = advisories
+        }
+
+        // Fetch METARs only for the misses among airports with official reporting stations.
+        // K-prefix 3-letter FAA codes for NOAA lookup, then map results back.
         let metarNearby = nearestAirports.filter { $0.hasMetar || WeatherService.noaaCandidate(for: $0.icao) != nil }
         var nearNoaaToOrig: [String: String] = [:]
         var nearNoaaIds: [String] = []
         for airport in metarNearby {
             let code = airport.icao.uppercased()
+            if metars[code] != nil { continue }   // fresh cached METAR — skip
             let id = WeatherService.noaaCandidate(for: code) ?? code
             nearNoaaIds.append(id)
             nearNoaaToOrig[id] = code
         }
-        if let metars = try? await weatherService.fetchMetars(for: nearNoaaIds) {
+        if !nearNoaaIds.isEmpty, let fetched = try? await weatherService.fetchMetars(for: nearNoaaIds) {
             var mapped: [String: Metar] = [:]
-            for (key, metar) in metars {
+            for (key, metar) in fetched {
                 mapped[nearNoaaToOrig[key] ?? key] = metar
             }
-            nearestMetars = mapped
+            WeatherCache.shared.store(metars: mapped)
+            for (k, m) in mapped { metars[k] = m }
         }
-        let advisoryTargets = nearestAirports.filter { nearestMetars[$0.icao] == nil && !$0.hasMetar }
-        nearestAdvisories = await fetchAdvisories(for: advisoryTargets)
+        nearestMetars = metars
+
+        let advisoryTargets = nearestAirports.filter {
+            metars[$0.icao] == nil && advisories[$0.icao] == nil && !$0.hasMetar
+        }
+        let fetchedAdv = await fetchAdvisories(for: advisoryTargets)
+        if !fetchedAdv.isEmpty {
+            WeatherCache.shared.store(advisories: fetchedAdv)
+            for (k, v) in fetchedAdv { advisories[k] = v }
+        }
+        nearestAdvisories = advisories
         isLoadingNearest = false
     }
 

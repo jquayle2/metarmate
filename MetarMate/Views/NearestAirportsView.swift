@@ -106,7 +106,7 @@ struct NearestAirportsView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await airportVM.loadNearestAirports()
+            await airportVM.loadNearestAirports(force: true)
             lastUpdated = Date()
         }
     }
