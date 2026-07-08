@@ -1507,16 +1507,20 @@ struct WeatherDetailView: View {
 
     // MARK: - METAR History
     private func metarHistorySection(_ metars: [Metar]) -> some View {
+        // The entire section — trend summary, window tag, wind strip, AND the Observations
+        // list — describes the SAME most-recent-6 window (5 prior obs + current), so the
+        // headline never cites a wind/gust that isn't visible in the strip or the rows below.
+        let windowMetars = Array(metars.prefix(6))
         let defaultShown = 3
-        let totalCount = metars.count
-        let displayed = Array(metars.prefix(historyExpanded ? totalCount : defaultShown))
-        let pressure = HistoryRules.pressureTrend(from: metars)
+        let totalCount = windowMetars.count
+        let displayed = Array(windowMetars.prefix(historyExpanded ? totalCount : defaultShown))
+        let pressure = HistoryRules.pressureTrend(from: windowMetars)
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 sectionHeader("METAR History")
                 Spacer()
-                Text(historyWindowTag(metars))
+                Text(historyWindowTag(windowMetars))
                     .font(.brandMono(10.5, weight: .bold))
                     .foregroundColor(Brand.monoDim2)
                 if totalCount > defaultShown {
@@ -1530,7 +1534,7 @@ struct WeatherDetailView: View {
                 }
             }
 
-            historyTrendBrief(metars, pressure: pressure)
+            historyTrendBrief(windowMetars, pressure: pressure)
                 .font(.avenir(18, .heavy))
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1539,8 +1543,8 @@ struct WeatherDetailView: View {
                 pressureTrendCard(pressure)
             }
 
-            if metars.count >= 2 {
-                windHistoryStrip(metars)
+            if windowMetars.count >= 2 {
+                windHistoryStrip(windowMetars)
             }
 
             VStack(alignment: .leading, spacing: 2) {
