@@ -67,7 +67,7 @@ enum Brand {
     // Semantic (use ONLY for the documented meaning)
     static let accentOrange  = Color(hex: "#FF4E00") // brand accent; caution-low altimeter; trend-up
     static let cautionOrange = Color(hex: "#FF8A3D") // gusts, present wx, advisory
-    static let vfrGreen      = Color(hex: "#5FC588") // good / in-limits
+    static let vfrGreen      = Color(hex: "#00FF00") // good / in-limits — Garmin CDI green (was #5FC588)
     static let dangerRed     = Color(hex: "#F0473F") // deteriorating trend mark / alert chrome
     static let valueRed      = Color(hex: "#FF5A50") // danger values in text (IFR, sub-min vis)
     static let ifrBadgeBG    = Color(hex: "#E0453D") // solid fill behind white "IFR"
@@ -77,9 +77,9 @@ enum Brand {
     static let mvfrBlue      = Color(hex: "#4FA3F0") // MVFR
     static let lifrMagenta   = Color(hex: "#E06AD0") // LIFR (aviation magenta)
 
-    // VFR pill
-    static let vfrPillFill   = Color(red: 84/255, green: 177/255, blue: 122/255).opacity(0.16)
-    static let vfrPillBorder = Color(red: 84/255, green: 177/255, blue: 122/255).opacity(0.40)
+    // VFR pill  (Garmin CDI green; was 84/177/122)
+    static let vfrPillFill   = Color(red: 0/255, green: 255/255, blue: 0/255).opacity(0.16)
+    static let vfrPillBorder = Color(red: 0/255, green: 255/255, blue: 0/255).opacity(0.40)
 
     // Tinted card washes
     static let pilotNotesTop    = accentOrange.opacity(0.07)
