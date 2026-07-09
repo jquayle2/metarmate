@@ -2001,9 +2001,20 @@ struct WeatherDetailView: View {
         }
         guard let worst = bases.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
               tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
-            // Category is steady across the period. Still surface a wind story if any period
-            // gusts at or above the caution threshold (15 kt) — otherwise the hero would claim
-            // "no significant changes" while the Pilot Notes card flags gusts/crosswind (amber axis).
+            // Nothing gets WORSE than the first period. But the forecast may still IMPROVE —
+            // e.g. starts IFR and clears to VFR. Saying "IFR the entire forecast period" there
+            // is wrong and would keep a pilot on the ground when the TAF says it lifts.
+            if let firstBetter = bases.first(where: {
+                tafCategorySeverity($0.flightCategory) < tafCategorySeverity(first.flightCategory)
+            }) {
+                return Text("\(first.flightCategory.rawValue) now, ")
+                    .foregroundColor(ColorRules.flightCategoryColor(first.flightCategory))
+                    + Text("improving to \(firstBetter.flightCategory.rawValue) by \(tafTimeLabel(firstBetter.fromTime)).")
+                        .foregroundColor(ColorRules.flightCategoryColor(firstBetter.flightCategory))
+            }
+            // Category is genuinely steady across the period. Still surface a wind story if any
+            // period gusts at or above the caution threshold (15 kt) — otherwise the hero would
+            // claim "no significant changes" while the Pilot Notes card flags gusts (amber axis).
             let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
             if let gusty = firstGusty {
                 return Text("\(first.flightCategory.rawValue) throughout, ")
