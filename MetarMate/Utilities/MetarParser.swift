@@ -121,14 +121,25 @@ struct MetarParser {
         if let wx = wxString, !wx.isEmpty {
             raw = wx.components(separatedBy: " ").filter { !$0.isEmpty }
         } else {
-            let wxCodes = ["TS", "RA", "SN", "GR", "BR", "FG", "HZ", "DU", "SA",
-                           "FC", "SQ", "SS", "DS", "FU", "VA", "PL", "GS", "IC",
-                           "UP", "DZ", "SG", "FZRA", "FZDZ", "FZFG"]
-            let tokens = rawOb.components(separatedBy: " ")
+            // Match a real METAR present-weather group, not a substring. A group is:
+            //   optional intensity (+ / - / VC), then either a descriptor followed by one or
+            //   more phenomena codes, or bare phenomena, or a standalone TS/SH (e.g. "TS",
+            //   "VCTS", "VCSH") — and nothing else.
+            // A substring scan is unsafe: the station ident alone would match (KSNA contains
+            // "SN" -> phantom "Snow"; KICT -> "Ice Crystals"; KBGR -> "Hail"; ~556 idents affected).
+            let phen = "(DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|PY|PO|SQ|FC|SS|DS)"
+            let desc = "(MI|PR|BC|DR|BL|SH|TS|FZ)"
+            let pattern = "^(\\+|-|VC)?(\(desc)\(phen)+|\(phen)+|TS|SH)$"
+            let regex = try? NSRegularExpression(pattern: pattern)
+            // Present weather appears in the body only — never scan the remarks section.
+            let body = rawOb.components(separatedBy: " RMK").first ?? rawOb
+            let tokens = body.components(separatedBy: " ").filter { !$0.isEmpty }
             raw = tokens.filter { token in
-                let clean = token.trimmingCharacters(in: CharacterSet(charactersIn: "+-"))
-                return wxCodes.contains(where: { clean.contains($0) }) &&
-                       !token.hasPrefix("A") && !token.hasPrefix("Q") && !token.hasPrefix("RMK")
+                let upper = token.uppercased()
+                // A bare descriptor/intensity with no phenomena isn't a weather group.
+                guard let regex = regex else { return false }
+                let range = NSRange(upper.startIndex..<upper.endIndex, in: upper)
+                return regex.firstMatch(in: upper, range: range) != nil
             }
         }
 
