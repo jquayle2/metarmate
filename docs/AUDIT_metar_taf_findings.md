@@ -85,10 +85,10 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 |---|---|---|
 | F1 | OVX/VV indefinite ceiling dropped | ✅ Resolved — `1cd1144`; regression `ovxObscurationYieldsIndefiniteCeiling` + `ovxVertVisOnlyYieldsCeilingFromVertVis` |
 | F2 | PROB30/40 mis-typed as base | ✅ Resolved — `8d783ec`; regression `probPeriodIsClassifiedAsOverlayNotBase` |
-| F3 | Freezing-precip icing note temp-gated | ✅ Resolved (note fires) — `627a2a8`; regression `freezingPrecipIcingNoteFiresRegardlessOfTemp`. **Note tier (red/amber) → CFII.** |
-| F4 | Hero excludes TEMPO/PROB overlays | ✅ Resolved — `00d84ae`; regression `heroSurfacesTempoOverlayOnCautionAxis`. **"Improving to IFR" phrasing → CFII.** |
-| F5 | TS/CB never reach red on METAR side | ✅ Resolved (TS/CB → `.danger`) — `627a2a8`; regression `thunderstormAndCumulonimbusReachDangerTier`. **SQ / +FC tier → CFII.** |
-| F6 | `parseVisibility` fails unsafe to 10.0 | ✅ Resolved — `12658e8` (`Double?`, callers gate). **P6SM→6.0 lossiness → CFII.** |
+| F3 | Freezing-precip icing note temp-gated | ✅ Resolved (note fires) — `627a2a8`; regression `freezingPrecipIcingNoteFiresRegardlessOfTemp`. **Note tier: CFII item 1 ruled red → `.danger`, commit `ac0f0d3`.** |
+| F4 | Hero excludes TEMPO/PROB overlays | ✅ Resolved — `00d84ae`; regression `heroSurfacesTempoOverlayOnCautionAxis`. **"Improving to IFR" phrasing: CFII item 4 ruled reword → "improving", commit `ac0f0d3`.** |
+| F5 | TS/CB never reach red on METAR side | ✅ Resolved (TS/CB → `.danger`) — `627a2a8`; regression `thunderstormAndCumulonimbusReachDangerTier`. **SQ / +FC tier: CFII items 2–3 ruled red on the chip, commit `ac0f0d3`.** |
+| F6 | `parseVisibility` fails unsafe to 10.0 | ✅ Resolved — `12658e8` (`Double?`, callers gate). **P6SM→6.0 lossiness: CFII item 5 resolved by `Visibility` enum, commit 10.** |
 | F7 | TAF unknown visibility → 10 SM VFR | ✅ Resolved — `8d783ec`; regression `tafUnknownVisibilityYieldsUnknownCategoryNotVFR` + `heroShortCircuitsOnUnknownCurrentPeriod` |
 | F8 | Missing wind renders as calm | ✅ Resolved (full gate) — `6dc9b00`; regression `missingWindGroupIsUnknownNotCalm` + `realCalmIsReportedAndRendersCalm` |
 | F9 | Color boundaries disagree with category | ✅ Resolved — `6dc9b00`; regression `categoryColorsAgreeWithFlightCategoryAtBoundary` |
@@ -216,16 +216,22 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 - **Class:** same as the `?? 10.0` / `?? 0` fail-benign family, but structural rather than a single call site.
 - **Ruling:** code issue, not a CFII call. Out of scope for commit 7 — flagged, not fixed. (A fix would give `Verdict` a way to report evaluated-but-passed vs not-evaluated, without adding test-only API to production.)
 
+## 🟢 Finding 16 — present-weather chip crosses the color-axis discipline  **[LOW — design question; observed in commit 11, not fixed]**
+
+- **Observation:** the present-weather chip (`wxPhenomenaConditionColor`) tints hazardous phenomena with `Brand.valueRed` — the **same token** used for flight-category IFR, sub-minimum visibility, and ceiling. Per the app's color-axis discipline, the category colors (red/blue/magenta) are reserved for flight category and amber/red for phenomena/wind cautions. The chip currently crosses that axis: a red chip could read as "IFR" rather than "hazardous present weather."
+- **History:** pre-existing for TS/FZ; commit 11 (`ac0f0d3`) extends it to SQ/+FC **for consistency** with the existing TS/FZ behavior rather than introducing it. Confirmed during commit 11's pre-write axis check — Mike's SQ/+FC ruling said "red like TS/FZ," and TS/FZ already use `Brand.valueRed` on this chip, so extending to the same token is the literal fulfillment and adds no *new* bleed.
+- **Ruling:** whether the phenomena chip should have its **own** danger red, distinct from category-red, is a design question for a future commit (a new `Brand` color + retinting the existing TS/FZ chip too — broader than commit 11's scope). **Flagged, not fixed.** Naming the edge case is the point; the color-axis discipline noticing its own boundary.
+
 ---
 
 # Requires human judgment (CFII)
 
-These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). Items 1–4 and 6 remain **open** (Mike/CFII). **Item 5 (P6SM) was decided by Jeff and is now resolved** — see below.
+These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). **Items 1–4 were ruled by Mike (CFII) and are now resolved — commit `ac0f0d3`.** Item 5 (P6SM) was decided by Jeff (commit 10). **Only item 6 remains OPEN (Mike/CFII).**
 
-1. **Freezing-precip pilot-note tier — red or amber?** The icing note currently ships at `.warning` (orange). The present-weather *chip* already reds `FZ`; the *note* tier was never escalated. OPEN.
-2. **`SQ` (squall) — red or amber?** Not escalated on the METAR note side. OPEN.
-3. **`+FC` (funnel cloud / tornado) — red tier?** Not escalated on the METAR note side. OPEN.
-4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? Ships as-is. OPEN.
+1. **Freezing-precip pilot-note tier — red or amber?** — ✅ **RESOLVED (Mike/CFII, commit `ac0f0d3`): red.** The freezing-precipitation icing note in `MetarPilotNotes` escalates `.warning` → `.danger`. Freezing *fog* stays `.warning`, near-freezing stays `.caution`; firing condition unchanged.
+2. **`SQ` (squall) — red or amber?** — ✅ **RESOLVED (Mike/CFII, commit `ac0f0d3`): red.** The present-weather chip (`wxPhenomenaConditionColor`) reds `SQ` alongside the existing TS/FZ. (METAR note side unchanged — SQ has no standalone pilot note; the chip is the surface.)
+3. **`+FC` (funnel cloud / tornado) — red tier?** — ✅ **RESOLVED (Mike/CFII, commit `ac0f0d3`): red.** The chip reds `FC`/`+FC` (via `contains("FC")`, which catches both) alongside TS/FZ. Verified no other `WeatherDecoder` key contains `FC` or `SQ` as a substring — no false reddening.
+4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? — ✅ **RESOLVED (Mike/CFII, commit `ac0f0d3`): reword.** `TafHeroBrief`'s improving segment drops the destination-category suffix — "improving by 09:00." not "improving to IFR by 09:00." Segment color still carries the improved category; deteriorating/steady phrasing and all segment colors untouched.
 5. **`P6SM` → 6.0 lossiness** — ✅ **RESOLVED (commit 10, decided by Jeff).** Parsed visibility is now a `Visibility` enum (`.exact` / `.greaterThan` / `.unknown`); `P6SM`/`6+` → `.greaterThan(6)`, distinct from an exact 6, rendering `6+ SM` (and never stamping `6+` onto a genuine exact-6 report — the sibling bug). Flight category is provably unchanged (`.greaterThan(6)` → VFR, same as the old 6.0 — the cascade thresholds on the floor). Regression: `VisibilityCategoryParityTests` (green both ways, boundaries locked), `VisibilityDisplayTests`.
 6. **Missing-visibility vs missing-wind note asymmetry (Deferred item #6).** Post-F8, unreported wind renders "—" in cells **and** carries a "wind not reported" pilot note; unreported visibility renders "—" in cells but has **no** analogous note. The full gate changed the *surface area* of the asymmetry but not the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric? OPEN.
 
