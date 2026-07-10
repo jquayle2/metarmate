@@ -19,6 +19,10 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     let windSpeed: Int              // knots sustained
     let windGust: Int?              // knots
     let windIsVariable: Bool
+    // Bool? not Bool = true, for the same persisted-JSON reason as visibilityReported below: a
+    // missing wind group is UNKNOWN, not 00000KT calm. Legacy snapshots decode nil = treat as
+    // reported. Consumers must use `== false ? "—" : value`, never `?? true`.
+    var windReported: Bool? = nil
 
     // Conditions
     let visibility: Double          // statute miles; meaningful only when visibilityReported != false
@@ -59,6 +63,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
 
     // MARK: - Wind display (replicates Wind.displayString for widget use)
     var windDisplayString: String {
+        if windReported == false { return "—" }
         if windSpeed == 0 { return "Calm" }
         let dir = windIsVariable ? "VRB" : "\(windDirection ?? 0)\u{00B0}"
         let base = "\(dir) \(windSpeed)kt"
@@ -84,6 +89,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windSpeed: metar.wind.speed,
             windGust: metar.wind.gust,
             windIsVariable: metar.wind.isVariable,
+            windReported: metar.wind.isReported,
             visibility: metar.visibility,
             visibilityReported: metar.visibilityReported,
             ceilingFeet: metar.ceilingFeet,
@@ -116,6 +122,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windSpeed: advisory.windSpeedKtRounded,
             windGust: advisory.windGustKtRounded,
             windIsVariable: false,
+            windReported: true,
             visibility: advisory.visibilityMiles ?? 10,
             visibilityReported: advisory.visibilityMiles != nil,
             ceilingFeet: nil,

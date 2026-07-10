@@ -159,6 +159,7 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     private func windPhrase(_ wind: Wind) -> String {
+        guard wind.isReported else { return "Wind not reported." }   // nil ≠ calm
         if wind.speed == 0 && !wind.isVariable {
             return "Wind calm."
         }
@@ -186,7 +187,9 @@ struct FlyingWeatherIntent: AppIntent {
             ceiling = "Sky clear"
         }
         let windStr: String
-        if metar.wind.speed == 0 {
+        if !metar.wind.isReported {
+            windStr = "—"
+        } else if metar.wind.speed == 0 {
             windStr = "Calm"
         } else {
             windStr = "\(metar.wind.speed)kt"

@@ -67,10 +67,10 @@ enum GoNoGoEvaluator {
         // no runway data, since the component can't be computed then.
         let crosswindLimit = Double(profile.maxCrosswindKt
             ?? UserDefaults.standard.integer(forKey: "globalCrosswindMinimumKt"))
-        if let windDir = conditions.windDirection,
+        if let windDir = conditions.windDirection, let windSpd = conditions.windSpeed,
            let best = RunwayService.shared.bestRunway(for: icao,
                                                        windDirection: windDir,
-                                                       windSpeed: Double(conditions.windSpeed),
+                                                       windSpeed: Double(windSpd),
                                                        windGust: conditions.windGust.map(Double.init)) {
             let xw = Double(best.crosswind)   // already gust-based when a gust was supplied
             // Collapse parallel runways to the bare number (12L/12R share a heading, hence an
@@ -83,9 +83,9 @@ enum GoNoGoEvaluator {
                 failureText: "Rwy \(ident) crosswind \(Int(xw)) kt over \(Int(crosswindLimit)) kt"))
         }
 
-        // 2. Sustained wind
-        if let lim = profile.maxSustainedWindKt {
-            let v = Double(conditions.windSpeed)
+        // 2. Sustained wind — skipped when wind wasn't reported (nil ≠ calm; don't test a 0).
+        if let lim = profile.maxSustainedWindKt, let windSpd = conditions.windSpeed {
+            let v = Double(windSpd)
             factors.append(Factor(
                 label: "wind", value: v, limit: Double(lim), deadband: Deadband.windKt,
                 worseWhenHigher: true,
@@ -93,9 +93,9 @@ enum GoNoGoEvaluator {
         }
 
         // 3. Gust — no gust reported falls back to sustained (a steady 30 kt is worse than a
-        // 25 kt gust limit and should still fail it).
-        if let lim = profile.maxGustKt {
-            let v = Double(conditions.windGust ?? conditions.windSpeed)
+        // 25 kt gust limit and should still fail it). Skipped when neither is reported.
+        if let lim = profile.maxGustKt, let effective = conditions.windGust ?? conditions.windSpeed {
+            let v = Double(effective)
             factors.append(Factor(
                 label: "gust", value: v, limit: Double(lim), deadband: Deadband.gustKt,
                 worseWhenHigher: true,

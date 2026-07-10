@@ -161,7 +161,8 @@ enum ColorRules {
 
     /// Convenience over `windColor` for a parsed METAR `Wind`.
     static func windCodeColor(_ wind: Wind) -> Color {
-        windColor(speedKt: wind.speed, gustKt: wind.gust)
+        guard wind.isReported else { return Brand.slate }   // wind not reported (nil ≠ calm-green)
+        return windColor(speedKt: wind.speed, gustKt: wind.gust)
     }
 
     // valueColor(metric, value): neutral unless out-of-range. Per-metric below.
@@ -172,26 +173,29 @@ enum ColorRules {
     }
 
     /// Visibility (statute miles) on the flight-category axis:
-    /// < 1 LIFR magenta · < 3 IFR red · < 5 MVFR blue · ≥ 5 VFR green.
+    /// < 1 LIFR magenta · < 3 IFR red · <= 5 MVFR blue · > 5 VFR green.
+    /// Boundaries match calculateFlightCategory (FAA: 5 SM is MVFR, not VFR).
     static func visibilityColor(_ sm: Double) -> Color {
         if sm < 1 { return Brand.lifrMagenta }
         if sm < 3 { return Brand.valueRed }
-        if sm < 5 { return Brand.mvfrBlue }
+        if sm <= 5 { return Brand.mvfrBlue }
         return Brand.vfrGreen
     }
 
     /// Ceiling (feet AGL, nil = unlimited) on the flight-category axis:
-    /// < 500 LIFR magenta · < 1000 IFR red · < 3000 MVFR blue · else VFR green.
+    /// < 500 LIFR magenta · < 1000 IFR red · <= 3000 MVFR blue · > 3000 VFR green.
+    /// Boundaries match calculateFlightCategory (FAA: 3000 ft is MVFR, not VFR).
     static func ceilingColor(_ feet: Int?) -> Color {
         guard let feet = feet else { return Brand.vfrGreen }
         if feet < 500  { return Brand.lifrMagenta }
         if feet < 1000 { return Brand.valueRed }
-        if feet < 3000 { return Brand.mvfrBlue }
+        if feet <= 3000 { return Brand.mvfrBlue }
         return Brand.vfrGreen
     }
 
     /// Decoded wind value color: gusts caution; calm/light steady reads good (green).
     static func windValueColor(_ wind: Wind) -> Color {
+        guard wind.isReported else { return Brand.slate }   // wind not reported (nil ≠ calm-green)
         if wind.gust != nil { return Brand.cautionOrange }
         return Brand.vfrGreen
     }

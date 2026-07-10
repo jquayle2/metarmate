@@ -322,7 +322,7 @@ private struct WatchRow: View {
     private func conditionsSummary(_ c: AlertConditions) -> some View {
         // Whole wind token colored by the shared list rule (orange on gust/strong, green
         // CALM, neutral otherwise); sky/vis stay neutral — identical to AirportRowView.
-        let wColor = ColorRules.windColor(speedKt: c.windSpeed, gustKt: c.windGust)
+        let wColor = c.windSpeed.map { ColorRules.windColor(speedKt: $0, gustKt: c.windGust) } ?? Brand.monoDim
         return (Text("\(skyVisString(c)) · ").foregroundColor(Brand.monoDim)
                 + Text(windString(c)).foregroundColor(wColor))
             .font(.brandMono(13, weight: .medium))
@@ -350,10 +350,11 @@ private struct WatchRow: View {
     }
 
     private func windString(_ c: AlertConditions) -> String {
-        if c.windSpeed == 0 { return "Calm" }
+        guard let spd = c.windSpeed else { return "—" }   // wind not reported (nil ≠ calm)
+        if spd == 0 { return "Calm" }
         let dir = c.windDirection.map { String(format: "%03d", $0) } ?? "VRB"
-        if let gust = c.windGust { return "\(dir)@\(c.windSpeed)G\(gust)" }
-        return "\(dir)@\(c.windSpeed)"
+        if let gust = c.windGust { return "\(dir)@\(spd)G\(gust)" }
+        return "\(dir)@\(spd)"
     }
 
     private func freshness(_ c: AlertConditions) -> String {

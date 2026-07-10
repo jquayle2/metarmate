@@ -41,7 +41,7 @@
 3. **`+FC` (funnel cloud/tornado): red tier?** Not escalated.
 4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? Currently ships as-is.
 5. **P6SM → 6.0 lossiness** — losing the "greater than 6 SM" nuance; acceptable, or does P6SM need its own representation? Currently maps to `6.0` (VFR either way).
-6. **Missing-visibility note asymmetry vs missing-wind.** F8 (commit 6) will add a "wind not reported" pilot note; unreported **visibility** renders "—" in cells but has **no** analogous pilot note. Should it? Left asymmetric pending ruling.
+6. **Missing-visibility note asymmetry vs missing-wind. — STILL OPEN (Mike/CFII rules).** F8 (commit 6) full-gates unreported wind: it now renders "—" in every cell (like visibility) **and** carries a "wind not reported" pilot note. Unreported **visibility** still renders "—" in cells but has **no** analogous pilot note. The full gate *changed the surface area* of this asymmetry (wind cells now match visibility cells) but did **not** resolve the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric (drop the wind note / add a vis note)? That is a CFII call, not a code call — left open.
 
 ## REMAINING WORK
 **Commit 6 — F9 + F8** (planned):

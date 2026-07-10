@@ -15,7 +15,7 @@ struct AlertConditions {
     }
 
     var windDirection: Int?          // degrees true; nil = variable / calm
-    var windSpeed: Int               // knots
+    var windSpeed: Int?              // knots; nil = not reported (wind criteria are skipped)
     var windGust: Int?               // knots; nil = no gust reported
     var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling
     var ceilingCoverage: String?     // coverage code (BKN/OVC/VV) of the ceiling layer; nil = no/unknown
@@ -25,7 +25,7 @@ struct AlertConditions {
     var timestamp: Date              // observation time (UTC)
 
     init(windDirection: Int?,
-         windSpeed: Int,
+         windSpeed: Int?,
          windGust: Int?,
          ceilingFeet: Int?,
          ceilingCoverage: String? = nil,
@@ -49,8 +49,8 @@ struct AlertConditions {
     // flightCategory parsed), so this is a straight field map.
     init(from metar: Metar) {
         self.init(windDirection: metar.wind.direction,
-                  windSpeed: metar.wind.speed,
-                  windGust: metar.wind.gust,
+                  windSpeed: metar.wind.isReported ? metar.wind.speed : nil,
+                  windGust: metar.wind.isReported ? metar.wind.gust : nil,
                   ceilingFeet: metar.ceilingFeet,
                   ceilingCoverage: metar.ceilingCoverage,
                   visibilitySM: metar.visibilityReported ? metar.visibility : nil,
@@ -61,12 +61,13 @@ struct AlertConditions {
 
     // MARK: - ASOS / Synoptic adapter
     // SynopticObservation stores wind speed/gust as optional Doubles and derives ceiling and
-    // category via computed helpers (estimatedCategory, ceilingAGL). The two non-optional
-    // alert fields (windSpeed, visibilitySM) need a fallback when Synoptic omits them — see
-    // the two defaults below, both flagged for aviation sanity-check.
+    // category via computed helpers (estimatedCategory, ceilingAGL). Wind speed and visibility
+    // stay nil when Synoptic omits them — an unreported wind must NOT become a fabricated 0 kt
+    // calm (a degraded sensor would then silently satisfy every crosswind/wind minimum). nil
+    // makes the GoNoGo wind criteria SKIP, exactly as a nil visibilitySM skips the vis criterion.
     init(from obs: SynopticObservation) {
         self.init(windDirection: obs.windDirection,
-                  windSpeed: obs.windSpeed.map { Int($0.rounded()) } ?? Self.missingWindSpeedKt,
+                  windSpeed: obs.windSpeed.map { Int($0.rounded()) },   // nil (Synoptic omitted it) -> wind criteria skipped
                   windGust: obs.windGust.map { Int($0.rounded()) },
                   ceilingFeet: obs.ceilingAGL,
                   ceilingCoverage: obs.ceilingCoverage,
@@ -75,12 +76,4 @@ struct AlertConditions {
                   source: .asos,
                   timestamp: obs.observationTime)
     }
-
-    // MARK: - Fallback for missing ASOS wind (AVIATION DEFAULT — sanity-check)
-    // A live ASOS reading that omits wind is rare and usually means a degraded sensor.
-    //  - missing wind speed -> 0 kt (calm): a calm wind produces no crosswind/wind exceedance.
-    // Visibility is deliberately NOT defaulted: a missing vis leaves visibilitySM == nil and the
-    // GoNoGo visibility criterion is SKIPPED, so a dropped vis sensor can never silently clear a
-    // low-vis alert (the old `?? 10 SM` did exactly that).
-    static let missingWindSpeedKt = 0
 }

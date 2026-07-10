@@ -108,6 +108,9 @@ private enum WidgetFetcher {
         // Missing category -> unknown, not VFR (matches MetarParser; don't fail-permissive to green).
         let fltCat = FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown
 
+        // A missing wind group (neither direction nor speed) is UNKNOWN, not calm — mirrors
+        // MetarParser.parseWind. windReported drives the "—" render instead of a fabricated 00000KT.
+        let windReported = !(raw.wdir?.value == nil && raw.wspd == nil)
         let windDir = parseWindDirection(raw.wdir)
         let windSpd = raw.wspd ?? 0
         let windGst = raw.wgst
@@ -133,6 +136,7 @@ private enum WidgetFetcher {
             windSpeed: windSpd,
             windGust: windGst,
             windIsVariable: isVariable,
+            windReported: windReported,
             visibility: vis ?? 0.0,
             visibilityReported: vis != nil,
             ceilingFeet: ceilingFt,
@@ -262,6 +266,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             windSpeed: live.windSpeed,
             windGust: live.windGust,
             windIsVariable: live.windIsVariable,
+            windReported: live.windReported,
             visibility: live.visibility,
             visibilityReported: live.visibilityReported,
             ceilingFeet: live.ceilingFeet,

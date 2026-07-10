@@ -103,7 +103,7 @@ private enum TrendThresholds {
 struct RateOfChange: Codable {
     var ceilingDeltaFt: Int?
     var visibilityDeltaSM: Double?   // nil = fewer than two samples reported visibility
-    var windDeltaKt: Int
+    var windDeltaKt: Int?            // nil = fewer than two samples reported wind
     var spanHours: Double
 
     // Endpoints for "from → to" display
@@ -111,8 +111,8 @@ struct RateOfChange: Codable {
     var newCeilingFt: Int?
     var oldVisibilitySM: Double?   // nil = endpoint didn't report visibility
     var newVisibilitySM: Double?
-    var oldWindKt: Int          // sustained
-    var newWindKt: Int
+    var oldWindKt: Int?         // sustained; nil = endpoint didn't report wind
+    var newWindKt: Int?
     var oldGustKt: Int?
     var newGustKt: Int?
 
@@ -123,10 +123,12 @@ struct RateOfChange: Codable {
     // "5 → 20 kt (+15)" style — only shown when there's a meaningful change
     var windQuantitativeText: String {
         var parts: [String] = []
-        let sustainedDelta = newWindKt - oldWindKt
-        if abs(sustainedDelta) >= 3 || oldWindKt != newWindKt {
-            let sign = sustainedDelta > 0 ? "+" : ""
-            parts.append("Sustained: \(oldWindKt) → \(newWindKt) kt (\(sign)\(sustainedDelta))")
+        if let oldW = oldWindKt, let newW = newWindKt {
+            let sustainedDelta = newW - oldW
+            if abs(sustainedDelta) >= 3 || oldW != newW {
+                let sign = sustainedDelta > 0 ? "+" : ""
+                parts.append("Sustained: \(oldW) → \(newW) kt (\(sign)\(sustainedDelta))")
+            }
         }
         if let og = oldGustKt, let ng = newGustKt {
             let gDelta = ng - og
@@ -166,12 +168,13 @@ struct RateOfChange: Codable {
 
     // Simple change text for steady conditions (no pill shown if truly no change)
     var windChangeText: String {
-        if windDeltaKt == 0 && oldGustKt == newGustKt { return "No change" }
-        let sign = windDeltaKt > 0 ? "+" : ""
-        return "\(sign)\(windDeltaKt) kt"
+        guard let delta = windDeltaKt else { return "—" }   // fewer than two reported-wind samples
+        if delta == 0 && oldGustKt == newGustKt { return "No change" }
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(delta) kt"
     }
 
-    var hasWindChange: Bool { windDeltaKt != 0 || oldGustKt != newGustKt }
+    var hasWindChange: Bool { (windDeltaKt ?? 0) != 0 || oldGustKt != newGustKt }
     var hasVisibilityChange: Bool { if let d = visibilityDeltaSM { return abs(d) >= 0.1 } else { return false } }
     var hasCeilingChange: Bool { ceilingDeltaFt != nil && ceilingDeltaFt != 0 }
 }
@@ -209,11 +212,16 @@ struct ObservedTrend: Codable {
             : .unknown
         let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
 
-        let oldWindSustained = oldest.wind.speed
-        let newWindSustained = newest.wind.speed
-        let oldWind = oldest.wind.gust ?? oldest.wind.speed
-        let newWind = newest.wind.gust ?? newest.wind.speed
-        let windTrend = TrendThresholds.windTrend(old: oldWind, new: newWind)
+        // Wind trend/delta use the newest and oldest samples that actually reported wind — a
+        // missing wind group is unknown, not a 0-kt calm that would fake a drop to/from calm.
+        let windReported = metars.filter { $0.wind.isReported }
+        let oldWindSustained = windReported.last?.wind.speed
+        let newWindSustained = windReported.first?.wind.speed
+        let windTrend: TrendDirection = windReported.count >= 2
+            ? TrendThresholds.windTrend(
+                old: windReported.last!.wind.gust ?? windReported.last!.wind.speed,
+                new: windReported.first!.wind.gust ?? windReported.first!.wind.speed)
+            : .unknown
 
         let overall = deriveOverall(visibility: visTrend, ceiling: ceilTrend, wind: windTrend)
 
@@ -242,7 +250,7 @@ struct ObservedTrend: Codable {
         let roc = RateOfChange(
             ceilingDeltaFt: ceilDelta,
             visibilityDeltaSM: visReported.count >= 2 ? visReported.first!.visibility - visReported.last!.visibility : nil,
-            windDeltaKt: newWindSustained - oldWindSustained,
+            windDeltaKt: windReported.count >= 2 ? windReported.first!.wind.speed - windReported.last!.wind.speed : nil,
             spanHours: hoursSpan,
             oldCeilingFt: oldest.ceilingFeet,
             newCeilingFt: newest.ceilingFeet,
@@ -250,8 +258,8 @@ struct ObservedTrend: Codable {
             newVisibilitySM: visReported.first?.visibility,
             oldWindKt: oldWindSustained,
             newWindKt: newWindSustained,
-            oldGustKt: oldest.wind.gust,
-            newGustKt: newest.wind.gust
+            oldGustKt: windReported.last.flatMap { $0.wind.gust },
+            newGustKt: windReported.first.flatMap { $0.wind.gust }
         )
 
         return ObservedTrend(
@@ -311,9 +319,16 @@ struct ForecastTrend: Codable {
         let compareCeiling = ceilingFromClouds(compareBlock.clouds)
         let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: compareCeiling)
 
-        let currentWind = metar.wind.gust ?? metar.wind.speed
-        let nextWind = compareBlock.wind?.gust ?? compareBlock.wind?.speed ?? metar.wind.speed
-        let windTrend = TrendThresholds.windTrend(old: currentWind, new: nextWind)
+        // Only compare wind when the METAR actually reported it — an unreported wind is unknown,
+        // not a 0-kt calm to trend against.
+        let windTrend: TrendDirection
+        if metar.wind.isReported {
+            let currentWind = metar.wind.gust ?? metar.wind.speed
+            let nextWind = compareBlock.wind?.gust ?? compareBlock.wind?.speed ?? metar.wind.speed
+            windTrend = TrendThresholds.windTrend(old: currentWind, new: nextWind)
+        } else {
+            windTrend = .unknown
+        }
 
         let critical = [visTrend, ceilTrend]
         let overall: TrendDirection

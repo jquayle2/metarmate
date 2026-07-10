@@ -472,7 +472,9 @@ struct WeatherDetailView: View {
     private func computeASOSDeltas(_ obs: SynopticObservation, metar: Metar) -> [ASOSDelta] {
         var deltas: [ASOSDelta] = []
 
-        if let asosSpeed = obs.windSpeed {
+        // Only diff against the METAR wind when it was actually reported — an unreported wind
+        // (speed 0 placeholder) would fabricate a "+N kt" delta / phantom "gusts developed".
+        if metar.wind.isReported, let asosSpeed = obs.windSpeed {
             let metarSpeed = Double(metar.wind.speed)
             let diff = Int(asosSpeed) - Int(metarSpeed)
             if abs(diff) >= 5 {
@@ -481,7 +483,7 @@ struct WeatherDetailView: View {
             }
         }
 
-        if let asosGust = obs.windGust, asosGust > 0 {
+        if metar.wind.isReported, let asosGust = obs.windGust, asosGust > 0 {
             let metarGust = metar.wind.gust ?? 0
             let diff = Int(asosGust) - metarGust
             if metarGust == 0 {
@@ -719,6 +721,7 @@ struct WeatherDetailView: View {
 
     // Disciplined palette (visual refresh). Gusty/strong wind reads caution; calm/light is good.
     private func windConditionColor(_ wind: Wind) -> Color {
+        guard wind.isReported else { return Brand.slate }   // wind not reported (nil ≠ calm-green)
         let gust = wind.gust ?? 0
         let speed = wind.speed
         let spread = gust - speed
@@ -987,6 +990,13 @@ struct WeatherDetailView: View {
         let gust = wind.gust ?? 0
         let speed = wind.speed
         let spread = gust - speed
+
+        // Missing wind group — unknown, not calm. Surface it so the reader doesn't mistake an
+        // unreported wind for a genuine 00000KT. (All wind-derived notes below stay silent because
+        // speed/gust are 0 when isReported is false.)
+        if !wind.isReported {
+            notes.append(.init(icon: "wind", text: "Wind not reported — no wind group in this observation", severity: .caution))
+        }
 
         // Windshear in remarks
         if let remarks = metar.remarks?.uppercased(), remarks.contains("WS ") || remarks.contains("LLWS") {
@@ -1612,7 +1622,9 @@ struct WeatherDetailView: View {
         }
 
         var tail: String
-        if let oldest = metars.last,
+        // Only describe a wind change when both endpoints reported wind — an unreported endpoint
+        // (0-kt placeholder) would fake a change to/from calm.
+        if let oldest = metars.last, oldest.wind.isReported, latest.wind.isReported,
            oldest.wind.speed != latest.wind.speed || oldest.wind.gust != latest.wind.gust {
             tail = "Wind \(tafCompactWind(oldest.wind)) to \(tafCompactWind(latest.wind)) over the last \(historyWindowPhrase(metars))."
         } else {
@@ -1755,9 +1767,9 @@ struct WeatherDetailView: View {
         var body: some View {
             let color = ColorRules.windCodeColor(wind)
             VStack(spacing: 4) {
-                WindBarbGlyph(directionDeg: (wind.isVariable || wind.speed == 0) ? nil : wind.direction,
+                WindBarbGlyph(directionDeg: (!wind.isReported || wind.isVariable || wind.speed == 0) ? nil : wind.direction,
                              color: color, size: isNow ? 26 : 20)
-                Text(wind.speed == 0 ? "Calm" : "\(wind.speed)\(wind.gust.map { "G\($0)" } ?? "")")
+                Text(!wind.isReported ? "—" : (wind.speed == 0 ? "Calm" : "\(wind.speed)\(wind.gust.map { "G\($0)" } ?? "")"))
                     .font(.brandMono(isNow ? 13 : 12, weight: .semibold))
                     .foregroundColor(isNow ? Brand.cloud : color)
                 Text(timeLabel.uppercased())
@@ -1892,7 +1904,8 @@ struct WeatherDetailView: View {
     private func worstRecentStats(_ metars: [Metar]) -> WorstRecentStats? {
         guard metars.count >= 2 else { return nil }
         let maxGust = metars.compactMap { $0.wind.gust }.max()
-        let maxSustained = metars.map { $0.wind.speed }.max() ?? 0
+        // Only count samples that reported wind — an unreported 0-kt placeholder isn't a real calm.
+        let maxSustained = metars.filter { $0.wind.isReported }.map { $0.wind.speed }.max() ?? 0
         let minCeiling = metars.compactMap { $0.ceilingFeet }.min()
         // nil = no sample in the window reported visibility (mirrors minCeiling being nil for no
         // ceiling). Never fabricate 10 SM; downstream gates on `if let`.
@@ -2336,7 +2349,7 @@ struct WeatherDetailView: View {
 
     // Compact METAR-style wind token, e.g. "190° at 11G18", "CALM", "VRB at 6".
     private func tafCompactWind(_ wind: Wind?) -> String {
-        guard let wind = wind else { return "—" }
+        guard let wind = wind, wind.isReported else { return "—" }   // nil/unreported wind → —
         if wind.speed == 0 { return "CALM" }
         let dir = wind.isVariable ? "VRB" : String(format: "%03d°", wind.direction ?? 0)
         let gustPart = wind.gust.map { "G\($0)" } ?? ""
@@ -3725,6 +3738,7 @@ struct WeatherDetailView: View {
     }
 
     private func windText(_ wind: Wind) -> String {
+        guard wind.isReported else { return "—" }   // wind not reported (nil ≠ calm)
         if wind.speed == 0 { return "Calm" }
         let dir = wind.isVariable ? "Variable" : String(format: "%03d°", wind.direction ?? 0)
         var text = "\(dir) at \(wind.speed) kt"
@@ -3774,7 +3788,7 @@ struct WeatherDetailView: View {
         if let ceil = metar.ceilingFeet {
             parts.append("Ceil \(ceil.formatted()) ft")
         }
-        parts.append("Wind \(metar.wind.speed) kt")
+        parts.append(metar.wind.isReported ? "Wind \(metar.wind.speed) kt" : "Wind —")
         return parts.joined(separator: " · ")
     }
 

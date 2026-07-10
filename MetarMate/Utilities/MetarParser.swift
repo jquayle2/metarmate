@@ -55,6 +55,12 @@ struct MetarParser {
     // MARK: - Wind
     // API returns wdir as Int (degrees) or String ("VRB")
     nonisolated private static func parseWind(wdir: AnyCodable?, wspd: Int?, wgst: Int?) -> Wind {
+        // A missing wind group (neither direction nor speed reported) is UNKNOWN, not calm.
+        // Flag it so callers render "—" and a "wind not reported" note instead of 00000KT.
+        if wdir?.value == nil && wspd == nil {
+            return Wind(direction: nil, speed: 0, gust: nil, isVariable: false, isReported: false)
+        }
+
         let speed = wspd ?? 0
         let gust = wgst
 

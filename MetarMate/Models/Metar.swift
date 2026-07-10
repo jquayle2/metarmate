@@ -25,6 +25,11 @@ struct Wind: Codable {
     var speed: Int           // knots
     var gust: Int?           // knots
     var isVariable: Bool
+    // Whether the observation actually reported a wind group. A missing wind (wdir AND wspd both
+    // absent) must NOT read as a real 00000KT calm — that turned "unknown" into benign. Callers
+    // render "—"/skip and a "wind not reported" pilot note when false. Safe as a defaulted field:
+    // Wind is never decoded from persisted JSON, only memberwise-init (see Metar.visibilityReported).
+    var isReported: Bool = true
 
     static let calm = Wind(direction: 0, speed: 0, gust: nil, isVariable: false)
 }

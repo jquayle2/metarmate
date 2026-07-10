@@ -12,7 +12,7 @@ struct TafVerificationPoint: Identifiable, Codable {
     var forecastCeilingFt: Int?
     var actualVisibilitySM: Double?    // nil = the METAR didn't report visibility (omit from scoring)
     var forecastVisibilitySM: Double?
-    var actualWindKt: Int           // sustained
+    var actualWindKt: Int?          // sustained; nil = the METAR didn't report wind (omit from scoring)
     var actualGustKt: Int?
     var forecastWindKt: Int?
     var forecastGustKt: Int?
@@ -30,14 +30,14 @@ struct TafVerificationPoint: Identifiable, Codable {
     }
 
     nonisolated var windDivergenceKt: Int? {
-        guard let forecast = forecastWindKt else { return nil }
-        return actualWindKt - forecast
+        guard let actual = actualWindKt, let forecast = forecastWindKt else { return nil }
+        return actual - forecast
     }
 
     // Shows the "show your math" actual vs forecast comparison
     var windComparisonText: String? {
-        guard let fcstWind = forecastWindKt else { return nil }
-        var actual = "\(actualWindKt) kt"
+        guard let actualWind = actualWindKt, let fcstWind = forecastWindKt else { return nil }
+        var actual = "\(actualWind) kt"
         if let g = actualGustKt { actual += " G\(g)" }
         var forecast = "\(fcstWind) kt"
         if let g = forecastGustKt { forecast += " G\(g)" }
@@ -133,8 +133,8 @@ struct TafVerification: Codable {
                 forecastCeilingFt: forecastCeiling,
                 actualVisibilitySM: metar.visibilityReported ? metar.visibility : nil,
                 forecastVisibilitySM: period.visibility,
-                actualWindKt: metar.wind.speed,
-                actualGustKt: metar.wind.gust,
+                actualWindKt: metar.wind.isReported ? metar.wind.speed : nil,
+                actualGustKt: metar.wind.isReported ? metar.wind.gust : nil,
                 forecastWindKt: period.wind?.speed,
                 forecastGustKt: period.wind?.gust
             )
