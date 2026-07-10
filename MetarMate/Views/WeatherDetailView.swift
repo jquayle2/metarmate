@@ -1999,12 +1999,23 @@ struct WeatherDetailView: View {
         guard let first = bases.first else {
             return Text("No forecast data.").foregroundColor(Brand.slate)
         }
-        guard let worst = bases.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
+        // If the CURRENT period's category is undetermined (no visibility AND no ceiling in the
+        // forecast — now reachable since visibility no longer defaults to 10 SM), there is no
+        // honest baseline to narrate a trend from. Say so, rather than dressing "unknown" up as a
+        // category ("UNKN the entire forecast period") or an improvement.
+        if first.flightCategory == .unknown {
+            return Text("Forecast incomplete — the current period doesn't specify visibility or ceiling.")
+                .foregroundColor(Brand.slate)
+        }
+        // A LATER period we couldn't determine (.unknown) must likewise never read as a worst-case
+        // OR as an improvement — excluding it prevents "IFR now, improving to UNKN by 09:00."
+        let known = bases.filter { $0.flightCategory != .unknown }
+        guard let worst = known.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
               tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
             // Nothing gets WORSE than the first period. But the forecast may still IMPROVE —
             // e.g. starts IFR and clears to VFR. Saying "IFR the entire forecast period" there
             // is wrong and would keep a pilot on the ground when the TAF says it lifts.
-            if let firstBetter = bases.first(where: {
+            if let firstBetter = known.first(where: {
                 tafCategorySeverity($0.flightCategory) < tafCategorySeverity(first.flightCategory)
             }) {
                 return Text("\(first.flightCategory.rawValue) now, ")
