@@ -10,7 +10,7 @@ struct TafVerificationPoint: Identifiable, Codable {
     var forecastCategory: FlightCategory
     var actualCeilingFt: Int?
     var forecastCeilingFt: Int?
-    var actualVisibilitySM: Double
+    var actualVisibilitySM: Double?    // nil = the METAR didn't report visibility (omit from scoring)
     var forecastVisibilitySM: Double?
     var actualWindKt: Int           // sustained
     var actualGustKt: Int?
@@ -25,8 +25,8 @@ struct TafVerificationPoint: Identifiable, Codable {
     }
 
     nonisolated var visibilityDivergenceSM: Double? {
-        guard let forecast = forecastVisibilitySM else { return nil }
-        return actualVisibilitySM - forecast
+        guard let actual = actualVisibilitySM, let forecast = forecastVisibilitySM else { return nil }
+        return actual - forecast
     }
 
     nonisolated var windDivergenceKt: Int? {
@@ -57,9 +57,7 @@ struct TafVerificationPoint: Identifiable, Codable {
             parts.append("Ceiling formed (fcst clear)")
         }
 
-        if let visDiv = visibilityDivergenceSM {
-            let fcst = forecastVisibilitySM ?? 0
-            let actual = actualVisibilitySM
+        if let visDiv = visibilityDivergenceSM, let actual = actualVisibilitySM, let fcst = forecastVisibilitySM {
             // Only report if operationally significant (not both solidly VFR)
             let bothVFR = actual > 5.0 && fcst > 5.0
             if !bothVFR && abs(visDiv) >= 0.5 {
@@ -133,7 +131,7 @@ struct TafVerification: Codable {
                 forecastCategory: period.flightCategory,
                 actualCeilingFt: metar.ceilingFeet,
                 forecastCeilingFt: forecastCeiling,
-                actualVisibilitySM: metar.visibility,
+                actualVisibilitySM: metar.visibilityReported ? metar.visibility : nil,
                 forecastVisibilitySM: period.visibility,
                 actualWindKt: metar.wind.speed,
                 actualGustKt: metar.wind.gust,
@@ -168,12 +166,12 @@ struct TafVerification: Codable {
 
         // Visibility: only score when forecast specified vis AND conditions aren't both solidly VFR; ±0.5SM threshold
         let visPoints = points.filter {
-            guard let fcst = $0.forecastVisibilitySM else { return false }
-            return !($0.actualVisibilitySM > 5.0 && fcst > 5.0)
+            guard let actual = $0.actualVisibilitySM, let fcst = $0.forecastVisibilitySM else { return false }
+            return !(actual > 5.0 && fcst > 5.0)
         }
         let visClose = visPoints.isEmpty ? nil : Double(visPoints.filter {
-            guard let fcst = $0.forecastVisibilitySM else { return false }
-            return abs($0.actualVisibilitySM - fcst) <= 0.5
+            guard let actual = $0.actualVisibilitySM, let fcst = $0.forecastVisibilitySM else { return false }
+            return abs(actual - fcst) <= 0.5
         }.count)
         let visN = Double(visPoints.count)
 

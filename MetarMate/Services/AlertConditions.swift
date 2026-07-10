@@ -19,7 +19,7 @@ struct AlertConditions {
     var windGust: Int?               // knots; nil = no gust reported
     var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling
     var ceilingCoverage: String?     // coverage code (BKN/OVC/VV) of the ceiling layer; nil = no/unknown
-    var visibilitySM: Double         // statute miles
+    var visibilitySM: Double?         // statute miles; nil = not reported (visibility criterion is skipped)
     var flightCategory: FlightCategory
     var source: Source
     var timestamp: Date              // observation time (UTC)
@@ -29,7 +29,7 @@ struct AlertConditions {
          windGust: Int?,
          ceilingFeet: Int?,
          ceilingCoverage: String? = nil,
-         visibilitySM: Double,
+         visibilitySM: Double?,
          flightCategory: FlightCategory,
          source: Source,
          timestamp: Date) {
@@ -53,7 +53,7 @@ struct AlertConditions {
                   windGust: metar.wind.gust,
                   ceilingFeet: metar.ceilingFeet,
                   ceilingCoverage: metar.ceilingCoverage,
-                  visibilitySM: metar.visibility,
+                  visibilitySM: metar.visibilityReported ? metar.visibility : nil,
                   flightCategory: metar.flightCategory,
                   source: .metar,
                   timestamp: metar.observationTime)
@@ -70,19 +70,17 @@ struct AlertConditions {
                   windGust: obs.windGust.map { Int($0.rounded()) },
                   ceilingFeet: obs.ceilingAGL,
                   ceilingCoverage: obs.ceilingCoverage,
-                  visibilitySM: obs.visibility ?? Self.missingVisibilitySM,
+                  visibilitySM: obs.visibility,   // nil (Synoptic omitted it) -> visibility criterion skipped
                   flightCategory: obs.estimatedCategory,
                   source: .asos,
                   timestamp: obs.observationTime)
     }
 
-    // MARK: - Fallbacks for missing ASOS fields (AVIATION DEFAULTS — sanity-check)
-    // A live ASOS reading that omits a field is rare and usually means a degraded sensor.
-    // Both defaults are chosen to fail toward "do not false-fire" rather than "do not miss":
+    // MARK: - Fallback for missing ASOS wind (AVIATION DEFAULT — sanity-check)
+    // A live ASOS reading that omits wind is rare and usually means a degraded sensor.
     //  - missing wind speed -> 0 kt (calm): a calm wind produces no crosswind/wind exceedance.
-    //  - missing visibility  -> 10 SM (unrestricted): won't trip a low-vis alert on a sensor
-    //    that simply stopped reporting vis. Trade-off: a genuinely low-vis event on a station
-    //    that drops the vis field would be missed until the next full METAR.
+    // Visibility is deliberately NOT defaulted: a missing vis leaves visibilitySM == nil and the
+    // GoNoGo visibility criterion is SKIPPED, so a dropped vis sensor can never silently clear a
+    // low-vis alert (the old `?? 10 SM` did exactly that).
     static let missingWindSpeedKt = 0
-    static let missingVisibilitySM = 10.0
 }

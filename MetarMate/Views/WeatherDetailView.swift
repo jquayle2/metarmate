@@ -502,7 +502,7 @@ struct WeatherDetailView: View {
             }
         }
 
-        if let asosVis = obs.visibility {
+        if let asosVis = obs.visibility, metar.visibilityReported {
             let diff = asosVis - metar.visibility
             if diff <= -1.0 {
                 deltas.append(ASOSDelta(text: String(format: "Visibility %.0f SM (was %.0f)", asosVis, metar.visibility), icon: "eye.fill", color: .orange))
@@ -657,7 +657,9 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Decoded METAR")
             windConditionRow(metar.wind, value: windText(metar.wind))
-            conditionRow("eye.fill", "Visibility", visibilityText(metar.visibility), color: visibilityConditionColor(metar.visibility))
+            conditionRow("eye.fill", "Visibility",
+                         metar.visibilityReported ? visibilityText(metar.visibility) : "—",
+                         color: metar.visibilityReported ? visibilityConditionColor(metar.visibility) : Brand.slate)
             conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
@@ -1028,11 +1030,14 @@ struct WeatherDetailView: View {
             notes.append(.init(icon: "wind", text: "Variable wind direction at \(speed) kt — crosswind component unpredictable", severity: .caution))
         }
 
-        // Low visibility
-        if metar.visibility < 3 {
-            notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(String(format: "%g", metar.visibility)) SM — IFR conditions", severity: .warning))
-        } else if metar.visibility < 5 {
-            notes.append(.init(icon: "eye.slash", text: "Visibility \(String(format: "%g", metar.visibility)) SM — reduced; VFR marginal", severity: .caution))
+        // Low visibility — only when visibility was actually reported. An unreported sensor must
+        // never fire "Visibility 0 SM — IFR" off the 0.0 placeholder.
+        if metar.visibilityReported {
+            if metar.visibility < 3 {
+                notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(String(format: "%g", metar.visibility)) SM — IFR conditions", severity: .warning))
+            } else if metar.visibility < 5 {
+                notes.append(.init(icon: "eye.slash", text: "Visibility \(String(format: "%g", metar.visibility)) SM — reduced; VFR marginal", severity: .caution))
+            }
         }
 
         // Low ceiling
@@ -1608,8 +1613,11 @@ struct WeatherDetailView: View {
                     tail += " Gusts to \(gust) kt earlier."
                 } else if let ceil = stats.minCeilingFt, ceil < (latest.ceilingFeet ?? Int.max) {
                     tail += " Ceiling as low as \(ceil.formatted()) ft earlier."
-                } else if stats.minVisSM < latest.visibility {
-                    tail += " Vis as low as \(String(format: "%g", stats.minVisSM)) SM earlier."
+                } else if let minV = stats.minVisSM,
+                          minV < (latest.visibilityReported ? latest.visibility : .greatestFiniteMagnitude) {
+                    // Unknown latest visibility must not suppress a real earlier low-vis event —
+                    // treat it as "no constraint" (mirrors the ceiling line's `?? Int.max`).
+                    tail += " Vis as low as \(String(format: "%g", minV)) SM earlier."
                 }
             }
         }
@@ -1818,7 +1826,7 @@ struct WeatherDetailView: View {
         } else {
             parts.append("Clear")
         }
-        parts.append("Vis \(visibilityText(metar.visibility))")
+        parts.append("Vis \(metar.visibilityReported ? visibilityText(metar.visibility) : "—")")
         parts.append(tafCompactWind(metar.wind))
         parts.append(metarAltimeterCode(metar.altimeter))
         return parts.joined(separator: " · ")
@@ -1844,14 +1852,14 @@ struct WeatherDetailView: View {
         let maxGust: Int?
         let maxSustained: Int
         let minCeilingFt: Int?
-        let minVisSM: Double
+        let minVisSM: Double?          // nil = no reported visibility in the window
         let worstCategory: FlightCategory
         let spanHours: Double
         let obsCount: Int
 
         var hasRed: Bool {
             if let ceil = minCeilingFt, ceil < 1000 { return true }
-            if minVisSM < 3.0 { return true }
+            if let v = minVisSM, v < 3.0 { return true }
             if (maxGust ?? 0) >= 25 || maxSustained >= 25 { return true }
             if worstCategory == .ifr || worstCategory == .lifr { return true }
             return false
@@ -1859,7 +1867,7 @@ struct WeatherDetailView: View {
 
         var hasAmber: Bool {
             if let ceil = minCeilingFt, ceil < 3000 { return true }
-            if minVisSM < 5.0 { return true }
+            if let v = minVisSM, v < 5.0 { return true }
             if (maxGust ?? 0) >= 15 || maxSustained >= 20 { return true }
             if worstCategory == .mvfr { return true }
             return false
@@ -1873,7 +1881,9 @@ struct WeatherDetailView: View {
         let maxGust = metars.compactMap { $0.wind.gust }.max()
         let maxSustained = metars.map { $0.wind.speed }.max() ?? 0
         let minCeiling = metars.compactMap { $0.ceilingFeet }.min()
-        let minVis = metars.map { $0.visibility }.min() ?? 10.0
+        // nil = no sample in the window reported visibility (mirrors minCeiling being nil for no
+        // ceiling). Never fabricate 10 SM; downstream gates on `if let`.
+        let minVis = metars.filter { $0.visibilityReported }.map { $0.visibility }.min()
         let worstCat = metars.map { $0.flightCategory }.min(by: { categoryRank($0) < categoryRank($1) }) ?? .vfr
         let spanHours: Double = {
             guard let newest = metars.first?.observationTime,
@@ -2588,9 +2598,7 @@ struct WeatherDetailView: View {
         }
 
         // Visibility: threshold >0.5SM, ignore when both solidly VFR
-        if let vd = visDiv {
-            let fcst = point.forecastVisibilitySM ?? 0
-            let actual = point.actualVisibilitySM
+        if let vd = visDiv, let actual = point.actualVisibilitySM, let fcst = point.forecastVisibilitySM {
             let bothVFR = actual > 5.0 && fcst > 5.0
             if !bothVFR && abs(vd) > 0.5 {
                 let better = vd > 0 ? "better" : "worse"
@@ -3714,8 +3722,8 @@ struct WeatherDetailView: View {
 
     private func quickWeatherSummary(metar: Metar) -> String {
         var parts: [String] = []
-        let vis = metar.visibility >= 10 ? "10+" : String(format: "%g", metar.visibility)
-        parts.append("Vis \(vis) SM")
+        let vis = !metar.visibilityReported ? "—" : (metar.visibility >= 10 ? "10+ SM" : "\(String(format: "%g", metar.visibility)) SM")
+        parts.append("Vis \(vis)")
         if let ceil = metar.ceilingFeet {
             parts.append("Ceil \(ceil.formatted()) ft")
         }

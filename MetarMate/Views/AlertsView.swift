@@ -344,7 +344,7 @@ private struct WatchRow: View {
         } else {
             parts.append("CLR")
         }
-        let vis = c.visibilitySM >= 10 ? "10+SM" : "\(String(format: "%g", c.visibilitySM))SM"
+        let vis = c.visibilitySM.map { $0 >= 10 ? "10+SM" : "\(String(format: "%g", $0))SM" } ?? "—"
         parts.append(vis)
         return parts.joined(separator: " · ")
     }

@@ -253,6 +253,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             windGust: live.windGust,
             windIsVariable: live.windIsVariable,
             visibility: live.visibility,
+            visibilityReported: live.visibilityReported,
             ceilingFeet: live.ceilingFeet,
             temperature: live.temperature,
             dewpoint: live.dewpoint,
@@ -445,7 +446,7 @@ struct HomeScreenSmallView: View {
                         HStack(spacing: 2) {
                             Image(systemName: "eye")
                                 .font(.system(size: 9))
-                            Text(snap.visibility.visibilityString)
+                            Text(snap.visibilityReported == false ? "—" : snap.visibility.visibilityString)
                                 .font(.system(.caption2, weight: .medium))
                         }
                         .foregroundStyle(.secondary)
@@ -624,7 +625,7 @@ struct HomeScreenMediumView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
-                        Label("\(snap.visibility.visibilityString) SM", systemImage: "eye")
+                        Label(snap.visibilityReported == false ? "—" : "\(snap.visibility.visibilityString) SM", systemImage: "eye")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }

@@ -102,15 +102,15 @@ private enum TrendThresholds {
 // MARK: - Rate of Change (actual numeric deltas over observation window)
 struct RateOfChange: Codable {
     var ceilingDeltaFt: Int?
-    var visibilityDeltaSM: Double
+    var visibilityDeltaSM: Double?   // nil = fewer than two samples reported visibility
     var windDeltaKt: Int
     var spanHours: Double
 
     // Endpoints for "from → to" display
     var oldCeilingFt: Int?
     var newCeilingFt: Int?
-    var oldVisibilitySM: Double
-    var newVisibilitySM: Double
+    var oldVisibilitySM: Double?   // nil = endpoint didn't report visibility
+    var newVisibilitySM: Double?
     var oldWindKt: Int          // sustained
     var newWindKt: Int
     var oldGustKt: Int?
@@ -141,11 +141,12 @@ struct RateOfChange: Codable {
     }
 
     var visibilityQuantitativeText: String? {
-        if abs(visibilityDeltaSM) < 0.1 { return nil }
-        let sign = visibilityDeltaSM > 0 ? "+" : ""
-        let oldStr = oldVisibilitySM >= 10 ? "10+" : String(format: "%g", oldVisibilitySM)
-        let newStr = newVisibilitySM >= 10 ? "10+" : String(format: "%g", newVisibilitySM)
-        return "\(oldStr) → \(newStr) SM (\(sign)\(String(format: "%g", visibilityDeltaSM)))"
+        guard let delta = visibilityDeltaSM, let oldV = oldVisibilitySM, let newV = newVisibilitySM,
+              abs(delta) >= 0.1 else { return nil }
+        let sign = delta > 0 ? "+" : ""
+        let oldStr = oldV >= 10 ? "10+" : String(format: "%g", oldV)
+        let newStr = newV >= 10 ? "10+" : String(format: "%g", newV)
+        return "\(oldStr) → \(newStr) SM (\(sign)\(String(format: "%g", delta)))"
     }
 
     var ceilingQuantitativeText: String? {
@@ -171,7 +172,7 @@ struct RateOfChange: Codable {
     }
 
     var hasWindChange: Bool { windDeltaKt != 0 || oldGustKt != newGustKt }
-    var hasVisibilityChange: Bool { abs(visibilityDeltaSM) >= 0.1 }
+    var hasVisibilityChange: Bool { if let d = visibilityDeltaSM { return abs(d) >= 0.1 } else { return false } }
     var hasCeilingChange: Bool { ceilingDeltaFt != nil && ceilingDeltaFt != 0 }
 }
 
@@ -200,7 +201,12 @@ struct ObservedTrend: Codable {
         let newest = metars.first!
         let oldest = metars.last!
 
-        let visTrend = TrendThresholds.visibilityTrend(old: oldest.visibility, new: newest.visibility)
+        // Visibility trend/delta use the newest and oldest samples that actually reported
+        // visibility (metars are newest-first). Filter, never substitute a placeholder.
+        let visReported = metars.filter { $0.visibilityReported }
+        let visTrend: TrendDirection = visReported.count >= 2
+            ? TrendThresholds.visibilityTrend(old: visReported.last!.visibility, new: visReported.first!.visibility)
+            : .unknown
         let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
 
         let oldWindSustained = oldest.wind.speed
@@ -235,13 +241,13 @@ struct ObservedTrend: Codable {
 
         let roc = RateOfChange(
             ceilingDeltaFt: ceilDelta,
-            visibilityDeltaSM: newest.visibility - oldest.visibility,
+            visibilityDeltaSM: visReported.count >= 2 ? visReported.first!.visibility - visReported.last!.visibility : nil,
             windDeltaKt: newWindSustained - oldWindSustained,
             spanHours: hoursSpan,
             oldCeilingFt: oldest.ceilingFeet,
             newCeilingFt: newest.ceilingFeet,
-            oldVisibilitySM: oldest.visibility,
-            newVisibilitySM: newest.visibility,
+            oldVisibilitySM: visReported.last?.visibility,
+            newVisibilitySM: visReported.first?.visibility,
             oldWindKt: oldWindSustained,
             newWindKt: newWindSustained,
             oldGustKt: oldest.wind.gust,
@@ -296,10 +302,11 @@ struct ForecastTrend: Codable {
         let compareBlock = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) ?? current
         let isForwardLooking = compareBlock.fromTime > current.fromTime
 
-        let visTrend = TrendThresholds.visibilityTrend(
-            old: metar.visibility,
-            new: compareBlock.visibility ?? metar.visibility
-        )
+        // Only compare visibility when the METAR actually reported it — the `?? metar.visibility`
+        // fallback must not lean on the 0.0 placeholder.
+        let visTrend: TrendDirection = metar.visibilityReported
+            ? TrendThresholds.visibilityTrend(old: metar.visibility, new: compareBlock.visibility ?? metar.visibility)
+            : .unknown
 
         let compareCeiling = ceilingFromClouds(compareBlock.clouds)
         let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: compareCeiling)
@@ -432,13 +439,13 @@ struct WeatherTrend: Codable {
 
         // Visibility next
         if observed.visibility == .deteriorating {
-            if let delta = roc.map({ $0.visibilityDeltaSM }), abs(delta) >= 0.5 {
+            if let delta = roc?.visibilityDeltaSM, abs(delta) >= 0.5 {
                 return "Visibility Decreasing (\(String(format: "%g", delta)) SM)"
             }
             return "Visibility Decreasing"
         }
         if observed.visibility == .improving {
-            if let delta = roc.map({ $0.visibilityDeltaSM }), abs(delta) >= 0.5 {
+            if let delta = roc?.visibilityDeltaSM, abs(delta) >= 0.5 {
                 let sign = delta > 0 ? "+" : ""
                 return "Visibility Increasing (\(sign)\(String(format: "%g", delta)) SM)"
             }

@@ -53,7 +53,13 @@ struct Metar: Identifiable, Codable {
     var stationId: String
     var observationTime: Date
     var wind: Wind
-    var visibility: Double   // statute miles
+    var visibility: Double   // statute miles; meaningful only when visibilityReported == true
+    // Whether the observation actually reported a visibility. METAR flight category is
+    // authoritative from NOAA's fltCat, so visibility here is DISPLAY-ONLY — a flag suffices and
+    // callers render "—"/skip when false (see Wind.isReported for the same idiom). This is
+    // deliberately NOT the Double? that TafForecast.visibility uses: TAF category is *computed*
+    // from visibility, so it must express unknown in the value itself; do not "unify" the two.
+    var visibilityReported: Bool = true
     var clouds: [CloudLayer]
     var temperature: Int     // Celsius
     var dewpoint: Int        // Celsius

@@ -92,7 +92,7 @@ func quickWeatherSummary(metar: Metar) -> String {
         parts.append("CLR")
     }
 
-    let vis = metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM"
+    let vis = !metar.visibilityReported ? "—" : (metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM")
     parts.append(vis)
 
     let wind = metar.wind
@@ -253,7 +253,7 @@ struct AirportRowView: View {
         } else {
             parts.append("CLR")
         }
-        let vis = metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM"
+        let vis = !metar.visibilityReported ? "—" : (metar.visibility >= 10 ? "10+SM" : "\(String(format: "%g", metar.visibility))SM")
         parts.append(vis)
         return parts.joined(separator: " · ")
     }

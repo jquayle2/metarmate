@@ -21,7 +21,11 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     let windIsVariable: Bool
 
     // Conditions
-    let visibility: Double          // statute miles
+    let visibility: Double          // statute miles; meaningful only when visibilityReported != false
+    // Bool? not Bool = true — this type is decoded from persisted JSON, where synthesized Decodable
+    // throws on a missing key rather than using the default. Legacy snapshots decode nil = treat as
+    // reported. Consumers must use `== false ? "—" : value`, never `?? true`. Do not "simplify" to Bool.
+    var visibilityReported: Bool? = nil
     let ceilingFeet: Int?           // AGL; nil = no ceiling
     let temperature: Int?           // Celsius
     let dewpoint: Int?              // Celsius
@@ -81,6 +85,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windGust: metar.wind.gust,
             windIsVariable: metar.wind.isVariable,
             visibility: metar.visibility,
+            visibilityReported: metar.visibilityReported,
             ceilingFeet: metar.ceilingFeet,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
@@ -112,6 +117,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windGust: advisory.windGustKtRounded,
             windIsVariable: false,
             visibility: advisory.visibilityMiles ?? 10,
+            visibilityReported: advisory.visibilityMiles != nil,
             ceilingFeet: nil,
             temperature: Int(advisory.temperatureC),
             dewpoint: advisory.dewpointC.map { Int($0) },

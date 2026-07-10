@@ -102,9 +102,9 @@ enum GoNoGoEvaluator {
                 failureText: "gusts \(Int(v)) kt over \(lim) kt"))
         }
 
-        // 4. Visibility (lower is worse)
-        if let lim = profile.minVisibilitySM {
-            let v = conditions.visibilitySM
+        // 4. Visibility (lower is worse) — skipped entirely when visibility wasn't reported, so a
+        // dropped vis sensor can't be scored against a fabricated value (never substitute a number).
+        if let lim = profile.minVisibilitySM, let v = conditions.visibilitySM {
             factors.append(Factor(
                 label: "visibility", value: v, limit: lim,
                 deadband: Deadband.visibilitySM(forLimit: lim), worseWhenHigher: false,

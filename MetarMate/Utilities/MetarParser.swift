@@ -15,12 +15,15 @@ struct MetarParser {
         }
 
         let wind = parseWind(wdir: raw.wdir, wspd: raw.wspd, wgst: raw.wgst)
-        let visibility = parseVisibility(raw.visib)
+        // nil = visibility not reported / unrecognized. Never fabricate 10 SM VFR: keep a 0.0
+        // placeholder (reads worst-case if a gate is ever missed, never VFR) and flag it unreported.
+        let parsedVis = parseVisibility(raw.visib)
         let clouds = parseClouds(raw.clouds, vertVis: raw.vertVis)
         let phenomena = parseWeatherPhenomena(raw.wxString, rawOb: rawText)
 
-        let temp = Int(raw.temp ?? 0)
-        let dewp = Int(raw.dewp ?? 0)
+        // Round toward nearest, not toward zero: a raw -0.6 C is -1 C, not 0.
+        let temp = Int((raw.temp ?? 0).rounded())
+        let dewp = Int((raw.dewp ?? 0).rounded())
 
         // API returns altim in hPa — convert to inHg
         let altimInHg: Double
@@ -38,7 +41,8 @@ struct MetarParser {
             stationId: icao,
             observationTime: obsTime,
             wind: wind,
-            visibility: visibility,
+            visibility: parsedVis ?? 0.0,
+            visibilityReported: parsedVis != nil,
             clouds: clouds,
             temperature: temp,
             dewpoint: dewp,
@@ -78,18 +82,40 @@ struct MetarParser {
     }
 
     // MARK: - Visibility
-    // API returns visib as String ("10+", "6") or sometimes a number
-    nonisolated private static func parseVisibility(_ vis: AnyCodable?) -> Double {
-        guard let value = vis?.value else { return 10.0 }
-
-        if let str = value as? String {
-            if str == "10+" || str == "P6SM" { return 10.0 }
-            if str == "6+" { return 6.0 }
-            return Double(str) ?? 10.0
-        }
+    // Returns nil when visibility is absent or unrecognized. Callers must NOT invent 10 SM — that
+    // silently rendered a LIFR half-mile as VFR. NOAA delivers fractional/metric visibility already
+    // normalized to SM numbers (verified live: 3/4SM -> 0.75, metric 0150 m -> 0.09); the only
+    // strings it emits are "10+"/"6+". The fractional-string branch is defensive for a form NOAA
+    // does not currently send.
+    nonisolated private static func parseVisibility(_ vis: AnyCodable?) -> Double? {
+        guard let value = vis?.value else { return nil }
         if let num = value as? Double { return num }
         if let num = value as? Int { return Double(num) }
-        return 10.0
+        if let str = value as? String {
+            let s = str.trimmingCharacters(in: .whitespaces).uppercased()
+            if s == "10+" { return 10.0 }
+            if s == "6+" || s == "P6SM" { return 6.0 }   // "greater than 6 SM" -> 6 (good visibility)
+            if let d = Double(s) { return d }
+            return parseFractionalSM(s)
+        }
+        return nil
+    }
+
+    // Defensive fractional visibility: "1/2", "1 1/4SM", "M1/4SM" -> Double; nil if not a fraction.
+    nonisolated private static func parseFractionalSM(_ raw: String) -> Double? {
+        var s = raw
+        if s.hasSuffix("SM") { s = String(s.dropLast(2)) }
+        if s.hasPrefix("M") { s = String(s.dropFirst()) }   // "M" = less than; use the bound value
+        s = s.trimmingCharacters(in: .whitespaces)
+        func frac(_ t: Substring) -> Double? {
+            let f = t.split(separator: "/")
+            if f.count == 2, let n = Double(f[0]), let d = Double(f[1]), d != 0 { return n / d }
+            return Double(t)
+        }
+        let parts = s.split(separator: " ")
+        if parts.count == 2, let whole = Double(parts[0]), let fr = frac(parts[1]) { return whole + fr }
+        if parts.count == 1 { return frac(parts[0]) }
+        return nil
     }
 
     // MARK: - Clouds
@@ -211,11 +237,15 @@ struct WeatherDecoder {
             ("SS", "Sandstorm"), ("DS", "Duststorm"),
             ("PO", "Dust Whirls")
         ]
-        for (abbr, name) in types {
-            if remaining.contains(abbr) {
-                parts.append(name)
-                remaining = remaining.replacingOccurrences(of: abbr, with: "")
-            }
+        // Consume 2-char phenomena codes left-to-right from the FRONT (hasPrefix), never
+        // `contains`: a substring scan is the same shape that fabricated phantom weather (KSNA ->
+        // "Snow") and it mis-orders compound codes ("SNRA" -> "Rain Snow"). Every type code is a
+        // distinct 2-char token, so prefix matching is unambiguous; stop at the first unknown
+        // remainder rather than looping.
+        while !remaining.isEmpty {
+            guard let match = types.first(where: { remaining.hasPrefix($0.0) }) else { break }
+            parts.append(match.1)
+            remaining = String(remaining.dropFirst(match.0.count))
         }
 
         if parts.isEmpty { return code }

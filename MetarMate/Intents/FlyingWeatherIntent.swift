@@ -132,10 +132,16 @@ struct FlyingWeatherIntent: AppIntent {
             parts.append("Ceiling unlimited.")
         }
 
-        // Visibility
-        let visStr = metar.visibility >= 10 ? "10 or more" : String(format: "%.0f", metar.visibility)
+        // Visibility — omit the spoken sentence entirely when the station didn't report it
+        // (never voice a fabricated value); still voice present weather if any.
         let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased())"
-        parts.append("Visibility \(visStr) miles\(wxSuffix).")
+        if metar.visibilityReported {
+            let visStr = metar.visibility >= 10 ? "10 or more" : String(format: "%.0f", metar.visibility)
+            parts.append("Visibility \(visStr) miles\(wxSuffix).")
+        } else if !metar.weatherPhenomena.isEmpty {
+            let wx = WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased()
+            parts.append("\(wx.prefix(1).uppercased())\(wx.dropFirst()) observed.")
+        }
 
         // Wind
         parts.append(windPhrase(metar.wind))
@@ -172,7 +178,7 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     private func buildSummaryLine(metar: Metar) -> String {
-        let vis = metar.visibility >= 10 ? "Vis 10+" : String(format: "Vis %.0f sm", metar.visibility)
+        let vis = !metar.visibilityReported ? "Vis —" : (metar.visibility >= 10 ? "Vis 10+" : String(format: "Vis %.0f sm", metar.visibility))
         let ceiling: String
         if let c = metar.ceilingFeet {
             ceiling = "Ceil \(c / 100 * 100)ft"
