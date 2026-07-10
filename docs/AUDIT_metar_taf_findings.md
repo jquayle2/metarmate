@@ -96,7 +96,8 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 | F11 | Widget duplicate parser drifted | ✅ Resolved (parity) — `de90a9c`; **but see F14 — the duplication itself is structural and slated for de-duplication (commit 9).** |
 | F12 | Widget missing category → `.vfr` | ✅ Resolved (`.unknown`) — `de90a9c` |
 | F13 | GoNoGo `Verdict` can't express skip-vs-pass | 🔶 **OPEN** — structural; not fixed. Code issue, not CFII. |
-| F14 | Widget carries a duplicate parser (no shared `MetarParser`) | 🔶 **OPEN** — structural; resolution is de-duplication (commit 9), not test coverage. |
+| F14 | Widget carried a duplicate parser (no shared `MetarParser`) | ✅ Resolved — **commit 9**; widget delegates to `MetarParser`; regression `WidgetSnapshotParityTests` (10 cases). |
+| F15 | `Metar` temp/dewp/altimeter can't be unknown (`0 °C`/`29.92` substituted) | 🔶 **OPEN** — structural; needs the three fields optional + consumer gating (own commit). Worst instance feeds density/pressure altitude. |
 
 Six items require human (CFII) judgment and are **not** resolved by any code change or test — see [Requires human judgment (CFII)](#requires-human-judgment-cfii).
 
@@ -195,10 +196,18 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 - **Symptom:** the widget mapped an absent `fltCat` to `.vfr` (green) instead of `.unknown` — a fail-permissive default on the single most important datum.
 - **Resolution:** `FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown` (matches `MetarParser`; no fail-permissive green).
 
-## 🟡 Finding 14 — Widget target carries a duplicate parser; drift is unobservable by any test  **[LOW — structural; OPEN, not fixed in commit 8]**
+## 🟡 Finding 14 — Widget target carried a duplicate parser; drift was unobservable by any test  **[LOW — structural]** — ✅ RESOLVED (commit 9)
 
-- **Symptom:** The widget target does not link MetarMate's `MetarParser` and carries a duplicate implementation of `parseVisibility`/`parseCeiling`/`parseWindDirection`, including the `P6SM`/`6+`/`vertVis` branches. Drift between the two parsers is unobservable by any test in either target. F11/F12 are the observed instances; the class is structural. Resolution is de-duplication, not test coverage.
-- **Ruling:** code issue, not a CFII call. Out of scope for commit 8 (which is test-only — a test that pins the duplicate's behavior would ratify the duplication). **Resolution = commit 9:** link `MetarParser` into the widget target, have `buildSnapshot` call `MetarParser.parse(raw:)` and map `Metar → WidgetWeatherSnapshot`, delete the widget's parse funcs. (The `windReported`/`isReported` plumbing added to the widget in `6dc9b00` becomes redundant once the widget shares the app parser — an expected simplification, not a regression.)
+- **Symptom:** The widget target did not link MetarMate's `MetarParser` and carried a duplicate implementation of `parseVisibility`/`parseCeiling`/`parseWindDirection`, including the `P6SM`/`6+`/`vertVis` branches. Drift between the two parsers was unobservable by any test in either target. F11/F12 are the observed instances; the class was structural.
+- **Resolution (commit 9):** `MetarParser.swift` linked into the widget target; the snapshot builder moved out of the widget's private `WidgetFetcher` to `WidgetWeatherSnapshot.from(rawMetar:icao:)` (shared, unit-testable) and now delegates wind/visibility/ceiling/category/obsTime to `MetarParser.parse` — one parser, no drift possible. 10 parity tests (`WidgetSnapshotParityTests`) pin `P6SM`/`6+`/`10+`/numeric vis, VV003, OVX-no-base, missing wind, VRB, missing `fltCat`; written against the duplicate, unchanged through the swap.
+- **Behavior change (intended):** the builder now returns `WidgetWeatherSnapshot?` and yields **nil** for an unparseable METAR (missing `icaoId`/`rawOb`), where the duplicate fabricated a snapshot via `icaoId ?? icao`. De-duplication removed the widget's total-parse fallback — a widget must not render a fabricated snapshot from an unparseable observation. The caller (`fetchSnapshot`) already propagated nil for fetch/decode failures; a parse-failure nil rides the same path.
+- **Note:** temperature/dewpoint/altimeter are deliberately **not** taken from `Metar` — they're read from `raw` to avoid inheriting the model's `0 °C`/`29.92 inHg` substitution for missing values. See **Finding 15**.
+
+## 🟡 Finding 15 — `Metar` cannot represent unknown temperature / dewpoint / altimeter  **[MEDIUM — structural; OPEN, not fixed in commit 9]**
+
+- **Symptom:** `Metar.temperature` and `Metar.dewpoint` are non-optional `Int`; `Metar.altimeter` is non-optional `Double`. `MetarParser.parse` substitutes `0 °C` for missing temp/dewp and `29.92 inHg` for missing altimeter. The model cannot represent unknown, so every consumer reads a fabricated value indistinguishable from a real one. `0 °C` is a legitimate temperature and `29.92` is a legitimate altimeter setting — the same placeholder-collision shape as F6 (visibility `0.0`) and F8 (wind `0 kt`). A missing altimeter fabricated as standard pressure also propagates into density altitude and pressure altitude, which are computed from it. Resolution requires making the three fields optional and gating every consumer, as F8 did for wind. Not fixed in commit 9. The widget builder bypasses `Metar` for these three fields (reads `raw`) to avoid inheriting the defect.
+- **Why this is the worst instance of the class:** a fabricated `29.92` flowing into a **density-altitude / pressure-altitude** readout is worse than the display bugs — it produces a plausible number a pilot uses for **takeoff-performance planning**. A wrong DA off a fabricated altimeter is an operational hazard, not a cosmetic one.
+- **Ruling:** code issue, not a CFII call. Its own commit (model-optionality change threading through every temp/dewp/altimeter consumer, like F8's wind work).
 
 ## 🟡 Finding 13 — `GoNoGo Verdict` cannot express "factor not evaluated" vs "factor passed"  **[LOW — structural; OPEN, not fixed in commit 7]**
 

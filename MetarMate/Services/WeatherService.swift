@@ -117,21 +117,5 @@ struct RawTaf: Codable {
     let fcsts: [[String: AnyCodable]]?
 }
 
-// MARK: - Error types
-enum WeatherError: LocalizedError {
-    case invalidURL
-    case badResponse
-    case noData
-    case parseError(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL: return "Invalid URL"
-        case .badResponse: return "Server returned an error"
-        case .noData: return "No weather data available"
-        case .parseError(let msg): return "Parse error: \(msg)"
-        }
-    }
-}
-
-// AnyCodable is defined in Utilities/SharedTypes.swift
+// WeatherError moved to Utilities/SharedTypes.swift so MetarParser (which throws it) can be linked
+// into the widget target without dragging this networking file along. AnyCodable also lives there.

@@ -140,6 +140,46 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             snapshotTime: Date()
         )
     }
+
+    // MARK: - Build from a raw NOAA METAR (widget fetch path)
+    // Lives here (shared by the app + widget targets) rather than privately in the widget so it is
+    // unit-testable. De-duplicated (Finding 14): the wind/visibility/ceiling/category/obsTime parse
+    // is delegated to MetarParser — the single source of truth — instead of a widget-local copy.
+    // Returns nil when the observation can't be parsed: a widget must not render a fabricated
+    // snapshot from an unparseable METAR (this replaces the old total `icaoId ?? icao` fallback).
+    nonisolated static func from(rawMetar raw: RawMetar, icao: String) -> WidgetWeatherSnapshot? {
+        guard let metar = try? MetarParser.parse(raw: raw) else { return nil }
+
+        return WidgetWeatherSnapshot(
+            icao: metar.stationId,
+            iata: nil,
+            airportName: raw.name ?? metar.stationId,
+            flightCategory: metar.flightCategory,
+            windDirection: metar.wind.direction,
+            windSpeed: metar.wind.speed,
+            windGust: metar.wind.gust,
+            windIsVariable: metar.wind.isVariable,
+            windReported: metar.wind.isReported,
+            visibility: metar.visibility,
+            visibilityReported: metar.visibilityReported,
+            ceilingFeet: metar.ceilingFeet,
+            // temp/dewp/altimeter are read from `raw` (NOT `metar`) on purpose: Metar's fields are
+            // non-optional and substitute 0 °C / 29.92 inHg for missing values (Finding 15), which
+            // would fabricate a reading here. `raw.*.map` preserves nil = unknown.
+            temperature: raw.temp.map { Int($0.rounded()) },
+            dewpoint: raw.dewp.map { Int($0.rounded()) },
+            altimeter: raw.altim.map { $0 * 0.02953 },
+            trendDirection: .unknown,
+            trendHeadline: "Widget Refresh",
+            tafAccuracyPct: nil,
+            forecastWindDivergenceKt: nil,
+            forecastCeilingDivergenceFt: nil,
+            forecastVisibilityDivergenceSM: nil,
+            isAdvisory: false,
+            observationTime: metar.observationTime,
+            snapshotTime: Date()
+        )
+    }
 }
 
 // MARK: - Widget Airport Configuration

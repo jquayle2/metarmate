@@ -81,6 +81,7 @@
 				Models/WidgetWeatherSnapshot.swift,
 				Services/WidgetDataManager.swift,
 				Utilities/Extensions.swift,
+				Utilities/MetarParser.swift,
 				Utilities/SharedTypes.swift,
 			);
 			target = CDD069312F57583C00A16FDE /* MetarMateWidgetExtension */;

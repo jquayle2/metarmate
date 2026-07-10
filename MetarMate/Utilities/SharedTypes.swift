@@ -69,3 +69,22 @@ struct RawMetar: Codable {
     let fltCat: String?
     let metarType: String?
 }
+
+// MARK: - Error types
+// Moved verbatim from WeatherService.swift so MetarParser (which throws it) can be shared into the
+// widget target without linking the networking layer.
+enum WeatherError: LocalizedError {
+    case invalidURL
+    case badResponse
+    case noData
+    case parseError(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "Invalid URL"
+        case .badResponse: return "Server returned an error"
+        case .noData: return "No weather data available"
+        case .parseError(let msg): return "Parse error: \(msg)"
+        }
+    }
+}
