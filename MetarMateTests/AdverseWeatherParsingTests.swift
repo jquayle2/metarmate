@@ -7,10 +7,10 @@ import Foundation
 // MetarMateTests/Fixtures/adverse_*.json for the full corpus). Every raw string below is a
 // verbatim NOAA observation, not hand-written.
 //
-// Findings that reflect CURRENT BUGS are wrapped in `withKnownIssue` so this suite stays green
-// until Jeff triages them; each will flip to a hard failure the moment the fix lands (delete the
-// wrapper then). Findings that are already CORRECT (e.g. the 4b61a4b phantom-weather fix) assert
-// normally.
+// The HIGH/adverse findings (F1 OVX ceiling, F2 PROB overlays, F7 unknown-vis category, F8 missing
+// wind, F9 color boundaries) are now FIXED and assert directly — the `withKnownIssue` scaffolding
+// that tracked them pre-fix has been removed. Confirmations (e.g. the 4b61a4b phantom-weather fix)
+// assert normally.
 struct AdverseWeatherParsingTests {
 
     // MARK: - decode helpers (exercise the exact app decode + parse path)
@@ -39,6 +39,15 @@ struct AdverseWeatherParsingTests {
         static let kictClear = #"{"icaoId":"KICT","obsTime":1783633980,"temp":35,"dewp":21.7,"wdir":350,"wspd":6,"visib":"10+","altim":1010.2,"rawOb":"METAR KICT 092153Z 35006KT 10SM FEW120 FEW200 35/22 A2983","clouds":[{"cover":"FEW","base":12000},{"cover":"FEW","base":20000}],"fltCat":"VFR"}"#
         // KABR 2153Z: no wind group at all (wdir & wspd absent).
         static let kabrNoWind = #"{"icaoId":"KABR","obsTime":1783633980,"temp":27.2,"dewp":18.9,"visib":"10+","altim":1011.9,"rawOb":"METAR KABR 092153Z AUTO 10SM CLR 27/19 A2988","clouds":[],"fltCat":"VFR"}"#
+        // Negative control for the missing-wind case: a REAL 00000KT calm — wdir & wspd present as 0.
+        // Must be distinguishable from kabrNoWind (isReported true, renders "Calm", not "—").
+        static let calmWind = #"{"icaoId":"KFAR","obsTime":1783633980,"temp":22,"dewp":10,"wdir":0,"wspd":0,"visib":"10+","altim":1013,"rawOb":"METAR KFAR 092153Z 00000KT 10SM CLR 22/10 A2992","clouds":[],"fltCat":"VFR"}"#
+
+        // F9 exact-boundary probes (synthetic TAF periods; FAA: 5 SM and 3000 ft are MVFR, not VFR).
+        // vis exactly 5.0 SM, no ceiling -> MVFR on the vis axis.
+        static let tafVis5Boundary = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic vis 5.0 boundary","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":5,"clouds":[]}]}"#
+        // ceiling exactly 3000 ft (BKN030), vis unlimited -> MVFR on the ceiling axis.
+        static let tafCeil3000Boundary = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic ceiling 3000 boundary","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"BKN","base":3000,"type":null}]}]}"#
 
         // KORD TAF excerpt: a base FM period + a PROB30 TSRA period (NOAA sends fcstChange="PROB").
         static let kordProbTaf = #"{"icaoId":"KORD","issueTime":"2026-07-09T22:15:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"TAF KORD PROB30 excerpt","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":250,"wspd":9,"visib":"6+","clouds":[{"cover":"SCT","base":3500,"type":null},{"cover":"BKN","base":12000,"type":null}]},{"timeFrom":1783641600,"timeTo":1783648800,"fcstChange":"PROB","probability":30,"visib":2,"wxString":"TSRA BR","clouds":[{"cover":"BKN","base":3500,"type":"CB"}]}]}"#
@@ -49,12 +58,11 @@ struct AdverseWeatherParsingTests {
     // NOAA encodes an indefinite ceiling (raw "VV002") as cover:"OVX" + a top-level vertVis field.
     // CloudCoverage has no "OVX" case, so parseClouds drops the layer and ceilingFeet is nil — the
     // app shows NO ceiling for a 200 ft LIFR fog obscuration. (RawMetar also never reads vertVis.)
+    // FIXED (commit 1cd1144): OVX + top-level vertVis is now read into a .verticalVisibility layer.
     @Test func ovxObscurationYieldsIndefiniteCeiling() throws {
         let m = try metar(Obs.efhkOVX)
-        withKnownIssue("Finding 1: OVX/VV obscuration dropped — VV002 should give a ~200 ft ceiling, got nil") {
-            #expect(m.ceilingFeet == 200)
-            #expect(m.clouds.contains { $0.coverage == .verticalVisibility })
-        }
+        #expect(m.ceilingFeet == 200)                                     // VV002 -> 200 ft indefinite ceiling
+        #expect(m.clouds.contains { $0.coverage == .verticalVisibility }) // layer no longer dropped
     }
 
     // MARK: - Finding 6 (LOW): fractional / metric visibility fidelity — currently CORRECT
@@ -75,33 +83,30 @@ struct AdverseWeatherParsingTests {
     // "PROB30"/"PROB40", so the match fails and the period defaults to .base — a 30% TSRA/IFR
     // window is injected into the FIRM forecast timeline (hero, currentForecast, IFR-onset notes),
     // while overlayForecasts (which filters .prob30/.prob40) never sees it.
+    // FIXED (commit 8d783ec): fcstChange="PROB" + probability now maps to .prob30/.prob40 overlays.
     @Test func probPeriodIsClassifiedAsOverlayNotBase() throws {
         let t = try taf(Obs.kordProbTaf)
-        // The convective TSRA period should be an overlay, not a firm base period.
-        let probIsBase = t.baseForecasts.contains { $0.weatherPhenomena.contains("TSRA") }
-        withKnownIssue("Finding 2: PROB period mis-typed as .base — appears in baseForecasts") {
-            #expect(!probIsBase)
-            #expect(t.overlayForecasts.contains { $0.weatherPhenomena.contains("TSRA") })
-        }
+        // The convective TSRA period is an overlay, not a firm base period.
+        #expect(!t.baseForecasts.contains { $0.weatherPhenomena.contains("TSRA") })
+        #expect(t.overlayForecasts.contains { $0.weatherPhenomena.contains("TSRA") })
     }
 
     // MARK: - Finding 3 (LOW): TAF empty-string visibility -> fail-unsafe 10.0 default
 
     // parseVisibility returns nil for visib:"" (correct), but calculateFlightCategory does
     // `vis ?? 10.0`, so an unknown TAF visibility silently becomes 10 SM / VFR on the vis axis.
-    @Test func tafUnknownVisibilityDefaultsToTenSMExposingFailUnsafe() throws {
-        // Construct a period with unknown vis and a low (IFR) ceiling to show the default's reach.
+    // FIXED (commit 8d783ec): calculateFlightCategory no longer does `vis ?? 10.0`; an unknown TAF
+    // visibility with no ceiling is now .unknown, not a fabricated 10 SM VFR.
+    @Test func tafUnknownVisibilityYieldsUnknownCategoryNotVFR() throws {
+        // A low (IFR) ceiling still drives IFR when vis is unknown.
         let json = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic empty-vis probe","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":700,"type":null}]}]}"#
         let t = try taf(json)
         let p = try #require(t.forecasts.first)
-        #expect(p.visibility == nil)                 // parseVisibility correctly reports unknown
-        #expect(p.flightCategory == .ifr)            // here the 700 ft ceiling drives IFR anyway
-        // But with NO ceiling either, unknown vis alone lands on VFR — the fail-unsafe default:
+        #expect(p.visibility == nil)                 // parseVisibility reports unknown
+        #expect(p.flightCategory == .ifr)            // 700 ft ceiling drives IFR
+        // With NEITHER vis nor ceiling known, the category is .unknown (was 10 SM VFR pre-fix).
         let clear = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[]}]}"#
-        let clearCat = try taf(clear).forecasts.first?.flightCategory
-        withKnownIssue("Finding 3: unknown TAF visibility defaults to 10 SM -> VFR instead of surfacing unknown") {
-            #expect(clearCat == .unknown)
-        }
+        #expect(try taf(clear).forecasts.first?.flightCategory == .unknown)
     }
 
     // MARK: - Finding 4 (MEDIUM): phantom-weather fix holds on live data (CONFIRMATION)
@@ -119,23 +124,59 @@ struct AdverseWeatherParsingTests {
         #expect(try metar(Obs.ktpaThunder).weatherPhenomena == ["TS"])
     }
 
-    // MARK: - Finding 7 (LOW): missing wind group rendered as calm
+    // MARK: - Finding 8 (audit): missing wind group is UNKNOWN, not calm (FIXED, commit 6dc9b00)
 
-    // A METAR with no wind group parses to direction 0 / speed 0 — indistinguishable from real calm.
-    @Test func missingWindGroupRendersAsCalm() throws {
+    // Five surfaces, asserted independently — a missing wind group must be distinguishable from a
+    // real 00000KT calm everywhere it is consumed, not merely flagged on the model.
+    @Test @MainActor func missingWindGroupIsUnknownNotCalm() throws {
         let m = try metar(Obs.kabrNoWind)
-        // Documents current behavior; the safer outcome is an explicit "unknown wind" signal.
-        #expect(m.wind.speed == 0)
-        #expect(m.wind.isVariable == false)
-        withKnownIssue("Finding 7: missing wind group looks identical to calm (dir 0, spd 0)") {
-            #expect(m.wind.direction == nil)   // preferred: nil direction to signal "unknown"
-        }
+
+        // (1) the parsed wind is flagged unreported — not a fabricated 00000KT.
+        #expect(m.wind.isReported == false)
+
+        // (2) the decoded wind renders "—", not "Calm". quickWeatherSummary is the public render
+        // path; the view's private windText mirrors it. KABR reports vis ("10+"), so the only "—"
+        // in the summary is the wind token.
+        let summary = quickWeatherSummary(metar: m)
+        #expect(summary.contains("—"))
+        #expect(!summary.contains("Calm"))
+
+        // (3) the "wind not reported" pilot note fires (extracted MetarPilotNotes.build).
+        let notes = MetarPilotNotes.build(metar: m, history: [])
+        #expect(notes.contains { $0.text.contains("Wind not reported") && $0.severity == .caution })
+
+        // (4) AlertConditions carries nil windSpeed — the input that skips the wind criteria.
+        #expect(AlertConditions(from: m).windSpeed == nil)
+
+        // (5) GoNoGo: with nil windSpeed, strict wind limits are INERT — identical verdict and
+        // failingFactors to a profile with no wind limits at all (i.e. the wind factors were not
+        // evaluated). Observable through existing surfaces. NB: a skipped factor and a passing
+        // 0-kt factor remain indistinguishable via Verdict — see audit Finding 13 (open).
+        let c = AlertConditions(from: m)
+        let strict = MinimumsProfile(name: "strict", maxGustKt: 1, maxSustainedWindKt: 1)
+        let noWindLimits = MinimumsProfile(name: "noWindLimits")
+        let v1 = GoNoGoEvaluator.evaluate(strict, c, previousSide: nil, icao: "KABR")
+        let v2 = GoNoGoEvaluator.evaluate(noWindLimits, c, previousSide: nil, icao: "KABR")
+        #expect(v1.shouldFire == v2.shouldFire)
+        #expect(v1.failingFactors == v2.failingFactors)
+        #expect(!v1.failingFactors.contains { $0.lowercased().contains("wind") || $0.lowercased().contains("gust") })
     }
 
-    // MARK: - Finding 8 (LOW): flight-category boundary alignment
+    // Negative control: a REAL 00000KT calm is reported (isReported true) and still renders "Calm".
+    // The whole point of Finding 8 is that these two states are distinguishable.
+    @Test func realCalmIsReportedAndRendersCalm() throws {
+        let m = try metar(Obs.calmWind)
+        #expect(m.wind.isReported == true)
+        #expect(m.wind.speed == 0)
+        let summary = quickWeatherSummary(metar: m)
+        #expect(summary.contains("Calm"))
+        #expect(!summary.contains("—"))   // vis is reported ("10+"), so no "—" from any field
+    }
 
-    // WeatherDecoder decodes every real adverse code correctly (item #5 battery). Spot-check the
-    // convective/frozen-precip codes that would matter at adverse stations.
+    // MARK: - WeatherDecoder battery (audit item #5 / Finding 10)
+
+    // WeatherDecoder decodes every real adverse code correctly. Spot-check the convective/frozen-
+    // precip codes that would matter at adverse stations.
     @Test func weatherDecoderHandlesAdverseCodes() {
         #expect(WeatherDecoder.decode("+TSRA") == "Heavy Thunderstorm Rain")
         #expect(WeatherDecoder.decode("FZRA") == "Freezing Rain")
@@ -144,5 +185,22 @@ struct AdverseWeatherParsingTests {
         #expect(WeatherDecoder.decode("VCTS") == "Thunderstorm in Vicinity")
         #expect(WeatherDecoder.decode("SQ") == "Squall")
         #expect(WeatherDecoder.decode("+FC") == "Tornado/Waterspout")
+    }
+
+    // MARK: - Finding 9 (audit): category color boundaries match calculateFlightCategory (FIXED)
+
+    // The color functions (ColorRules) and the category function (TafParser.calculateFlightCategory,
+    // private — exercised via the public parse path) must AGREE at the FAA MVFR boundary: 5 SM and
+    // 3000 ft are MVFR, not VFR. Pre-fix the colors used `< 5` / `< 3000` and read VFR-green there.
+    @Test func categoryColorsAgreeWithFlightCategoryAtBoundary() throws {
+        // Visibility axis: exactly 5.0 SM.
+        #expect(ColorRules.visibilityColor(5.0) == Brand.mvfrBlue)   // MVFR-blue…
+        #expect(ColorRules.visibilityColor(5.0) != Brand.vfrGreen)   // …not VFR-green (the old bug)
+        #expect(try taf(Obs.tafVis5Boundary).forecasts.first?.flightCategory == .mvfr)
+
+        // Ceiling axis: exactly 3000 ft.
+        #expect(ColorRules.ceilingColor(3000) == Brand.mvfrBlue)
+        #expect(ColorRules.ceilingColor(3000) != Brand.vfrGreen)
+        #expect(try taf(Obs.tafCeil3000Boundary).forecasts.first?.flightCategory == .mvfr)
     }
 }

@@ -167,6 +167,12 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 - **Blast radius:** rare unlisted mixed-precip codes only; wxString is already tokenized so the descriptor stacking mostly doesn't arise. Cosmetic.
 - **Recommendation:** low priority; if touched, prefer prefix-consumption over `contains`.
 
+## 🟡 Finding 13 — `GoNoGo Verdict` cannot express "factor not evaluated" vs "factor passed"  **[LOW — structural; OPEN, not fixed in commit 7]**
+
+- **Symptom:** `Verdict` exposes only `failingFactors`. A skipped factor and a present-but-passing 0-kt factor are indistinguishable to any consumer. 0 kt never fails a max limit, so a fabricated calm reads as a satisfied wind minimum. `AlertConditions.windSpeed: Int?` (commit 6, F8) closes the current path, but `Verdict`'s shape still cannot express "this factor was not evaluated" vs "this factor passed." Any future non-optional numeric reaching a factor reintroduces the failure silently.
+- **Class:** same as the `?? 10.0` / `?? 0` fail-benign family, but structural rather than a single call site.
+- **Ruling:** code issue, not a CFII call. Out of scope for commit 7 — flagged, not fixed. (A fix would give `Verdict` a way to report evaluated-but-passed vs not-evaluated, without adding test-only API to production.)
+
 ---
 
 # Confirmations (no action needed)
