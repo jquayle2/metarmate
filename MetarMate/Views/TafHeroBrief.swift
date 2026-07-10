@@ -92,9 +92,12 @@ enum TafHeroBrief {
             if let firstBetter = known.first(where: {
                 TafFormat.categorySeverity($0.flightCategory) < TafFormat.categorySeverity(first.flightCategory)
             }) {
+                // CFII ruling (Mike): drop the destination-category suffix — say "improving" without
+                // naming the better category (a TAF improvement is not a guarantee to plan against).
+                // The segment color still carries the improved category; only the words change.
                 return [HeroSegment(text: "\(first.flightCategory.rawValue) now, ",
                                     color: ColorRules.flightCategoryColor(first.flightCategory)),
-                        HeroSegment(text: "improving to \(firstBetter.flightCategory.rawValue) by \(TafFormat.timeLabel(firstBetter.fromTime)).",
+                        HeroSegment(text: "improving by \(TafFormat.timeLabel(firstBetter.fromTime)).",
                                     color: ColorRules.flightCategoryColor(firstBetter.flightCategory))]
             }
             // Category is genuinely steady across the period. Still surface a wind story if any

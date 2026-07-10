@@ -185,11 +185,11 @@ enum MetarPilotNotes {
         // the old `temp <= 0` gate suppressed the icing warning at ice-storm onset. Match the "FZ"
         // descriptor on ANY precip (FZRA/FZDZ/FZUP) — everything the old contains("FZ") caught EXCEPT
         // freezing fog, handled just below; narrowing to FZRA/FZDZ would silently drop FZUP.
-        // (Color severity stays .warning pending a CFII red/amber ruling — see audit doc.)
+        // CFII ruling (Mike): freezing precip icing reads red → .danger (freezing fog stays .warning).
         let hasFreezingPrecip = metar.weatherPhenomena.contains { let c = $0.uppercased(); return c.contains("FZ") && !c.contains("FZFG") }
         let hasFreezingFog = metar.weatherPhenomena.contains { $0.uppercased().contains("FZFG") }
         if hasFreezingPrecip {
-            notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing on aircraft and runway surfaces", severity: .warning))
+            notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing on aircraft and runway surfaces", severity: .danger))
         } else if hasFreezingFog {
             notes.append(.init(icon: "cloud.fog.fill", text: "Freezing fog — icing and obscuration", severity: .warning))
         } else if metar.temperature <= 2 && metar.temperature - metar.dewpoint <= 3 {

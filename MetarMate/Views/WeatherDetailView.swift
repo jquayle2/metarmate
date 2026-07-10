@@ -749,11 +749,15 @@ struct WeatherDetailView: View {
         ColorRules.altimeterColor(alt)
     }
 
-    // Present weather: situational caution; TS/FZ escalate to danger.
+    // Present weather: situational caution; TS/FZ/SQ/FC escalate to danger.
+    // CFII ruling (Mike): squalls (SQ) and funnel cloud/tornado (FC/+FC) read red alongside TS/FZ.
+    // FC via contains("FC") catches both FC and +FC; no other decoder key contains "FC" or "SQ".
     private func wxPhenomenaConditionColor(_ phenomena: [String]) -> Color {
         let hasTS = phenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
         let hasFZ = phenomena.contains(where: { $0.contains("FZ") })
-        if hasTS || hasFZ { return Brand.valueRed }
+        let hasSQ = phenomena.contains(where: { $0.contains("SQ") })
+        let hasFC = phenomena.contains(where: { $0.contains("FC") })
+        if hasTS || hasFZ || hasSQ || hasFC { return Brand.valueRed }
         return Brand.cautionOrange
     }
 
