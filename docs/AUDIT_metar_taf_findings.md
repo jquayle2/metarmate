@@ -44,19 +44,16 @@
 6. **Missing-visibility note asymmetry vs missing-wind. — STILL OPEN (Mike/CFII rules).** F8 (commit 6) full-gates unreported wind: it now renders "—" in every cell (like visibility) **and** carries a "wind not reported" pilot note. Unreported **visibility** still renders "—" in cells but has **no** analogous pilot note. The full gate *changed the surface area* of this asymmetry (wind cells now match visibility cells) but did **not** resolve the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric (drop the wind note / add a vis note)? That is a CFII call, not a code call — left open.
 
 ## REMAINING WORK
-**Commit 6 — F9 + F8** (planned):
-- **F9** align color boundaries: `ColorRules.ceilingColor` `< 3000 → <= 3000`, `visibilityColor` `< 5 → <= 5` (match `calculateFlightCategory` / FAA "3000 ft / 5 SM = MVFR"). `Theme.swift`.
-- **F8** missing wind ≠ calm: add `Wind.isReported: Bool = true` (safe — `Wind` is never decoded from persisted JSON, only memberwise-init; same rationale as `Metar.visibilityReported`), set `false` in `MetarParser.parseWind` when `wdir` AND `wspd` both absent, add a "wind not reported" pilot note. **Also the widget's duplicate `windSpd = raw.wspd ?? 0`** (MetarMateWidget `buildSnapshot`) carries the same missing-wind→calm bug — fix in step with F8.
 
-**Commit 7 — tests + audit-doc finalization:**
-- **Wire the test file into the test target** (Xcode 16 synchronized group — dropping it in `MetarMateTests/` should auto-include; confirm) and **remove `withKnownIssue`** wrappers for now-fixed F1/F2/F7 (they will flip to passing assertions; if a wrapper no longer records an issue Swift Testing fails it).
-- **Add tests:** F3 (`-FZRA` at +1 °C fires the icing note), F4 (hero string includes the TEMPO/PROB clause, both benign-base and worsening-base paths), F5 (`.danger` → red for TS/CB), F9 (`ceilingColor(3000)`/`visibilityColor(5)` are MVFR-blue), F11/F12 (widget parser).
-- **F10 dict-audit test** (Jeff-requested): walk EVERY key in `WeatherDecoder.descriptions`, assert value non-empty, ≠ key, AND **consistent with the fallback path** for the same code; report any dict-vs-fallback disagreement as a finding, don't silently prefer one.
-- **Fallback-targeted decoder tests** (the exact-match dict shadows 40/50 codes): the 10 that reach the prefix-consumption fallback — `SH, -TSRA, RASN, -RASN, SNRA, VA, DU, SA, PO, PY` — plus `TS/VCTS/VCSH` guarding the no-echo behavior, plus the order fix `SNRA → "Snow Rain"`.
-- **F1 `vertVis` synthetic test:** an OVX layer with NO `base`, only `vertVis` → `ceilingFeet` from `vertVis` (NOT exercised by the live corpus — KDUJ/EFHK/NZDN all carry `base`, so the fallback branch needs a synthetic case).
-- **F7 `.unknown` synthetic test:** a TAF period with neither visibility nor ceiling → `.unknown`; and the hero "Forecast incomplete" short-circuit (also not in the live corpus — synthetic).
-- Add a **KDUJ `VV003`** ob to the fixtures.
-- **Audit-doc finalization:** mark each finding Resolved/Deferred, correct the original **Finding 5** text (the present-weather chip already reds TS/FZ — only the *note* tier was orange), add a formal "Requires human judgment" section from the deferred list above, and add **F11/F12** finding entries.
+**Commits 6–8 — LANDED** (see [Resolution status](#resolution-status-as-of-commit-8)):
+- **Commit 6 (`6dc9b00`)** — F9 color boundaries + F8 missing-wind full gate (every `Metar.wind` consumer gated; `AlertConditions.windSpeed`/`TafVerification.actualWindKt`/`RateOfChange` wind fields optional; widget `windReported`).
+- **Commit 7 (`9f1240c`)** — removed `withKnownIssue` for F1/F2/F7; F8 (5 surfaces + negative) and F9 boundary tests; extracted `MetarPilotNotes`; logged Finding 13.
+- **Commit 8** — extracted `TafHeroBrief`/`TafFormat`; tests for F3 (note-fires), F4 (hero TEMPO overlay + segment color), F5 (TS/CB `.danger`), F1 `vertVis` synthetic, F7 hero short-circuit, F10 dict-audit + decoder battery; KDUJ `VV003` fixture; this audit-doc finalization; logged Finding 14. **F11/F12 dropped from commit 8** — the widget parsers are `private`/`fileprivate` and unreachable without widening access; pinning the duplicate's behavior would ratify the duplication. See Finding 14.
+
+**Commit 9 — de-duplicate the widget parser (Finding 14), standalone:**
+- Link `MetarParser` into the widget target; `buildSnapshot` calls `MetarParser.parse(raw:)` and maps `Metar → WidgetWeatherSnapshot`; delete the widget's `parseVisibility`/`parseCeiling`/`parseWindDirection`. The widget-side `windReported`/`isReported` plumbing becomes redundant (expected). Scope fresh when it starts.
+
+**Not scheduled (optional):** fallback-targeted decoder tests for the ~10 codes that reach prefix-consumption (`SH, -TSRA, RASN, -RASN, SNRA, VA, DU, SA, PO, PY`) beyond the current battery + dict-audit — nice-to-have, F10 already resolved and audited.
 
 ## Method reminders for the next session (Jeff's working style)
 - **Build-verify before EVERY commit; show `BUILD SUCCEEDED` immediately before committing.** No bundling build+commit; show the diff (inline plain text — piped through `cat`, tool-call diffs may not render), get explicit approval, then commit.
@@ -81,6 +78,27 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 ---
 
 # Findings (severity-ranked)
+
+## Resolution status (as of commit 8)
+
+| # | Finding | Status |
+|---|---|---|
+| F1 | OVX/VV indefinite ceiling dropped | ✅ Resolved — `1cd1144`; regression `ovxObscurationYieldsIndefiniteCeiling` + `ovxVertVisOnlyYieldsCeilingFromVertVis` |
+| F2 | PROB30/40 mis-typed as base | ✅ Resolved — `8d783ec`; regression `probPeriodIsClassifiedAsOverlayNotBase` |
+| F3 | Freezing-precip icing note temp-gated | ✅ Resolved (note fires) — `627a2a8`; regression `freezingPrecipIcingNoteFiresRegardlessOfTemp`. **Note tier (red/amber) → CFII.** |
+| F4 | Hero excludes TEMPO/PROB overlays | ✅ Resolved — `00d84ae`; regression `heroSurfacesTempoOverlayOnCautionAxis`. **"Improving to IFR" phrasing → CFII.** |
+| F5 | TS/CB never reach red on METAR side | ✅ Resolved (TS/CB → `.danger`) — `627a2a8`; regression `thunderstormAndCumulonimbusReachDangerTier`. **SQ / +FC tier → CFII.** |
+| F6 | `parseVisibility` fails unsafe to 10.0 | ✅ Resolved — `12658e8` (`Double?`, callers gate). **P6SM→6.0 lossiness → CFII.** |
+| F7 | TAF unknown visibility → 10 SM VFR | ✅ Resolved — `8d783ec`; regression `tafUnknownVisibilityYieldsUnknownCategoryNotVFR` + `heroShortCircuitsOnUnknownCurrentPeriod` |
+| F8 | Missing wind renders as calm | ✅ Resolved (full gate) — `6dc9b00`; regression `missingWindGroupIsUnknownNotCalm` + `realCalmIsReportedAndRendersCalm` |
+| F9 | Color boundaries disagree with category | ✅ Resolved — `6dc9b00`; regression `categoryColorsAgreeWithFlightCategoryAtBoundary` |
+| F10 | Decoder compound path order-dependent | ✅ Resolved — `12658e8`; regression `weatherDecoderHandlesAdverseCodes` + `weatherDecoderDictAuditEveryKeyDecodes` (dict-audit: 0 offenders) |
+| F11 | Widget duplicate parser drifted | ✅ Resolved (parity) — `de90a9c`; **but see F14 — the duplication itself is structural and slated for de-duplication (commit 9).** |
+| F12 | Widget missing category → `.vfr` | ✅ Resolved (`.unknown`) — `de90a9c` |
+| F13 | GoNoGo `Verdict` can't express skip-vs-pass | 🔶 **OPEN** — structural; not fixed. Code issue, not CFII. |
+| F14 | Widget carries a duplicate parser (no shared `MetarParser`) | 🔶 **OPEN** — structural; resolution is de-duplication (commit 9), not test coverage. |
+
+Six items require human (CFII) judgment and are **not** resolved by any code change or test — see [Requires human judgment (CFII)](#requires-human-judgment-cfii).
 
 ## 🔴 Finding 1 — Vertical-visibility / indefinite-ceiling obscurations are dropped (ceiling lost)  **[HIGH]**
 
@@ -127,12 +145,11 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 - **Note:** interacts with Finding 2 — `PROB` (which *should* be an overlay like `TEMPO`) is currently *included* in the hero because it's mis-typed `.base`, so the two overlay classes are treated inconsistently.
 - **Recommendation:** decide intentionally — either surface a worst-case `TEMPO`/`PROB` hazard in the hero ("VFR, but TEMPO IFR 09–13Z"), or document that overlays are Pilot-Notes-only. No code change pending your call.
 
-## 🟠 Finding 5 — Thunderstorm / frozen precip never reach the red axis on the METAR side  **[MEDIUM — color/design]**
+## 🟠 Finding 5 — Thunderstorm / CB pilot *note* never reached the red tier on the METAR side  **[MEDIUM — color/design]** — ✅ RESOLVED (`627a2a8`)
 
-- **Symptom (brief item #7):** Real `TS`, `+TSRA`, `FZRA` on a METAR render **amber**, never red. `ColorRules.presentWeatherColor` is a constant `cautionOrange` (`Theme.swift:208`), and `PilotNote.Severity` only has `{caution, warning}` where `warning → .orange` (`WeatherDetailView.swift:842-846`) — so a METAR Pilot Note **cannot** produce red. The TAF side *does* have a red tier (`tafPilotNotes` rank 0, `WeatherDetailView.swift:2406`), so the two surfaces disagree.
-- **Live evidence:** `KTPA … TS` (VFR), `KEGE … TS HZ` (MVFR), `KPUB … +TSRA SQ 31021G58KT` (LIFR), `KMSS … +TSRA` — all confirmed to parse and to trip the TS pilot note, but at orange/amber, not red.
-- **Confirmation:** the TS-detection prefixes (`hasPrefix("TS")||("+TS")||("VCTS")`, `WeatherDetailView.swift:1058`) do match all live TS tokens — detection works; only the *color axis* is off.
-- **Recommendation:** put convective/frozen present weather on the red (IFR/TS) axis for METAR to match TAF, per the brief. No code change pending your call.
+- **Correction to the original framing:** the present-weather **chip** already reds `TS`/`FZ` via `wxPhenomenaConditionColor` — that surface was never amber-only. The defect was narrower and specific to the **pilot-note tier**: `PilotNote.Severity` had only `{caution, warning}` (max = orange), so a METAR *note* could not produce red, while the TAF notes had a red rank. The two *note* surfaces disagreed; the chip did not.
+- **Resolution:** added a `.danger` (red) tier to `PilotNote.Severity`; **TS and CB** notes route to it (`MetarPilotNotes.build`). SQ and +FC are deliberately **not** escalated — that tier is a CFII call (see [Requires human judgment](#requires-human-judgment-cfii)). Regression: `thunderstormAndCumulonimbusReachDangerTier` (asserts TS/CB `.danger`; does not assert SQ/+FC).
+- **Live evidence (unchanged):** `KTPA … TS` (VFR), `KEGE … TS HZ` (MVFR), `KPUB … +TSRA SQ 31021G58KT` (LIFR), `KMSS … +TSRA` — all parse and trip the TS note, now at the red tier.
 
 ## 🟡 Finding 6 — `parseVisibility` fails UNSAFE to 10.0 SM  **[LOW live impact — flagged per brief]**
 
@@ -145,14 +162,14 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 - **Symptom:** `TafParser.parseVisibility` correctly returns `nil` for an empty `visib:""`, but `calculateFlightCategory` does `let vis = visibility ?? 10.0` (`TafParser.swift:151`) — an **unknown** TAF visibility becomes **10 SM VFR** on the vis axis.
 - **Live evidence:** 5 TAF periods (KDEN/KASE/KPUB/KEGE `-TSRA` overlays) had `visib:""` → parsed `visibility=nil` → category VFR. In these cases the high CB ceilings kept the category VFR anyway (coincidentally harmless), but the fail-unsafe mechanism is confirmed to operate on real data.
 - **Affected code:** `calculateFlightCategory` (`TafParser.swift:150`).
-- **Recommendation:** treat unknown visibility as unknown (or carry forward the prior period), not 10 SM. Regression: `tafUnknownVisibilityDefaultsToTenSMExposingFailUnsafe`.
+- **Recommendation:** treat unknown visibility as unknown (or carry forward the prior period), not 10 SM. ✅ Resolved (`8d783ec`). Regression: `tafUnknownVisibilityYieldsUnknownCategoryNotVFR`.
 
 ## 🟡 Finding 8 — Missing wind group renders as calm  **[LOW]**
 
 - **Symptom:** A METAR with **no wind group** parses to `direction 0, speed 0` — identical to a real `00000KT` calm. "Unknown wind" becomes benign "calm."
 - **Exact raw (live):** `METAR KABR 092153Z AUTO 10SM CLR 27/19 A2988` (no wind group; `wdir` & `wspd` both null). Harness: `wind dir=Optional(0) speed=0 variable=false`.
 - **Affected code:** `MetarParser.parseWind` (`MetarParser.swift:53-59`) — `wspd ?? 0` and the `guard … else { return Wind(direction: 0 …) }`.
-- **Recommendation:** signal unknown wind (e.g. `direction = nil` + a "wind not reported" note) rather than 0/0. Regression: `missingWindGroupRendersAsCalm`.
+- **Recommendation:** signal unknown wind (e.g. `direction = nil` + a "wind not reported" note) rather than 0/0. ✅ Resolved (full gate, `6dc9b00`) — every `Metar.wind` consumer gates on `isReported`; `AlertConditions.windSpeed`/`TafVerification.actualWindKt`/`RateOfChange` wind fields made optional. Regression: `missingWindGroupIsUnknownNotCalm` + `realCalmIsReportedAndRendersCalm`.
 
 ## 🟡 Finding 9 — Category color functions disagree with `calculateFlightCategory` at the exact boundary  **[LOW]**
 
@@ -165,13 +182,42 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 
 - **Symptom:** The precip-type loop uses `remaining.contains(abbr)` in a fixed order (`WeatherParser`→`MetarParser.swift:207`), so codes **not** in the exact-match table decode in the wrong word order: `SNRA → "Rain Snow"` (should be "Snow Rain"). `RASN → "Rain Snow"` (correct). All **listed** real codes decode correctly (verified against the brief's item-#5 battery: `+TSRA`, `-FZRA`, `FZFG`, `BLSN`, `DRSN`, `SHSN`, `VCTS`, `VCSH`, `TSGR`, `MIFG`, `BCFG`, `PRFG`, `+FC` all correct).
 - **Blast radius:** rare unlisted mixed-precip codes only; wxString is already tokenized so the descriptor stacking mostly doesn't arise. Cosmetic.
-- **Recommendation:** low priority; if touched, prefer prefix-consumption over `contains`.
+- **Recommendation:** low priority; if touched, prefer prefix-consumption over `contains`. ✅ Resolved (`12658e8`, prefix-consumption). Regression: `weatherDecoderHandlesAdverseCodes`, and `weatherDecoderDictAuditEveryKeyDecodes` walks every exact-match key (0 offenders: each decodes non-empty and non-passthrough).
+
+## 🟡 Finding 11 — Widget carried a duplicate METAR parser that had drifted from the app  **[LOW]** — ✅ RESOLVED (parity, `de90a9c`)
+
+- **Symptom:** `MetarMateWidget` reimplements `parseVisibility`/`parseCeiling`/`parseWindDirection` inside a private `WidgetFetcher`, independent of `MetarParser`. It had drifted (e.g. the OVX/`vertVis` and `P6SM`/`6+` handling, temp rounding, F1/F6/F3c behaviors).
+- **Resolution:** the widget parser was brought to parity (F1 OVX+vertVis, F6 `Double?`/no-fake-10, F3c rounding), and the missing-wind → `windReported` "—" render was added in `6dc9b00`.
+- **Residual:** parity is currently maintained by hand across two implementations — see **Finding 14** (the duplication itself is the structural defect; de-duplication is commit 9).
+
+## 🟡 Finding 12 — Widget missing flight category defaulted to `.vfr` (fail-permissive)  **[LOW]** — ✅ RESOLVED (`de90a9c`)
+
+- **Symptom:** the widget mapped an absent `fltCat` to `.vfr` (green) instead of `.unknown` — a fail-permissive default on the single most important datum.
+- **Resolution:** `FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown` (matches `MetarParser`; no fail-permissive green).
+
+## 🟡 Finding 14 — Widget target carries a duplicate parser; drift is unobservable by any test  **[LOW — structural; OPEN, not fixed in commit 8]**
+
+- **Symptom:** The widget target does not link MetarMate's `MetarParser` and carries a duplicate implementation of `parseVisibility`/`parseCeiling`/`parseWindDirection`, including the `P6SM`/`6+`/`vertVis` branches. Drift between the two parsers is unobservable by any test in either target. F11/F12 are the observed instances; the class is structural. Resolution is de-duplication, not test coverage.
+- **Ruling:** code issue, not a CFII call. Out of scope for commit 8 (which is test-only — a test that pins the duplicate's behavior would ratify the duplication). **Resolution = commit 9:** link `MetarParser` into the widget target, have `buildSnapshot` call `MetarParser.parse(raw:)` and map `Metar → WidgetWeatherSnapshot`, delete the widget's parse funcs. (The `windReported`/`isReported` plumbing added to the widget in `6dc9b00` becomes redundant once the widget shares the app parser — an expected simplification, not a regression.)
 
 ## 🟡 Finding 13 — `GoNoGo Verdict` cannot express "factor not evaluated" vs "factor passed"  **[LOW — structural; OPEN, not fixed in commit 7]**
 
 - **Symptom:** `Verdict` exposes only `failingFactors`. A skipped factor and a present-but-passing 0-kt factor are indistinguishable to any consumer. 0 kt never fails a max limit, so a fabricated calm reads as a satisfied wind minimum. `AlertConditions.windSpeed: Int?` (commit 6, F8) closes the current path, but `Verdict`'s shape still cannot express "this factor was not evaluated" vs "this factor passed." Any future non-optional numeric reaching a factor reintroduces the failure silently.
 - **Class:** same as the `?? 10.0` / `?? 0` fail-benign family, but structural rather than a single call site.
 - **Ruling:** code issue, not a CFII call. Out of scope for commit 7 — flagged, not fixed. (A fix would give `Verdict` a way to report evaluated-but-passed vs not-evaluated, without adding test-only API to production.)
+
+---
+
+# Requires human judgment (CFII)
+
+These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). **None of the below is "resolved."**
+
+1. **Freezing-precip pilot-note tier — red or amber?** The icing note currently ships at `.warning` (orange). The present-weather *chip* already reds `FZ`; the *note* tier was never escalated. OPEN.
+2. **`SQ` (squall) — red or amber?** Not escalated on the METAR note side. OPEN.
+3. **`+FC` (funnel cloud / tornado) — red tier?** Not escalated on the METAR note side. OPEN.
+4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? Ships as-is. OPEN.
+5. **`P6SM` → 6.0 lossiness** — the "greater than 6 SM" nuance is dropped (maps to `6.0`; VFR either way). Acceptable, or does `P6SM` need its own representation? OPEN.
+6. **Missing-visibility vs missing-wind note asymmetry (Deferred item #6).** Post-F8, unreported wind renders "—" in cells **and** carries a "wind not reported" pilot note; unreported visibility renders "—" in cells but has **no** analogous note. The full gate changed the *surface area* of the asymmetry but not the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric? OPEN.
 
 ---
 
@@ -190,4 +236,4 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 - `MetarMateTests/Fixtures/adverse_metars.json`, `adverse_tafs.json` — the real-observation corpus (verbatim NOAA JSON, 2026-07-09).
 - `MetarMateTests/AdverseWeatherParsingTests.swift` — regression tests (Swift Testing). Confirmations assert pass; reproduced bugs use `withKnownIssue` so the suite stays green until each fix lands. **Ran on iPhone 17 simulator.**
 
-**No behavior changes made.** Awaiting your triage before touching parser/consumer logic (including the two HIGH findings and the `parseVisibility` fail-unsafe default, which — see Finding 6 — turned out to be low live impact rather than the flight-category mis-render originally feared).
+**Status (post-triage).** Commits 1–8 landed on `fix/metar-taf-adverse-audit` (build-verified each; not pushed). F1–F12 resolved with regression coverage; F13 and F14 are OPEN structural code issues (not CFII); the six items under [Requires human judgment (CFII)](#requires-human-judgment-cfii) remain open and unratified. Remaining planned work: **commit 9** — de-duplicate the widget parser (Finding 14). The original "no behavior changes made" note applied to the audit-only phase and no longer holds.

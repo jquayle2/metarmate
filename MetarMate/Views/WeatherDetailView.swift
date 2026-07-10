@@ -1865,102 +1865,9 @@ struct WeatherDetailView: View {
     // Plain-English 1-2 line lead: an MVFR/IFR/LIFR onset within the window leads in its
     // category color; a steady-good period reads as one quiet neutral line.
     private func tafHeroBrief(_ taf: Taf) -> Text {
-        let bases = taf.baseForecasts
-        guard let first = bases.first else {
-            return Text("No forecast data.").foregroundColor(Brand.slate)
-        }
-        // If the CURRENT period's category is undetermined (no visibility AND no ceiling in the
-        // forecast — now reachable since visibility no longer defaults to 10 SM), there is no
-        // honest baseline to narrate a trend from. Say so, rather than dressing "unknown" up as a
-        // category ("UNKN the entire forecast period") or an improvement.
-        if first.flightCategory == .unknown {
-            return Text("Forecast incomplete — the current period doesn't specify visibility or ceiling.")
-                .foregroundColor(Brand.slate)
-        }
-        // A LATER period we couldn't determine (.unknown) must likewise never read as a worst-case
-        // OR as an improvement — excluding it prevents "IFR now, improving to UNKN by 09:00."
-        let known = bases.filter { $0.flightCategory != .unknown }
-        let worst = known.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) })
-        let worstBaseSeverity = worst.map { tafCategorySeverity($0.flightCategory) } ?? tafCategorySeverity(first.flightCategory)
-
-        // Worst-base story: lead category/time + limiting tail — "MVFR by 09:00. Ceiling 2,500 ft."
-        // Shared by the overlay path and the plain worsening branch so the tail never diverges.
-        func worstBaseStory(_ w: TafForecast) -> Text {
-            let isLow = w.flightCategory == .ifr || w.flightCategory == .lifr
-            let lead = Text("\(w.flightCategory.rawValue) by \(tafTimeLabel(w.fromTime)). ")
-                .foregroundColor(isLow ? Brand.valueRed : Brand.mvfrBlue)
-            var tailParts: [String] = []
-            if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
-            if let v = w.visibility, v < 5 { tailParts.append("visibility \(tafVisText(v))") }
-            if !w.weatherPhenomena.isEmpty { tailParts.append(WeatherDecoder.decodeAll(w.weatherPhenomena).lowercased()) }
-            let tailText: String
-            if tailParts.isEmpty {
-                tailText = "Watch the trend through the period."
-            } else {
-                let joined = tailParts.joined(separator: ", ")
-                tailText = joined.prefix(1).uppercased() + joined.dropFirst() + "."
-            }
-            return lead + Text(tailText).foregroundColor(Brand.slate)
-        }
-
-        // A significant TEMPO/PROB overlay is a distinct hazard from the base trend and must surface
-        // REGARDLESS of what the bases do — a PROB30 thunderstorm is not covered by an "MVFR by
-        // 09:00" base story. Lead with it when it's convective/heavy (always), or when it is IFR/LIFR
-        // AND more severe than the worst base. Hoisted above the worsening guard on purpose. (PROB
-        // reaches overlayForecasts via the F2 fix.)
-        if let overlay = taf.overlayForecasts.first(where: {
-            tafHasConvectiveOrHeavy($0)
-                || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
-                    && tafCategorySeverity($0.flightCategory) > worstBaseSeverity)
-        }) {
-            let label = overlay.type == .becmg ? "BECMG" : (overlay.type == .tempo ? "TEMPO" : overlay.type.rawValue)
-            let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
-            let what = low
-                ? overlay.flightCategory.rawValue
-                : (overlay.weatherPhenomena.isEmpty ? "convective activity" : WeatherDecoder.decodeAll(overlay.weatherPhenomena).lowercased())
-            let overlayClause = Text(" \(label) \(what) \(tafWindowLabel(from: overlay.fromTime, to: overlay.toTime)).")
-                .foregroundColor(low ? Brand.valueRed : Brand.cautionOrange)
-            let basesWorsen = worst.map { tafCategorySeverity($0.flightCategory) > tafCategorySeverity(first.flightCategory) } ?? false
-            if basesWorsen, let w = worst {
-                // Keep the full worst-base story (lead + limiting tail), then the overlay as a
-                // separate sentence — both hazards, base detail intact.
-                return worstBaseStory(w) + Text(" Plus").foregroundColor(Brand.slate) + overlayClause
-            }
-            // Benign/steady base — contrast the current category with the overlay hazard.
-            return Text("\(first.flightCategory.rawValue) now,").foregroundColor(ColorRules.flightCategoryColor(first.flightCategory))
-                + Text(" but").foregroundColor(Brand.slate) + overlayClause
-        }
-
-        // No significant overlay — the base trend logic. Nothing worse than the first period?
-        guard let worst, tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
-            // Nothing gets WORSE than the first period. But the forecast may still IMPROVE —
-            // e.g. starts IFR and clears to VFR. Saying "IFR the entire forecast period" there
-            // is wrong and would keep a pilot on the ground when the TAF says it lifts.
-            if let firstBetter = known.first(where: {
-                tafCategorySeverity($0.flightCategory) < tafCategorySeverity(first.flightCategory)
-            }) {
-                return Text("\(first.flightCategory.rawValue) now, ")
-                    .foregroundColor(ColorRules.flightCategoryColor(first.flightCategory))
-                    + Text("improving to \(firstBetter.flightCategory.rawValue) by \(tafTimeLabel(firstBetter.fromTime)).")
-                        .foregroundColor(ColorRules.flightCategoryColor(firstBetter.flightCategory))
-            }
-            // Category is genuinely steady across the period. Still surface a wind story if any
-            // period gusts at or above the caution threshold (15 kt) — otherwise the hero would
-            // claim "no significant changes" while the Pilot Notes card flags gusts (amber axis).
-            let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
-            if let gusty = firstGusty {
-                return Text("\(first.flightCategory.rawValue) throughout, ")
-                    .foregroundColor(Brand.cloud)
-                    + Text("but gusty periods \(tafCoarseWhen(gusty.fromTime)).")
-                        .foregroundColor(Brand.cautionOrange)
-            }
-            return Text("\(first.flightCategory.rawValue) the entire forecast period. ")
-                .foregroundColor(Brand.cloud)
-                + Text("No significant changes expected.").foregroundColor(Brand.slate)
-        }
-
-        // Bases worsen with no significant overlay — the full worst-base story (lead + limiting tail).
-        return worstBaseStory(worst)
+        // Pure derivation lives in TafHeroBrief.build; reduce the colored segments back to a
+        // single Text (each segment keeps its own flight-category / caution-axis color).
+        TafHeroBrief.build(taf).reduce(Text("")) { $0 + Text($1.text).foregroundColor($1.color) }
     }
 
     // Compact hero-strip time label, e.g. "5P", "8P", "11P", "12A".
@@ -2191,65 +2098,13 @@ struct WeatherDetailView: View {
     }
 
     // Local "h:mm a" clock for a forecast time (Zulu → local).
-    private func tafLocalClock(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "h:mm a"
-        fmt.timeZone = .current
-        return fmt.string(from: date)
-    }
-
-    // Day-of-week disambiguation for a forecast time relative to now's local calendar day.
-    // "" = today, " tomorrow" = next local day, " MMM d" = further out (Fix 2).
-    private func tafDaySuffix(_ date: Date) -> String {
-        let cal = Calendar.current
-        let days = cal.dateComponents([.day],
-                                      from: cal.startOfDay(for: Date()),
-                                      to: cal.startOfDay(for: date)).day ?? 0
-        if days <= 0 { return "" }
-        if days == 1 { return " tomorrow" }
-        let df = DateFormatter()
-        df.dateFormat = "MMM d"
-        df.timeZone = .current
-        return " \(df.string(from: date))"
-    }
-
-    // Full point-in-time label, e.g. "3:00 PM local" / "9:00 AM local tomorrow".
-    private func tafTimeLabel(_ date: Date) -> String {
-        "\(tafLocalClock(date)) local\(tafDaySuffix(date))"
-    }
-
-    // Window label for an overlay group, e.g. "3:00 PM–9:00 AM local tomorrow"
-    // (day suffix keyed off the window start).
-    private func tafWindowLabel(from: Date, to: Date) -> String {
-        "\(tafLocalClock(from))–\(tafLocalClock(to)) local\(tafDaySuffix(from))"
-    }
-
-    // Coarse time-of-day phrasing for the hero wind-caution tail, e.g. "midday tomorrow",
-    // "this afternoon", "tomorrow morning". Deliberately vague (Option B) — the exact gust
-    // number and time live in the TAF Pilot Notes card below.
-    private func tafCoarseWhen(_ date: Date) -> String {
-        let hour = Calendar.current.component(.hour, from: date)
-        let partOfDay: String
-        switch hour {
-        case 5..<11:  partOfDay = "morning"
-        case 11..<14: partOfDay = "midday"
-        case 14..<18: partOfDay = "afternoon"
-        case 18..<22: partOfDay = "evening"
-        default:      partOfDay = "overnight"
-        }
-        let suffix = tafDaySuffix(date).trimmingCharacters(in: .whitespaces)
-        if suffix.isEmpty {
-            // Today: "this morning/afternoon/evening" reads naturally, but "this midday"
-            // and "this overnight" don't — those stand alone.
-            switch partOfDay {
-            case "midday":    return "midday"
-            case "overnight": return "overnight"
-            default:          return "this \(partOfDay)"
-            }
-        }
-        if suffix == "tomorrow" { return "\(partOfDay) tomorrow" }
-        return "\(partOfDay) \(suffix)"
-    }
+    // TAF time/text/severity formatters moved to TafFormat (pure, shared with TafHeroBrief);
+    // these thin delegators keep every existing call site in this file unchanged.
+    private func tafLocalClock(_ date: Date) -> String { TafFormat.localClock(date) }
+    private func tafDaySuffix(_ date: Date) -> String { TafFormat.daySuffix(date) }
+    private func tafTimeLabel(_ date: Date) -> String { TafFormat.timeLabel(date) }
+    private func tafWindowLabel(from: Date, to: Date) -> String { TafFormat.windowLabel(from: from, to: to) }
+    private func tafCoarseWhen(_ date: Date) -> String { TafFormat.coarseWhen(date) }
 
     // MARK: - TAF Pilot Notes
     // Forecast-oriented companion to the METAR Pilot Notes card. Every note carries timing
@@ -2276,28 +2131,9 @@ struct WeatherDetailView: View {
         ForecastRules.ceilingFeet(period)
     }
 
-    private func tafVisText(_ vis: Double) -> String {
-        vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM"
-    }
-
-    // Heavy precip or thunderstorm in a period's phenomena — escalates overlay severity to warning.
-    private func tafHasConvectiveOrHeavy(_ period: TafForecast) -> Bool {
-        period.weatherPhenomena.contains { code in
-            let c = code.uppercased()
-            return c.contains("TS") || c.contains("GR") || c.hasPrefix("+") || c.contains("FC") || c.contains("FZ")
-        }
-        || period.clouds.contains { $0.isCumulonimbus }
-    }
-
-    private func tafCategorySeverity(_ cat: FlightCategory) -> Int {
-        switch cat {
-        case .vfr: return 0
-        case .mvfr: return 1
-        case .ifr: return 2
-        case .lifr: return 3
-        case .unknown: return 0
-        }
-    }
+    private func tafVisText(_ vis: Double) -> String { TafFormat.visText(vis) }
+    private func tafHasConvectiveOrHeavy(_ period: TafForecast) -> Bool { TafFormat.hasConvectiveOrHeavy(period) }
+    private func tafCategorySeverity(_ cat: FlightCategory) -> Int { TafFormat.categorySeverity(cat) }
 
     private func tafPilotNotes(for taf: Taf) -> [TafPilotNote] {
         var notes: [TafPilotNote] = []

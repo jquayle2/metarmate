@@ -51,6 +51,34 @@ struct AdverseWeatherParsingTests {
 
         // KORD TAF excerpt: a base FM period + a PROB30 TSRA period (NOAA sends fcstChange="PROB").
         static let kordProbTaf = #"{"icaoId":"KORD","issueTime":"2026-07-09T22:15:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"TAF KORD PROB30 excerpt","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":250,"wspd":9,"visib":"6+","clouds":[{"cover":"SCT","base":3500,"type":null},{"cover":"BKN","base":12000,"type":null}]},{"timeFrom":1783641600,"timeTo":1783648800,"fcstChange":"PROB","probability":30,"visib":2,"wxString":"TSRA BR","clouds":[{"cover":"BKN","base":3500,"type":"CB"}]}]}"#
+
+        // MARK: commit-8 fixtures
+
+        // F3 — freezing precip. -FZRA at +1 C (temp ABOVE 0): the icing note must still fire.
+        static let fzraWarm = #"{"icaoId":"KROC","obsTime":1783633980,"temp":1,"dewp":0,"wdir":90,"wspd":8,"visib":2,"altim":1005,"rawOb":"METAR KROC 092153Z 09008KT 2SM -FZRA OVC008 01/00 A2967","clouds":[{"cover":"OVC","base":800}],"wxString":"-FZRA","fltCat":"IFR"}"#
+        // F3 — FZRA reported ALONGSIDE FZFG in the same ob. The icing note must fire (not be
+        // suppressed by the FZFG entry); the FZFG suppression applies per-token, not to the ob.
+        static let fzraWithFzfg = #"{"icaoId":"KART","obsTime":1783633980,"temp":0,"dewp":0,"wdir":100,"wspd":6,"visib":0.5,"altim":1004,"rawOb":"METAR KART 092153Z 10006KT 1/2SM FZRA FZFG OVC003 00/00 A2964","clouds":[{"cover":"OVC","base":300}],"wxString":"FZRA FZFG","fltCat":"LIFR"}"#
+        // F3 — -FZRA with NO temperature field at all. Missing temp must NOT read as "not freezing"
+        // (the ?? shape in a different costume) — the note fires off the FZ precip, not the temp.
+        static let fzraNoTemp = #"{"icaoId":"KGTB","obsTime":1783633980,"wdir":90,"wspd":10,"visib":1,"altim":1006,"rawOb":"METAR KGTB 092153Z 09010KT 1SM -FZRA OVC006","clouds":[{"cover":"OVC","base":600}],"wxString":"-FZRA","fltCat":"IFR"}"#
+
+        // F5 — a cumulonimbus cloud (type CB) with NO thunderstorm in wxString. Must reach .danger.
+        static let cbNoThunder = #"{"icaoId":"KBOS","obsTime":1783633980,"temp":20,"dewp":15,"wdir":200,"wspd":10,"visib":"10+","altim":1013,"rawOb":"METAR KBOS 092153Z 20010KT 10SM FEW040CB 20/15 A2992","clouds":[{"cover":"FEW","base":4000,"type":"CB"}],"fltCat":"VFR"}"#
+
+        // F1 — SYNTHETIC OVX obscuration with NO base, only a top-level vertVis (the fallback branch
+        // the live corpus never hits — KDUJ/EFHK/NZDN all carry base). VV003 -> 300 ft ceiling.
+        static let ovxVertVisOnly = #"{"icaoId":"KDUJ","obsTime":1783633980,"temp":5,"dewp":5,"wdir":0,"wspd":0,"visib":0.5,"vertVis":3,"altim":1015,"rawOb":"METAR KDUJ 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","clouds":[{"cover":"OVX"}],"wxString":"FG","fltCat":"LIFR"}"#
+
+        // F7 — TAF whose CURRENT (first) period specifies neither visibility nor ceiling -> .unknown.
+        static let tafFirstUnknown = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic first-period unknown","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[]}]}"#
+
+        // F4 — benign (VFR) base + a non-low convective TEMPO TSRA overlay. Hero must surface the
+        // TEMPO clause on the CAUTION axis (amber), never a flight-category color.
+        static let tafBenignBaseTempoTS = #"{"icaoId":"KMCO","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"benign base + TEMPO TSRA","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":90,"wspd":8,"visib":"6+","clouds":[{"cover":"SCT","base":4000,"type":null}]},{"timeFrom":1783641600,"timeTo":1783645200,"fcstChange":"TEMPO","visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000,"type":"CB"}]}]}"#
+        // F4 — WORSENING base (VFR -> IFR) + a TEMPO TSRA overlay. Hero keeps the worst-base story
+        // (IFR lead on the category axis) AND appends the overlay clause on the caution axis.
+        static let tafWorseningBaseTempoTS = #"{"icaoId":"KMCO","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"worsening base + TEMPO TSRA","fcsts":[{"timeFrom":1783634400,"timeTo":1783641600,"wdir":90,"wspd":8,"visib":"6+","clouds":[{"cover":"SCT","base":4000,"type":null}]},{"timeFrom":1783645200,"timeTo":1783728000,"fcstChange":"FM","wdir":100,"wspd":10,"visib":2,"clouds":[{"cover":"BKN","base":800,"type":null}]},{"timeFrom":1783648800,"timeTo":1783652400,"fcstChange":"TEMPO","visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000,"type":"CB"}]}]}"#
     }
 
     // MARK: - Finding 1 (HIGH): OVX / vertical-visibility obscuration dropped -> ceiling lost
@@ -202,5 +230,88 @@ struct AdverseWeatherParsingTests {
         #expect(ColorRules.ceilingColor(3000) == Brand.mvfrBlue)
         #expect(ColorRules.ceilingColor(3000) != Brand.vfrGreen)
         #expect(try taf(Obs.tafCeil3000Boundary).forecasts.first?.flightCategory == .mvfr)
+    }
+
+    // MARK: - Finding 3 (audit): freezing-precip icing note fires regardless of temp (FIXED)
+
+    // Asserts the icing note FIRES (existence), NOT its severity — the red-vs-amber tier is a CFII
+    // call (deferred #1); asserting .severity here would quietly ratify an unmade decision.
+    @Test func freezingPrecipIcingNoteFiresRegardlessOfTemp() throws {
+        func fires(_ json: String) throws -> Bool {
+            try MetarPilotNotes.build(metar: metar(json), history: [])
+                .contains { $0.text.contains("Freezing precipitation") }
+        }
+        #expect(try fires(Obs.fzraWarm))      // -FZRA at +1 C — not suppressed above 0
+        #expect(try fires(Obs.fzraWithFzfg))  // FZRA alongside FZFG — not suppressed by the FZFG token
+        #expect(try fires(Obs.fzraNoTemp))    // -FZRA with no temp field — missing temp ≠ "not freezing"
+    }
+
+    // MARK: - Finding 5 (audit): TS/CB reach the red (.danger) tier on the METAR side (FIXED)
+
+    // TS/CB were routed to .danger in commit 627a2a8 — a landed decision. Deliberately does NOT
+    // assert SQ (deferred #2) or +FC (deferred #3) severity; those escalations are unmade (CFII).
+    @Test func thunderstormAndCumulonimbusReachDangerTier() throws {
+        let tsNotes = try MetarPilotNotes.build(metar: metar(Obs.ktpaThunder), history: [])
+        #expect(tsNotes.contains { $0.text.contains("Thunderstorm") && $0.severity == .danger })
+        let cbNotes = try MetarPilotNotes.build(metar: metar(Obs.cbNoThunder), history: [])
+        #expect(cbNotes.contains { $0.text.contains("Cumulonimbus") && $0.severity == .danger })
+    }
+
+    // MARK: - Finding 1 (audit): OVX obscuration with only vertVis (no base) — synthetic (FIXED)
+
+    // The live corpus always carried a `base`; this exercises the fallback branch where the OVX
+    // layer has no base and the ceiling must come from the top-level vertVis field.
+    @Test func ovxVertVisOnlyYieldsCeilingFromVertVis() throws {
+        let m = try metar(Obs.ovxVertVisOnly)
+        #expect(m.ceilingFeet == 300)                                     // VV003 via vertVis, no base
+        #expect(m.clouds.contains { $0.coverage == .verticalVisibility })
+    }
+
+    // MARK: - Finding 7 (audit): hero short-circuits when the current period is undetermined (FIXED)
+
+    @Test func heroShortCircuitsOnUnknownCurrentPeriod() throws {
+        let segs = TafHeroBrief.build(try taf(Obs.tafFirstUnknown))
+        #expect(segs.count == 1)                                          // short-circuit — one segment
+        #expect(segs.first?.text.contains("Forecast incomplete") == true)
+        #expect(segs.first?.color == Brand.slate)                         // neutral, not a category color
+    }
+
+    // MARK: - Finding 4 (audit): hero surfaces significant TEMPO/PROB overlays (FIXED)
+
+    // The overlay hazard must appear in the hero AND on the CAUTION axis (amber / valueRed-when-low),
+    // never tinted with a flight-category color. Asserts the color on the segment carrying the clause
+    // (per design: the category axis and the caution axis must never be collapsed).
+    @Test func heroSurfacesTempoOverlayOnCautionAxis() throws {
+        // Benign (VFR) base: "VFR now, but TEMPO … " — TEMPO clause on the caution axis.
+        let benign = TafHeroBrief.build(try taf(Obs.tafBenignBaseTempoTS))
+        let benignTempo = try #require(benign.first { $0.text.contains("TEMPO") })
+        #expect(benignTempo.color == Brand.cautionOrange)   // amber caution axis…
+        #expect(benignTempo.color != Brand.vfrGreen)        // …not the VFR category color
+        #expect(benignTempo.color != Brand.mvfrBlue)
+        #expect(benign.contains { $0.text.contains("now,") })   // the base contrast is preserved
+
+        // Worsening base (VFR -> IFR): worst-base IFR lead (category axis) + overlay (caution axis).
+        let worsening = TafHeroBrief.build(try taf(Obs.tafWorseningBaseTempoTS))
+        #expect(worsening.contains { $0.text.contains("IFR by") && $0.color == Brand.valueRed })
+        let worseTempo = try #require(worsening.first { $0.text.contains("TEMPO") })
+        #expect(worseTempo.color == Brand.cautionOrange)
+    }
+
+    // MARK: - Finding 10 (audit): WeatherDecoder dict-audit — every key decodes
+
+    // Walk EVERY key in the exact-match table; each must decode to a non-empty, non-passthrough
+    // description. Per the audit method: if a key has no real decode path this FAILS and reports
+    // it — we do NOT paper over it by adding a decode here.
+    @Test func weatherDecoderDictAuditEveryKeyDecodes() {
+        var offenders: [String] = []
+        var walked = 0
+        for (key, _) in WeatherDecoder.descriptions {
+            walked += 1
+            let decoded = WeatherDecoder.decode(key)
+            if decoded.isEmpty || decoded == key { offenders.append(key) }
+        }
+        // Prove EVERY key was walked (not a subset): iterated count must equal the dict size.
+        #expect(walked == WeatherDecoder.descriptions.count, "walked \(walked) of \(WeatherDecoder.descriptions.count) keys")
+        #expect(offenders.isEmpty, "codes with empty/passthrough decode: \(offenders.sorted())")
     }
 }

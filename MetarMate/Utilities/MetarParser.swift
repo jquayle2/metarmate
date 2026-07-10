@@ -262,8 +262,10 @@ struct WeatherDecoder {
         codes.map { decode($0) }.joined(separator: ", ")
     }
 
-    // Common exact matches
-    private static let descriptions: [String: String] = [
+    // Common exact matches. Internal (not private) so the F10 dict-audit test can walk every key
+    // and assert each decodes to a non-empty, non-passthrough description — widening access to
+    // existing data, not adding test-only API.
+    static let descriptions: [String: String] = [
         "RA": "Rain", "+RA": "Heavy Rain", "-RA": "Light Rain",
         "SN": "Snow", "+SN": "Heavy Snow", "-SN": "Light Snow",
         "DZ": "Drizzle", "+DZ": "Heavy Drizzle", "-DZ": "Light Drizzle",
