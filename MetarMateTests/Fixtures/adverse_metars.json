@@ -1,0 +1,787 @@
+[
+ {
+  "icaoId": "CYRB",
+  "receiptTime": "2026-07-09T20:48:04.425Z",
+  "obsTime": 1783629960,
+  "reportTime": "2026-07-09T20:46:00.000Z",
+  "temp": 1,
+  "dewp": 1,
+  "wdir": 300,
+  "wspd": 7,
+  "visib": 0.5,
+  "altim": 1006.2,
+  "slp": 1007,
+  "qcField": 0,
+  "wxString": "FG",
+  "vertVis": 2,
+  "metarType": "SPECI",
+  "rawOb": "SPECI CYRB 092046Z 30007KT 1/2SM R35/1600V2200FT/N FG VV002 01/01 A2971 RMK FG8 SLP070",
+  "lat": 74.713,
+  "lon": -94.982,
+  "elev": 59,
+  "name": "Resolute Bay Arpt, NU, CA",
+  "cover": "OVX",
+  "clouds": [
+   {
+    "cover": "OVX",
+    "base": 200
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "CYRB",
+  "receiptTime": "2026-07-09T20:41:04.234Z",
+  "obsTime": 1783629540,
+  "reportTime": "2026-07-09T20:39:00.000Z",
+  "temp": 1,
+  "dewp": 1,
+  "wdir": 290,
+  "wspd": 8,
+  "visib": 0.38,
+  "altim": 1006.2,
+  "slp": 1007,
+  "qcField": 0,
+  "wxString": "FG",
+  "vertVis": 2,
+  "metarType": "SPECI",
+  "rawOb": "SPECI CYRB 092039Z 29008KT 3/8SM R35/2800VP6000FT/D FG VV002 01/01 A2971 RMK FG8 SLP070",
+  "lat": 74.713,
+  "lon": -94.982,
+  "elev": 59,
+  "name": "Resolute Bay Arpt, NU, CA",
+  "cover": "OVX",
+  "clouds": [
+   {
+    "cover": "OVX",
+    "base": 200
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "EFHK",
+  "receiptTime": "2026-07-09T22:26:09.525Z",
+  "obsTime": 1783635600,
+  "reportTime": "2026-07-09T22:20:00.000Z",
+  "temp": 14,
+  "dewp": 14,
+  "wdir": 360,
+  "wspd": 3,
+  "visib": 0.19,
+  "altim": 1012,
+  "qcField": 0,
+  "wxString": "FG",
+  "vertVis": 2,
+  "metarType": "METAR",
+  "rawOb": "METAR EFHK 092220Z 36003KT 330V030 0300 R04L/1300D R15/0700D R22L/0700N R22R/0650N FG VV002 14/14 Q1012 TEMPO 0100 VV001",
+  "lat": 60.327,
+  "lon": 24.957,
+  "elev": 56,
+  "name": "Helsinki/Vantaa Arpt, UU, FI",
+  "cover": "OVX",
+  "clouds": [
+   {
+    "cover": "OVX",
+    "base": 200
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "KMSS",
+  "receiptTime": "2026-07-09T22:04:07.281Z",
+  "obsTime": 1783634460,
+  "reportTime": "2026-07-09T22:01:00.000Z",
+  "temp": 20.6,
+  "dewp": 20.6,
+  "wdir": 0,
+  "wspd": 0,
+  "visib": 1.25,
+  "altim": 1008.9,
+  "qcField": 14,
+  "wxString": "RA BR",
+  "precip": 0.04,
+  "metarType": "SPECI",
+  "rawOb": "SPECI KMSS 092201Z AUTO 00000KT 1 1/4SM RA BR SCT004 BKN032 OVC060 21/21 A2979 RMK AO2 LTG DSNT SW P0004 T02060206 $",
+  "lat": 44.9334,
+  "lon": -74.8484,
+  "elev": 60,
+  "name": "Massena Intl, NY, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 400
+   },
+   {
+    "cover": "BKN",
+    "base": 3200
+   },
+   {
+    "cover": "OVC",
+    "base": 6000
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "KMSS",
+  "receiptTime": "2026-07-09T21:56:31.007Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 20.6,
+  "dewp": 20.6,
+  "wdir": 0,
+  "wspd": 0,
+  "visib": 1.5,
+  "altim": 1008.9,
+  "slp": 1008.8,
+  "qcField": 6,
+  "wxString": "+RA BR",
+  "precip": 0.25,
+  "metarType": "METAR",
+  "rawOb": "METAR KMSS 092153Z AUTO 00000KT 1 1/2SM +RA BR SCT004 BKN038 OVC065 21/21 A2979 RMK AO2 LTG DSNT SW RAE18B24 SLP088 P0025 T02060206",
+  "lat": 44.9334,
+  "lon": -74.8484,
+  "elev": 60,
+  "name": "Massena Intl, NY, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 400
+   },
+   {
+    "cover": "BKN",
+    "base": 3800
+   },
+   {
+    "cover": "OVC",
+    "base": 6500
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "KMSS",
+  "receiptTime": "2026-07-09T20:04:09.315Z",
+  "obsTime": 1783627260,
+  "reportTime": "2026-07-09T20:01:00.000Z",
+  "temp": 20.6,
+  "dewp": 20.6,
+  "wdir": 0,
+  "wspd": 0,
+  "visib": 0.75,
+  "altim": 1009.9,
+  "qcField": 6,
+  "wxString": "+RA BR",
+  "precip": 0.18,
+  "metarType": "SPECI",
+  "rawOb": "SPECI KMSS 092001Z AUTO 00000KT 3/4SM +RA BR FEW004 BKN030 OVC044 21/21 A2982 RMK AO2 LTG DSNT E-SW P0018 T02060206",
+  "lat": 44.9334,
+  "lon": -74.8484,
+  "elev": 60,
+  "name": "Massena Intl, NY, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 400
+   },
+   {
+    "cover": "BKN",
+    "base": 3000
+   },
+   {
+    "cover": "OVC",
+    "base": 4400
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "KPUB",
+  "receiptTime": "2026-07-09T21:56:30.536Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 21.1,
+  "dewp": 12.2,
+  "wdir": 310,
+  "wspd": 21,
+  "wgst": 58,
+  "visib": 0.75,
+  "altim": 1016.7,
+  "slp": 1011.7,
+  "qcField": 12,
+  "wxString": "+TSRA SQ",
+  "precip": 0.005,
+  "metarType": "METAR",
+  "rawOb": "METAR KPUB 092153Z 31021G58KT 290V010 3/4SM +TSRA SQ FEW028 BKN100 21/12 A3002 RMK AO2 PK WND 29058/2151 WSHFT 2127 RAB43 TSB49 SLP117 P0000 T02110122 RVRNO $",
+  "lat": 38.2887,
+  "lon": -104.5057,
+  "elev": 1441,
+  "name": "Pueblo Mem Arpt, CO, US",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 2800
+   },
+   {
+    "cover": "BKN",
+    "base": 10000
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "KTPA",
+  "receiptTime": "2026-07-09T21:56:26.798Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 35,
+  "dewp": 23.3,
+  "wdir": 270,
+  "wspd": 8,
+  "wgst": 17,
+  "visib": "10+",
+  "altim": 1018,
+  "slp": 1017.7,
+  "qcField": 4,
+  "wxString": "TS",
+  "metarType": "METAR",
+  "rawOb": "METAR KTPA 092153Z 27008G17KT 10SM TS FEW060CB FEW250 35/23 A3006 RMK AO2 TSE21B24 SLP177 FRQ LTGICCG E TS E MOV NW VCSH E T03500233",
+  "lat": 27.9633,
+  "lon": -82.54,
+  "elev": 2,
+  "name": "Tampa Intl Arpt, FL, US",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 6000
+   },
+   {
+    "cover": "FEW",
+    "base": 25000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KEGE",
+  "receiptTime": "2026-07-09T20:58:24.449Z",
+  "obsTime": 1783630560,
+  "reportTime": "2026-07-09T21:00:00.000Z",
+  "temp": 26.1,
+  "dewp": 5.6,
+  "wdir": 360,
+  "wspd": 13,
+  "wgst": 22,
+  "visib": 3,
+  "altim": 1022.1,
+  "slp": 1012.5,
+  "qcField": 4,
+  "wxString": "TS HZ",
+  "presTend": -1.5,
+  "metarType": "METAR",
+  "rawOb": "METAR KEGE 092056Z 36013G22KT 3SM TS HZ SCT100 26/06 A3018 RMK AO2 PK WND 21030/2019 WSHFT 2041 LTG DSNT N-E TSB31 SLP125 T02610056 55015",
+  "lat": 39.6448,
+  "lon": -106.9176,
+  "elev": 1993,
+  "name": "Eagle Cnty Rgnl, CO, US",
+  "cover": "SCT",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 10000
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "KIAH",
+  "receiptTime": "2026-07-09T20:56:33.232Z",
+  "obsTime": 1783630380,
+  "reportTime": "2026-07-09T21:00:00.000Z",
+  "temp": 30.6,
+  "dewp": 22.8,
+  "wdir": 180,
+  "wspd": 12,
+  "wgst": 23,
+  "visib": "10+",
+  "altim": 1016.7,
+  "slp": 1016.3,
+  "qcField": 4,
+  "wxString": "TS",
+  "presTend": -1.6,
+  "metarType": "METAR",
+  "rawOb": "METAR KIAH 092053Z 18012G23KT 10SM TS FEW030 SCT050CB BKN250 31/23 A3002 RMK AO2 PK WND 18027/2042 TSB48 SLP163 SHRA S-SW OCNL LTGCG SW TS SW MOV N T03060228 55016",
+  "lat": 29.9844,
+  "lon": -95.3607,
+  "elev": 27,
+  "name": "Houston/Bush Intl, TX, US",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 3000
+   },
+   {
+    "cover": "SCT",
+    "base": 5000
+   },
+   {
+    "cover": "BKN",
+    "base": 25000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KBTR",
+  "receiptTime": "2026-07-09T19:56:42.407Z",
+  "obsTime": 1783626780,
+  "reportTime": "2026-07-09T20:00:00.000Z",
+  "temp": 31.1,
+  "dewp": 21.1,
+  "wdir": 220,
+  "wspd": 12,
+  "visib": "10+",
+  "altim": 1018.4,
+  "slp": 1017.9,
+  "qcField": 4,
+  "wxString": "VCTS",
+  "precip": 0.005,
+  "metarType": "METAR",
+  "rawOb": "METAR KBTR 091953Z 22012KT 10SM VCTS SCT075 31/21 A3007 RMK AO2 PK WND 22026/1902 WSHFT 1856 LTG DSNT E RAB06E20 SLP179 P0000 T03110211",
+  "lat": 30.5378,
+  "lon": -91.1468,
+  "elev": 20,
+  "name": "Baton Rouge/Ryan Fld, LA, US",
+  "cover": "SCT",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 7500
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KMSS",
+  "receiptTime": "2026-07-09T19:46:02.182Z",
+  "obsTime": 1783626120,
+  "reportTime": "2026-07-09T19:42:00.000Z",
+  "temp": 20.6,
+  "dewp": 20,
+  "wdir": "VRB",
+  "wspd": 6,
+  "visib": 1.75,
+  "altim": 1009.6,
+  "qcField": 6,
+  "wxString": "+TSRA BR",
+  "precip": 0.31,
+  "metarType": "SPECI",
+  "rawOb": "SPECI KMSS 091942Z AUTO VRB06KT 1 3/4SM +TSRA BR BKN041 BKN047 OVC100 21/20 A2981 RMK AO2 TSB00E15B30 P0031 T02060200",
+  "lat": 44.9334,
+  "lon": -74.8484,
+  "elev": 60,
+  "name": "Massena Intl, NY, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 4100
+   },
+   {
+    "cover": "BKN",
+    "base": 4700
+   },
+   {
+    "cover": "OVC",
+    "base": 10000
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "KMSN",
+  "receiptTime": "2026-07-09T21:56:30.962Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 27.8,
+  "dewp": 20,
+  "wdir": 330,
+  "wspd": 6,
+  "visib": "10+",
+  "altim": 1010.9,
+  "slp": 1010.1,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KMSN 092153Z 33006KT 10SM SCT043 BKN250 28/20 A2985 RMK AO2 SLP101 T02780200",
+  "lat": 43.1407,
+  "lon": -89.3452,
+  "elev": 262,
+  "name": "Madison/Dane Cnty Rgnl, WI, US",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 4300
+   },
+   {
+    "cover": "BKN",
+    "base": 25000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KICT",
+  "receiptTime": "2026-07-09T21:56:32.311Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 35,
+  "dewp": 21.7,
+  "wdir": 350,
+  "wspd": 6,
+  "visib": "10+",
+  "altim": 1010.2,
+  "slp": 1008.3,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KICT 092153Z 35006KT 10SM FEW120 FEW200 35/22 A2983 RMK AO2 SLP083 T03500217",
+  "lat": 37.6475,
+  "lon": -97.43,
+  "elev": 428,
+  "name": "Wichita/Eisenhower Arpt, KS, US",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 12000
+   },
+   {
+    "cover": "FEW",
+    "base": 20000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KBGR",
+  "receiptTime": "2026-07-09T21:56:27.951Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 28.3,
+  "dewp": 18.9,
+  "wdir": 360,
+  "wspd": 6,
+  "visib": "10+",
+  "altim": 1007.5,
+  "slp": 1007,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KBGR 092153Z 36006KT 10SM SCT075 BKN110 BKN250 28/19 A2975 RMK AO2 SLP070 T02830189",
+  "lat": 44.7979,
+  "lon": -68.8195,
+  "elev": 45,
+  "name": "Bangor Intl Arpt, ME, US",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 7500
+   },
+   {
+    "cover": "BKN",
+    "base": 11000
+   },
+   {
+    "cover": "BKN",
+    "base": 25000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KSNA",
+  "receiptTime": "2026-07-09T21:56:26.448Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 22.8,
+  "dewp": 16.7,
+  "wdir": 200,
+  "wspd": 12,
+  "visib": "10+",
+  "altim": 1011.6,
+  "slp": 1011.4,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KSNA 092153Z 20012KT 10SM FEW011 23/17 A2987 RMK AO2 SLP114 T02280167",
+  "lat": 33.6798,
+  "lon": -117.8675,
+  "elev": 14,
+  "name": "Santa Ana/Wayne Arpt, CA, US",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1100
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KDSM",
+  "receiptTime": "2026-07-09T21:56:29.697Z",
+  "obsTime": 1783634040,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 29.4,
+  "dewp": 20.6,
+  "wdir": 270,
+  "wspd": 4,
+  "visib": "10+",
+  "altim": 1011.6,
+  "slp": 1010.6,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KDSM 092154Z 27004KT 10SM FEW035 SCT100 SCT200 BKN250 29/21 A2987 RMK AO2 SLP106 T02940206",
+  "lat": 41.5339,
+  "lon": -93.6531,
+  "elev": 286,
+  "name": "Des Moines Intl, IA, US",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 3500
+   },
+   {
+    "cover": "SCT",
+    "base": 10000
+   },
+   {
+    "cover": "SCT",
+    "base": 20000
+   },
+   {
+    "cover": "BKN",
+    "base": 25000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KSGF",
+  "receiptTime": "2026-07-09T21:56:22.842Z",
+  "obsTime": 1783633920,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 31.7,
+  "dewp": 22.8,
+  "wdir": 200,
+  "wspd": 11,
+  "visib": "10+",
+  "altim": 1012.3,
+  "slp": 1010.4,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KSGF 092152Z 20011KT 10SM CLR 32/23 A2989 RMK AO2 SLP104 T03170228",
+  "lat": 37.2398,
+  "lon": -93.3899,
+  "elev": 387,
+  "name": "Springfield Muni, MO, US",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KFUL",
+  "receiptTime": "2026-07-09T21:56:33.293Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 25.6,
+  "dewp": 16.1,
+  "wdir": 240,
+  "wspd": 8,
+  "visib": "10+",
+  "altim": 1011.3,
+  "slp": 1011,
+  "qcField": 12,
+  "metarType": "METAR",
+  "rawOb": "METAR KFUL 092153Z 24008KT 10SM CLR 26/16 A2986 RMK AO2 SLP110 T02560161 $",
+  "lat": 33.8715,
+  "lon": -117.9856,
+  "elev": 23,
+  "name": "Fullerton Muni, CA, US",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KPIH",
+  "receiptTime": "2026-07-09T21:56:30.305Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 32.2,
+  "dewp": 3.9,
+  "wdir": 250,
+  "wspd": 10,
+  "visib": "10+",
+  "altim": 1017,
+  "slp": 1012,
+  "qcField": 4,
+  "metarType": "METAR",
+  "rawOb": "METAR KPIH 092153Z 25010KT 10SM CLR 32/04 A3003 RMK AO2 SLP120 T03220039",
+  "lat": 42.9197,
+  "lon": -112.5723,
+  "elev": 1357,
+  "name": "Pocatello Rgnl, ID, US",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KABR",
+  "receiptTime": "2026-07-09T21:56:27.444Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 27.2,
+  "dewp": 18.9,
+  "visib": "10+",
+  "altim": 1011.9,
+  "slp": 1011.1,
+  "qcField": 6,
+  "metarType": "METAR",
+  "rawOb": "METAR KABR 092153Z AUTO 10SM CLR 27/19 A2988 RMK AO2 SLP111 T02720189",
+  "lat": 45.4436,
+  "lon": -98.4138,
+  "elev": 397,
+  "name": "Aberdeen Rgnl, SD, US",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "KINW",
+  "receiptTime": "2026-07-09T20:00:13.404Z",
+  "obsTime": 1783626960,
+  "reportTime": "2026-07-09T20:00:00.000Z",
+  "temp": 35.6,
+  "dewp": 7.2,
+  "wdir": "VRB",
+  "wspd": 6,
+  "wgst": 15,
+  "visib": "10+",
+  "altim": 1018.7,
+  "slp": 1009.2,
+  "qcField": 6,
+  "metarType": "METAR",
+  "rawOb": "METAR KINW 091956Z AUTO VRB06G15KT 10SM CLR 36/07 A3008 RMK AO2 SLP092 T03560072",
+  "lat": 35.0279,
+  "lon": -110.7221,
+  "elev": 1492,
+  "name": "Winslow/Lindberg Rgnl, AZ, US",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "PAOM",
+  "receiptTime": "2026-07-09T21:56:30.052Z",
+  "obsTime": 1783633980,
+  "reportTime": "2026-07-09T22:00:00.000Z",
+  "temp": 8.9,
+  "dewp": 6.7,
+  "wdir": 240,
+  "wspd": 12,
+  "visib": 6,
+  "altim": 1018,
+  "slp": 1018.1,
+  "qcField": 38,
+  "wxString": "BR",
+  "metarType": "METAR",
+  "rawOb": "METAR PAOM 092153Z AUTO 24012KT 6SM BR OVC003 09/07 A3006 RMK AO2 SLP181 T00890067 TSNO",
+  "lat": 64.5111,
+  "lon": -165.4401,
+  "elev": 6,
+  "name": "Nome Arpt, AK, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 300
+   }
+  ],
+  "fltCat": "LIFR"
+ },
+ {
+  "icaoId": "PAFA",
+  "receiptTime": "2026-07-09T20:56:34.460Z",
+  "obsTime": 1783630380,
+  "reportTime": "2026-07-09T21:00:00.000Z",
+  "temp": 13.9,
+  "dewp": 11.7,
+  "wdir": 230,
+  "wspd": 9,
+  "visib": 6,
+  "altim": 1010.9,
+  "slp": 1011.3,
+  "qcField": 12,
+  "wxString": "BR",
+  "presTend": 0.7,
+  "metarType": "METAR",
+  "rawOb": "METAR PAFA 092053Z 23009KT 6SM BR BKN008 OVC012 14/12 A2985 RMK AO2 SLP113 T01390117 51007 $",
+  "lat": 64.8031,
+  "lon": -147.8761,
+  "elev": 130,
+  "name": "Fairbanks Intl, AK, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 800
+   },
+   {
+    "cover": "OVC",
+    "base": 1200
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "CYRB",
+  "receiptTime": "2026-07-09T22:21:04.106Z",
+  "obsTime": 1783635540,
+  "reportTime": "2026-07-09T22:19:00.000Z",
+  "temp": 1,
+  "dewp": 1,
+  "wdir": 300,
+  "wspd": 5,
+  "visib": 9,
+  "altim": 1006.2,
+  "slp": 1006.8,
+  "qcField": 0,
+  "wxString": "-RA",
+  "metarType": "SPECI",
+  "rawOb": "SPECI CYRB 092219Z 30005KT 9SM -RA SCT005 OVC049 01/01 A2971 RMK ST3SC5 SLP068",
+  "lat": 74.713,
+  "lon": -94.982,
+  "elev": 59,
+  "name": "Resolute Bay Arpt, NU, CA",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 500
+   },
+   {
+    "cover": "OVC",
+    "base": 4900
+   }
+  ],
+  "fltCat": "VFR"
+ }
+]
