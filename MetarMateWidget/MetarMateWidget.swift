@@ -105,16 +105,17 @@ private enum WidgetFetcher {
 
     private static func buildSnapshot(from raw: RawMetar, icao: String) -> WidgetWeatherSnapshot {
         let stationId = raw.icaoId ?? icao
-        let fltCat = FlightCategory(rawValue: raw.fltCat ?? "VFR") ?? .vfr
+        // Missing category -> unknown, not VFR (matches MetarParser; don't fail-permissive to green).
+        let fltCat = FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown
 
         let windDir = parseWindDirection(raw.wdir)
         let windSpd = raw.wspd ?? 0
         let windGst = raw.wgst
         let isVariable = isVRB(raw.wdir)
 
-        let vis = parseVisibility(raw.visib)
+        let vis = parseVisibility(raw.visib)   // nil = not reported
 
-        let ceilingFt = parseCeiling(raw.clouds)
+        let ceilingFt = parseCeiling(raw.clouds, vertVis: raw.vertVis)
 
         let obsDate: Date
         if let epoch = raw.obsTime {
@@ -132,10 +133,11 @@ private enum WidgetFetcher {
             windSpeed: windSpd,
             windGust: windGst,
             windIsVariable: isVariable,
-            visibility: vis,
+            visibility: vis ?? 0.0,
+            visibilityReported: vis != nil,
             ceilingFeet: ceilingFt,
-            temperature: raw.temp.map { Int($0) },
-            dewpoint: raw.dewp.map { Int($0) },
+            temperature: raw.temp.map { Int($0.rounded()) },
+            dewpoint: raw.dewp.map { Int($0.rounded()) },
             altimeter: raw.altim.map { $0 * 0.02953 },
             trendDirection: .unknown,
             trendHeadline: "Widget Refresh",
@@ -163,27 +165,35 @@ private enum WidgetFetcher {
         return false
     }
 
-    private static func parseVisibility(_ visib: AnyCodable?) -> Double {
-        guard let v = visib?.value else { return 10 }
+    // Returns nil when visibility is absent/unrecognized — never fabricate 10 SM (mirrors
+    // MetarParser.parseVisibility). Caller sets visibilityReported from the optional.
+    private static func parseVisibility(_ visib: AnyCodable?) -> Double? {
+        guard let v = visib?.value else { return nil }
         if let d = v as? Double { return d }
         if let i = v as? Int { return Double(i) }
         if let s = v as? String {
-            if s.contains("10+") || s.contains("P6") || s.contains("6+") { return 10 }
-            if let d = Double(s) { return d }
+            let t = s.trimmingCharacters(in: .whitespaces).uppercased()
+            if t == "10+" { return 10 }
+            if t == "6+" || t == "P6SM" { return 6 }   // "greater than 6 SM" -> 6 (good visibility)
+            if let d = Double(t) { return d }
         }
-        return 10
+        return nil
     }
 
-    private static func parseCeiling(_ clouds: [[String: AnyCodable]]?) -> Int? {
-        guard let layers = clouds else { return nil }
+    // Ceiling in feet: lowest BKN/OVC/VV/OVX layer. NOAA encodes an indefinite ceiling as cover
+    // "OVX" (+ a vertVis field, hundreds of feet), not "VV" — match it so fog obscurations aren't
+    // dropped (mirrors the F1 fix in MetarParser.parseClouds).
+    private static func parseCeiling(_ clouds: [[String: AnyCodable]]?, vertVis: Int?) -> Int? {
+        guard let layers = clouds else { return vertVis.map { $0 * 100 } }
         for layer in layers {
             guard let coverVal = layer["cover"]?.value as? String else { continue }
             let cover = coverVal.uppercased()
-            if cover == "BKN" || cover == "OVC" || cover == "VV" {
+            if cover == "BKN" || cover == "OVC" || cover == "VV" || cover == "OVX" {
                 if let baseVal = layer["base"]?.value {
                     if let i = baseVal as? Int { return i }
                     if let d = baseVal as? Double { return Int(d) }
                 }
+                if let vv = vertVis { return vv * 100 }   // obscuration layer with no base
             }
         }
         return nil
