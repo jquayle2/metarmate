@@ -135,12 +135,17 @@ struct FlyingWeatherIntent: AppIntent {
         // Visibility — omit the spoken sentence entirely when the station didn't report it
         // (never voice a fabricated value); still voice present weather if any.
         let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased())"
-        if metar.visibilityReported {
-            let visStr = metar.visibility >= 10 ? "10 or more" : String(format: "%.0f", metar.visibility)
-            parts.append("Visibility \(visStr) miles\(wxSuffix).")
-        } else if !metar.weatherPhenomena.isEmpty {
-            let wx = WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased()
-            parts.append("\(wx.prefix(1).uppercased())\(wx.dropFirst()) observed.")
+        switch metar.visibility {
+        case .exact(let v):
+            parts.append("Visibility \(String(format: "%.0f", v)) miles\(wxSuffix).")
+        case .greaterThan(let v):
+            parts.append("Visibility \(String(format: "%.0f", v)) or more miles\(wxSuffix).")
+        case .unknown:
+            // Never voice a fabricated value; still voice present weather if any.
+            if !metar.weatherPhenomena.isEmpty {
+                let wx = WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased()
+                parts.append("\(wx.prefix(1).uppercased())\(wx.dropFirst()) observed.")
+            }
         }
 
         // Wind
@@ -179,7 +184,12 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     private func buildSummaryLine(metar: Metar) -> String {
-        let vis = !metar.visibilityReported ? "Vis —" : (metar.visibility >= 10 ? "Vis 10+" : String(format: "Vis %.0f sm", metar.visibility))
+        let vis: String
+        switch metar.visibility {
+        case .exact(let v):       vis = String(format: "Vis %.0f sm", v)
+        case .greaterThan(let v): vis = "Vis \(String(format: "%.0f", v))+ sm"
+        case .unknown:            vis = "Vis —"
+        }
         let ceiling: String
         if let c = metar.ceilingFeet {
             ceiling = "Ceil \(c / 100 * 100)ft"

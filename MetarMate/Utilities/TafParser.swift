@@ -32,7 +32,7 @@ struct TafParser {
     nonisolated private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]]) -> [TafForecast] {
         var result: [TafForecast] = []
         // The prevailing (base/FM) visibility, carried forward into change groups that omit it.
-        var prevailingVis: Double? = nil
+        var prevailingVis: Visibility = .unknown
 
         for dict in fcsts {
             guard let fromEpoch = dict["timeFrom"]?.value as? Int,
@@ -66,13 +66,13 @@ struct TafParser {
             // inherits the prevailing conditions rather than defaulting to 10 SM VFR. Only base/FM
             // periods (the persistent state) update the prevailing value; TEMPO/BECMG/PROB are
             // transient overlays and must not.
-            let ownVis = parseVisibility(dict)
-            let vis: Double?
-            if let ownVis {
+            let ownVis = parseVisibility(dict)   // .unknown when the period omits visibility
+            let vis: Visibility
+            if ownVis.isKnown {
                 vis = ownVis
                 if type == .base || type == .fm { prevailingVis = ownVis }
             } else {
-                vis = prevailingVis
+                vis = prevailingVis   // carry the prevailing forward (may itself be .unknown)
             }
 
             // Calculate flight category from visibility and ceiling
@@ -123,16 +123,19 @@ struct TafParser {
     }
 
     // MARK: - Visibility parsing
-    nonisolated private static func parseVisibility(_ dict: [String: AnyCodable]) -> Double? {
-        guard let value = dict["visib"]?.value else { return nil }
+    nonisolated private static func parseVisibility(_ dict: [String: AnyCodable]) -> Visibility {
+        guard let value = dict["visib"]?.value else { return .unknown }
         if let str = value as? String {
-            if str == "6+" || str == "P6SM" { return 6.0 }
-            if str == "10+" { return 10.0 }
-            return Double(str)
+            let s = str.trimmingCharacters(in: .whitespaces).uppercased()
+            // The ONLY constructors of .greaterThan — NOAA's greater-than strings at 6 and 10.
+            if s == "6+"  || s == "P6SM"  { return .greaterThan(6) }
+            if s == "10+" || s == "P10SM" { return .greaterThan(10) }
+            if let d = Double(s) { return .exact(d) }
+            return .unknown
         }
-        if let num = value as? Double { return num }
-        if let num = value as? Int { return Double(num) }
-        return nil
+        if let num = value as? Double { return .exact(num) }
+        if let num = value as? Int { return .exact(Double(num)) }
+        return .unknown
     }
 
     // MARK: - Cloud parsing (base in feet from API, store as hundreds)
@@ -175,11 +178,18 @@ struct TafParser {
     }
 
     // MARK: - Flight category from visibility + ceiling
-    nonisolated private static func calculateFlightCategory(visibility: Double?, clouds: [CloudLayer]) -> FlightCategory {
+    nonisolated private static func calculateFlightCategory(visibility: Visibility, clouds: [CloudLayer]) -> FlightCategory {
         // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count)
         let ceilingFeet: Int? = clouds
             .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
             .map { $0.altitude * 100 }
+
+        // Feed the enum into the SAME threshold cascade via its lower bound, so the arithmetic is
+        // byte-identical to the old Double path. .exact(n) and .greaterThan(n) both threshold on n:
+        // for .greaterThan the true value is > n, so n is the conservative floor — and since NOAA
+        // emits .greaterThan only at 6/10 (both > 5), it lands on VFR exactly as the old 6.0/10.0
+        // did (6 <= 5 is false -> never dragged into MVFR). .unknown -> nil (unknown axis).
+        let vis = visibility.lowerBoundSM
 
         // Take the worst of the two axes that are actually KNOWN. An unknown visibility must not
         // default to 10 SM VFR (that silently cleared low-vis forecasts); guard each threshold
@@ -187,18 +197,18 @@ struct TafParser {
 
         // LIFR: ceiling < 500 OR visibility < 1
         if let ceil = ceilingFeet, ceil < 500 { return .lifr }
-        if let vis = visibility, vis < 1.0 { return .lifr }
+        if let vis, vis < 1.0 { return .lifr }
 
         // IFR: ceiling 500-999 OR visibility 1-2.99
         if let ceil = ceilingFeet, ceil < 1000 { return .ifr }
-        if let vis = visibility, vis < 3.0 { return .ifr }
+        if let vis, vis < 3.0 { return .ifr }
 
         // MVFR: ceiling 1000-3000 OR visibility 3-5
         if let ceil = ceilingFeet, ceil <= 3000 { return .mvfr }
-        if let vis = visibility, vis <= 5.0 { return .mvfr }
+        if let vis, vis <= 5.0 { return .mvfr }
 
         // Nothing known on either axis -> unknown; otherwise VFR (ceiling > 3000 AND/OR vis > 5)
-        if ceilingFeet == nil && visibility == nil { return .unknown }
+        if ceilingFeet == nil && !visibility.isKnown { return .unknown }
         return .vfr
     }
 }

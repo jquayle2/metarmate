@@ -504,10 +504,10 @@ struct WeatherDetailView: View {
             }
         }
 
-        if let asosVis = obs.visibility, metar.visibilityReported {
-            let diff = asosVis - metar.visibility
+        if let asosVis = obs.visibility, let metarVis = metar.visibility.exactSM {
+            let diff = asosVis - metarVis
             if diff <= -1.0 {
-                deltas.append(ASOSDelta(text: String(format: "Visibility %.0f SM (was %.0f)", asosVis, metar.visibility), icon: "eye.fill", color: .orange))
+                deltas.append(ASOSDelta(text: String(format: "Visibility %.0f SM (was %.0f)", asosVis, metarVis), icon: "eye.fill", color: .orange))
             }
         }
 
@@ -557,7 +557,7 @@ struct WeatherDetailView: View {
 
             if let v = obs.visibility {
                 let visText = v >= 10 ? "10+ SM" : String(format: "%.1f SM", v)
-                conditionRow("eye.fill", "Visibility", visText, color: visibilityConditionColor(v))
+                conditionRow("eye.fill", "Visibility", visText, color: ColorRules.visibilityColor(v))
             }
 
             if let ceiling = obs.ceilingAGL {
@@ -660,8 +660,8 @@ struct WeatherDetailView: View {
             sectionHeader("Decoded METAR")
             windConditionRow(metar.wind, value: windText(metar.wind))
             conditionRow("eye.fill", "Visibility",
-                         metar.visibilityReported ? visibilityText(metar.visibility) : "—",
-                         color: metar.visibilityReported ? visibilityConditionColor(metar.visibility) : Brand.slate)
+                         visibilityText(metar.visibility),
+                         color: visibilityConditionColor(metar.visibility))
             conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
@@ -730,8 +730,8 @@ struct WeatherDetailView: View {
     }
 
     // Visibility: < 3 SM is sub-minimum danger (value red); 3–5 marginal caution; else good.
-    private func visibilityConditionColor(_ vis: Double) -> Color {
-        ColorRules.visibilityColor(vis)
+    private func visibilityConditionColor(_ vis: Visibility) -> Color {
+        vis.lowerBoundSM.map { ColorRules.visibilityColor($0) } ?? Brand.slate   // .unknown -> neutral
     }
 
     // Ceiling: < 1000 IFR danger; < 3000 marginal; clear/high = good.
@@ -1473,7 +1473,7 @@ struct WeatherDetailView: View {
                 } else if let ceil = stats.minCeilingFt, ceil < (latest.ceilingFeet ?? Int.max) {
                     tail += " Ceiling as low as \(ceil.formatted()) ft earlier."
                 } else if let minV = stats.minVisSM,
-                          minV < (latest.visibilityReported ? latest.visibility : .greatestFiniteMagnitude) {
+                          minV < (latest.visibility.exactSM ?? .greatestFiniteMagnitude) {
                     // Unknown latest visibility must not suppress a real earlier low-vis event —
                     // treat it as "no constraint" (mirrors the ceiling line's `?? Int.max`).
                     tail += " Vis as low as \(String(format: "%g", minV)) SM earlier."
@@ -1685,7 +1685,7 @@ struct WeatherDetailView: View {
         } else {
             parts.append("Clear")
         }
-        parts.append("Vis \(metar.visibilityReported ? visibilityText(metar.visibility) : "—")")
+        parts.append("Vis \(visibilityText(metar.visibility))")
         parts.append(tafCompactWind(metar.wind))
         parts.append(metarAltimeterCode(metar.altimeter))
         return parts.joined(separator: " · ")
@@ -1743,7 +1743,7 @@ struct WeatherDetailView: View {
         let minCeiling = metars.compactMap { $0.ceilingFeet }.min()
         // nil = no sample in the window reported visibility (mirrors minCeiling being nil for no
         // ceiling). Never fabricate 10 SM; downstream gates on `if let`.
-        let minVis = metars.filter { $0.visibilityReported }.map { $0.visibility }.min()
+        let minVis = metars.compactMap { $0.visibility.exactSM }.min()   // exact only; a >6 is not a worst-vis event
         let worstCat = metars.map { $0.flightCategory }.min(by: { categoryRank($0) < categoryRank($1) }) ?? .vfr
         let spanHours: Double = {
             guard let newest = metars.first?.observationTime,
@@ -1943,11 +1943,7 @@ struct WeatherDetailView: View {
             case .ceiling:
                 Text(factor.ceilingFeet.map { "\($0.formatted())" } ?? "CLR")
             case .visibility:
-                if let v = factor.visibilitySM {
-                    Text(v >= 6 ? "6+" : String(format: "%g", v))
-                } else {
-                    Text("—")
-                }
+                Text(factor.visibility.displayNumber ?? "—")   // .exact(6)->"6", .greaterThan(6)->"6+"
             }
         }
     }
@@ -2062,8 +2058,8 @@ struct WeatherDetailView: View {
             }
         }
 
-        if period.visibility != previous?.visibility, let v = period.visibility {
-            parts.append("vis \(tafVisText(v))")
+        if period.visibility != previous?.visibility, period.visibility.isKnown {
+            parts.append("vis \(tafVisText(period.visibility))")
         }
 
         if includePhenomena, !period.weatherPhenomena.isEmpty {
@@ -2131,7 +2127,7 @@ struct WeatherDetailView: View {
         ForecastRules.ceilingFeet(period)
     }
 
-    private func tafVisText(_ vis: Double) -> String { TafFormat.visText(vis) }
+    private func tafVisText(_ vis: Visibility) -> String { TafFormat.visText(vis) }
     private func tafHasConvectiveOrHeavy(_ period: TafForecast) -> Bool { TafFormat.hasConvectiveOrHeavy(period) }
     private func tafCategorySeverity(_ cat: FlightCategory) -> Int { TafFormat.categorySeverity(cat) }
 
@@ -2149,7 +2145,7 @@ struct WeatherDetailView: View {
 
             var factors: [String] = []
             if let c = tafCeilingFeet(p), c < 1000 { factors.append("ceiling \(c.formatted()) ft") }
-            if let v = p.visibility, v < 3 { factors.append("visibility \(tafVisText(v))") }
+            if let v = p.visibility.lowerBoundSM, v < 3 { factors.append("visibility \(tafVisText(p.visibility))") }
             let limiting = factors.isEmpty ? "" : " (\(factors.joined(separator: ", ")))"
             notes.append(.init(
                 icon: cat == .lifr ? "cloud.fog.fill" : "cloud.fill",
@@ -2164,7 +2160,7 @@ struct WeatherDetailView: View {
             let severe = low || tafHasConvectiveOrHeavy(p)
 
             var bits: [String] = []
-            if let v = p.visibility { bits.append("vis \(tafVisText(v))") }
+            if p.visibility.isKnown { bits.append("vis \(tafVisText(p.visibility))") }
             if let c = tafCeilingFeet(p) { bits.append("ceiling \(c.formatted()) ft") }
             if !p.weatherPhenomena.isEmpty { bits.append(WeatherDecoder.decodeAll(p.weatherPhenomena).lowercased()) }
             let worst = bits.isEmpty ? p.flightCategory.rawValue : bits.joined(separator: ", ")
@@ -2219,7 +2215,7 @@ struct WeatherDetailView: View {
         for p in bases where p.flightCategory == .mvfr {
             var factors: [String] = []
             if let c = tafCeilingFeet(p), c < 1500 { factors.append("ceiling \(c.formatted()) ft") }
-            if let v = p.visibility, v < 4 { factors.append("visibility \(tafVisText(v))") }
+            if let v = p.visibility.lowerBoundSM, v < 4 { factors.append("visibility \(tafVisText(p.visibility))") }
             guard !factors.isEmpty else { continue }
             notes.append(.init(
                 icon: "cloud",
@@ -2731,7 +2727,7 @@ struct WeatherDetailView: View {
                 let visText = vis >= 10 ? "~10+ SM" : "~\(Int(vis.rounded())) SM"
                 conditionRow("eye.fill", "Visibility",
                              visText,
-                             color: visibilityConditionColor(vis))
+                             color: ColorRules.visibilityColor(vis))
             }
 
             // Cloud cover / ceiling
@@ -3416,8 +3412,8 @@ struct WeatherDetailView: View {
         return text
     }
 
-    private func visibilityText(_ vis: Double) -> String {
-        vis >= 10 ? "10+ SM" : "\(String(format: "%g", vis)) SM"
+    private func visibilityText(_ vis: Visibility) -> String {
+        vis.displayNumber.map { "\($0) SM" } ?? "—"   // .exact(10)->"10 SM", .greaterThan(10)->"10+ SM", .unknown->"—"
     }
 
     private func ceilingText(_ metar: Metar) -> String {
@@ -3453,7 +3449,7 @@ struct WeatherDetailView: View {
 
     private func quickWeatherSummary(metar: Metar) -> String {
         var parts: [String] = []
-        let vis = !metar.visibilityReported ? "—" : (metar.visibility >= 10 ? "10+ SM" : "\(String(format: "%g", metar.visibility)) SM")
+        let vis = visibilityText(metar.visibility)
         parts.append("Vis \(vis)")
         if let ceil = metar.ceilingFeet {
             parts.append("Ceil \(ceil.formatted()) ft")

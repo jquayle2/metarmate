@@ -30,6 +30,10 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // throws on a missing key rather than using the default. Legacy snapshots decode nil = treat as
     // reported. Consumers must use `== false ? "—" : value`, never `?? true`. Do not "simplify" to Bool.
     var visibilityReported: Bool? = nil
+    // Whether `visibility` is a greater-than (P6SM/"6+") vs an exact report, so the lock screen can
+    // render "6+" vs "6". Defaulted + decode-safe, same idiom as windReported/visibilityReported —
+    // the persisted snapshot stays a Double; this bit carries the parsed Visibility's distinction.
+    var visibilityIsGreaterThan: Bool = false
     let ceilingFeet: Int?           // AGL; nil = no ceiling
     let temperature: Int?           // Celsius
     let dewpoint: Int?              // Celsius
@@ -71,6 +75,15 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
         return base
     }
 
+    // Visibility display carrying the greater-than distinction: "—" (not reported), "6+" (P6SM),
+    // "6" (exact). Formats the number plainly (no `>=10 -> "10+"` threshold, which would double the
+    // "+" for a greater-than-10 or fake a "+" onto an exact 10).
+    var visibilityDisplay: String {
+        if visibilityReported == false { return "—" }
+        let n = visibility == Double(Int(visibility)) ? "\(Int(visibility))" : String(format: "%.1f", visibility)
+        return visibilityIsGreaterThan ? "\(n)+" : n
+    }
+
     // MARK: - Build from METAR app state
     nonisolated static func from(
         airport: Airport,
@@ -90,8 +103,9 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windGust: metar.wind.gust,
             windIsVariable: metar.wind.isVariable,
             windReported: metar.wind.isReported,
-            visibility: metar.visibility,
-            visibilityReported: metar.visibilityReported,
+            visibility: metar.visibility.lowerBoundSM ?? 0,
+            visibilityReported: metar.visibility.isKnown,
+            visibilityIsGreaterThan: metar.visibility.isGreaterThan,
             ceilingFeet: metar.ceilingFeet,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
@@ -160,8 +174,9 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             windGust: metar.wind.gust,
             windIsVariable: metar.wind.isVariable,
             windReported: metar.wind.isReported,
-            visibility: metar.visibility,
-            visibilityReported: metar.visibilityReported,
+            visibility: metar.visibility.lowerBoundSM ?? 0,
+            visibilityReported: metar.visibility.isKnown,
+            visibilityIsGreaterThan: metar.visibility.isGreaterThan,
             ceilingFeet: metar.ceilingFeet,
             // temp/dewp/altimeter are read from `raw` (NOT `metar`) on purpose: Metar's fields are
             // non-optional and substitute 0 °C / 29.92 inHg for missing values (Finding 15), which

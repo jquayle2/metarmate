@@ -101,4 +101,17 @@ struct WidgetSnapshotParityTests {
         let raw = try rawMetar(#"{"rawOb":"METAR ????? 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KPASS") == nil)
     }
+
+    // NEW (commit 10): the snapshot carries the greater-than distinction so the lock screen renders
+    // "6+" vs "6". The snapshot .visibility stays a Double (unchanged); the bit is the addition.
+    @Test func p6smSetsVisibilityIsGreaterThanBit() throws {
+        let p6sm = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT P6SM FEW040 20/10 A2992","visib":"6+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        #expect(p6sm.visibility == 6)                    // Double unchanged (the floor)
+        #expect(p6sm.visibilityIsGreaterThan == true)
+        #expect(p6sm.visibilityDisplay == "6+")
+
+        let exact3 = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 3SM BR BKN020 20/18 A2992","visib":3,"wdir":270,"wspd":8,"fltCat":"MVFR"}"#)
+        #expect(exact3.visibilityIsGreaterThan == false)
+        #expect(exact3.visibilityDisplay == "3")
+    }
 }

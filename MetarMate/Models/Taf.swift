@@ -7,7 +7,7 @@ struct TafForecast: Identifiable, Codable {
     var fromTime: Date
     var toTime: Date
     var wind: Wind?
-    var visibility: Double?
+    var visibility: Visibility   // .exact / .greaterThan (P6SM/P10SM) / .unknown — see Visibility
     var clouds: [CloudLayer]
     var weatherPhenomena: [String]
     var flightCategory: FlightCategory

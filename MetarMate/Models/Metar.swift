@@ -51,6 +51,57 @@ struct CloudLayer: Codable {
     var isCumulonimbus: Bool
 }
 
+// MARK: - Visibility
+// Parsed visibility. Replaces a bare Double so "P6SM"/"6+" (greater-than) is distinguishable from
+// an exactly-6-SM report, and "unknown" is representable without a fabricated number or a separate
+// flag. NOAA emits greater-than only at 6 and 10 (the "6+"/"P6SM"/"10+"/"P10SM" strings — see
+// MetarParser/TafParser.parseVisibility); every other input is .exact or .unknown.
+enum Visibility: Codable, Equatable {
+    case exact(Double)
+    case greaterThan(Double)   // true value is strictly greater than the associated SM value
+    case unknown
+
+    var isKnown: Bool {
+        if case .unknown = self { return false }
+        return true
+    }
+
+    var isGreaterThan: Bool {
+        if case .greaterThan = self { return true }
+        return false
+    }
+
+    // Lower bound in statute miles, for category thresholds and "is it below X" checks.
+    // For .greaterThan the true value is > n, so n is the conservative (worst-case) floor:
+    // reading a threshold off n can only under-state the visibility, never over-state it.
+    // .unknown has no bound. Do NOT use this for orderings/deltas between two known values — a
+    // .greaterThan can't be ordered against another value off its floor without fabricating one.
+    var lowerBoundSM: Double? {
+        switch self {
+        case .exact(let v), .greaterThan(let v): return v
+        case .unknown: return nil
+        }
+    }
+
+    // The exact reported value, ONLY when it is exact. nil for .greaterThan (a range) and .unknown.
+    // Use this for deltas/orderings so a greater-than never fabricates a comparable number.
+    var exactSM: Double? {
+        if case .exact(let v) = self { return v }
+        return nil
+    }
+
+    // Shared numeric display core so every parsed-visibility formatter agrees on the ONE rule:
+    // .exact(6) -> "6" (never "6+"), .greaterThan(6) -> "6+", .unknown -> nil (caller renders "—").
+    // %g drops trailing zeros (6.0 -> "6", 1.5 -> "1.5"). Callers add their own "SM"/spacing.
+    var displayNumber: String? {
+        switch self {
+        case .exact(let v):       return String(format: "%g", v)
+        case .greaterThan(let v): return String(format: "%g", v) + "+"
+        case .unknown:            return nil
+        }
+    }
+}
+
 // MARK: - METAR
 struct Metar: Identifiable, Codable {
     var id: String { stationId + observationTime.ISO8601Format() }
@@ -58,13 +109,7 @@ struct Metar: Identifiable, Codable {
     var stationId: String
     var observationTime: Date
     var wind: Wind
-    var visibility: Double   // statute miles; meaningful only when visibilityReported == true
-    // Whether the observation actually reported a visibility. METAR flight category is
-    // authoritative from NOAA's fltCat, so visibility here is DISPLAY-ONLY — a flag suffices and
-    // callers render "—"/skip when false (see Wind.isReported for the same idiom). This is
-    // deliberately NOT the Double? that TafForecast.visibility uses: TAF category is *computed*
-    // from visibility, so it must express unknown in the value itself; do not "unify" the two.
-    var visibilityReported: Bool = true
+    var visibility: Visibility   // .exact / .greaterThan (P6SM/P10SM) / .unknown — see Visibility
     var clouds: [CloudLayer]
     var temperature: Int     // Celsius
     var dewpoint: Int        // Celsius

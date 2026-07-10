@@ -131,8 +131,10 @@ struct TafVerification: Codable {
                 forecastCategory: period.flightCategory,
                 actualCeilingFt: metar.ceilingFeet,
                 forecastCeilingFt: forecastCeiling,
-                actualVisibilitySM: metar.visibilityReported ? metar.visibility : nil,
-                forecastVisibilitySM: period.visibility,
+                // .exactSM: nil for .greaterThan (a >6 actual has no honest divergence magnitude —
+                // omit from scoring) and .unknown; the exact value otherwise. (Finding 15 / Flag 5.)
+                actualVisibilitySM: metar.visibility.exactSM,
+                forecastVisibilitySM: period.visibility.exactSM,
                 actualWindKt: metar.wind.isReported ? metar.wind.speed : nil,
                 actualGustKt: metar.wind.isReported ? metar.wind.gust : nil,
                 forecastWindKt: period.wind?.speed,

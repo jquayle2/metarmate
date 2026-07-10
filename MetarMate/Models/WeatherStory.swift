@@ -25,7 +25,7 @@ struct LimitingFactor {
     let windSpeedKt: Int
     let windGustKt: Int?
     let ceilingFeet: Int?          // nil = unlimited
-    let visibilitySM: Double?
+    let visibility: Visibility
 }
 
 enum ForecastRules {
@@ -43,14 +43,15 @@ enum ForecastRules {
     /// closest to, or furthest past, its VFR/MVFR category boundary. Ties resolve
     /// visibility, then ceiling, then wind (per the design spec).
     static func limitingFactor(for period: TafForecast) -> LimitingFactor {
-        let visSM = period.visibility
+        let vis = period.visibility
         let ceilFt = ceilingFeet(period)
 
         // Severity is a 0...1+ scale normalized to the VFR/MVFR boundary (5 SM / 3000 ft,
         // matching ColorRules.visibilityColor/ceilingColor) — 0 at/above the boundary,
         // increasing as conditions worsen past it. Not clamped above 1 so a badly-past-LIFR
-        // period still outranks a barely-past-MVFR one on the same axis.
-        let visSeverity: Double = visSM.map { max(0, (5.0 - $0) / 5.0) } ?? 0
+        // period still outranks a barely-past-MVFR one on the same axis. .greaterThan(6) reads off
+        // its floor (6) -> severity 0 -> never the limiting factor; .unknown -> 0.
+        let visSeverity: Double = vis.lowerBoundSM.map { max(0, (5.0 - $0) / 5.0) } ?? 0
         let ceilSeverity: Double = ceilFt.map { max(0, (3000.0 - Double($0)) / 3000.0) } ?? 0
 
         // Wind has no VFR-axis threshold in ColorRules (it isn't part of the category axis),
@@ -78,7 +79,7 @@ enum ForecastRules {
             windSpeedKt: period.wind?.speed ?? 0,
             windGustKt: period.wind?.gust,
             ceilingFeet: ceilFt,
-            visibilitySM: visSM
+            visibility: vis
         )
     }
 }

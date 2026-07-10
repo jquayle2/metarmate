@@ -98,11 +98,9 @@ struct AdverseWeatherParsingTests {
     // Confirms the brief's predicted #1 failure (Double("1/2") -> nil -> 10.0) does NOT occur:
     // NOAA delivers fractional & metric visibility already normalized to SM numbers.
     @Test func fractionalVisibilityParsesExactly() throws {
-        #expect(try metar(Obs.kmssHeavyRain).visibility == 1.75)   // raw "1 3/4SM"
-        let kpubVis = try metar(Obs.kpubSquall).visibility
-        #expect(kpubVis == 0.75)                                   // raw "3/4SM"
-        let efhkVis = try metar(Obs.efhkOVX).visibility
-        #expect(efhkVis == 0.19)                                   // raw "0300" (metric -> SM)
+        #expect(try metar(Obs.kmssHeavyRain).visibility == .exact(1.75))   // raw "1 3/4SM"
+        #expect(try metar(Obs.kpubSquall).visibility == .exact(0.75))      // raw "3/4SM"
+        #expect(try metar(Obs.efhkOVX).visibility == .exact(0.19))         // raw "0300" (metric -> SM)
     }
 
     // MARK: - Finding 2 (HIGH): PROB30/PROB40 periods mis-typed as .base
@@ -130,7 +128,7 @@ struct AdverseWeatherParsingTests {
         let json = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic empty-vis probe","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":700,"type":null}]}]}"#
         let t = try taf(json)
         let p = try #require(t.forecasts.first)
-        #expect(p.visibility == nil)                 // parseVisibility reports unknown
+        #expect(p.visibility == .unknown)            // parseVisibility reports unknown
         #expect(p.flightCategory == .ifr)            // 700 ft ceiling drives IFR
         // With NEITHER vis nor ceiling known, the category is .unknown (was 10 SM VFR pre-fix).
         let clear = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[]}]}"#

@@ -40,7 +40,7 @@
 2. **`SQ` (squall): red or amber?** Not escalated.
 3. **`+FC` (funnel cloud/tornado): red tier?** Not escalated.
 4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? Currently ships as-is.
-5. **P6SM → 6.0 lossiness** — losing the "greater than 6 SM" nuance; acceptable, or does P6SM need its own representation? Currently maps to `6.0` (VFR either way).
+5. **P6SM → 6.0 lossiness** — ✅ RESOLVED (commit 10, decided by Jeff): `Visibility` enum carries the greater-than distinction. See the CFII section / Finding 15.
 6. **Missing-visibility note asymmetry vs missing-wind. — STILL OPEN (Mike/CFII rules).** F8 (commit 6) full-gates unreported wind: it now renders "—" in every cell (like visibility) **and** carries a "wind not reported" pilot note. Unreported **visibility** still renders "—" in cells but has **no** analogous pilot note. The full gate *changed the surface area* of this asymmetry (wind cells now match visibility cells) but did **not** resolve the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric (drop the wind note / add a vis note)? That is a CFII call, not a code call — left open.
 
 ## REMAINING WORK
@@ -97,7 +97,7 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 | F12 | Widget missing category → `.vfr` | ✅ Resolved (`.unknown`) — `de90a9c` |
 | F13 | GoNoGo `Verdict` can't express skip-vs-pass | 🔶 **OPEN** — structural; not fixed. Code issue, not CFII. |
 | F14 | Widget carried a duplicate parser (no shared `MetarParser`) | ✅ Resolved — `a6c8d57` (commit 9); widget delegates to `MetarParser`; regression `WidgetSnapshotParityTests` (10 cases). |
-| F15 | `Metar` temp/dewp/altimeter can't be unknown (`0 °C`/`29.92` substituted) | 🔶 **OPEN** — structural; needs the three fields optional + consumer gating (own commit). Worst instance feeds density/pressure altitude. |
+| F15 | `Metar` can't represent unknown temp/dewp/altimeter (`0 °C`/`29.92`) | 🔶 **temp/dewp/altimeter OPEN** — own commit. **Visibility sibling ✅ Resolved — commit 10** (`Visibility` enum; also fixes P6SM CFII item + the exact-6-shows-"6+" bug). Regression `VisibilityCategoryParityTests`/`VisibilityDisplayTests`. |
 
 Six items require human (CFII) judgment and are **not** resolved by any code change or test — see [Requires human judgment (CFII)](#requires-human-judgment-cfii).
 
@@ -203,11 +203,12 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 - **Behavior change (intended):** the builder now returns `WidgetWeatherSnapshot?` and yields **nil** for an unparseable METAR (missing `icaoId`/`rawOb`), where the duplicate fabricated a snapshot via `icaoId ?? icao`. De-duplication removed the widget's total-parse fallback — a widget must not render a fabricated snapshot from an unparseable observation. The caller (`fetchSnapshot`) already propagated nil for fetch/decode failures; a parse-failure nil rides the same path.
 - **Note:** temperature/dewpoint/altimeter are deliberately **not** taken from `Metar` — they're read from `raw` to avoid inheriting the model's `0 °C`/`29.92 inHg` substitution for missing values. See **Finding 15**.
 
-## 🟡 Finding 15 — `Metar` cannot represent unknown temperature / dewpoint / altimeter  **[MEDIUM — structural; OPEN, not fixed in commit 9]**
+## 🟡 Finding 15 — `Metar` cannot represent unknown temperature / dewpoint / altimeter  **[MEDIUM — structural; temp/dewp/altimeter OPEN — visibility sibling RESOLVED in commit 10]**
 
-- **Symptom:** `Metar.temperature` and `Metar.dewpoint` are non-optional `Int`; `Metar.altimeter` is non-optional `Double`. `MetarParser.parse` substitutes `0 °C` for missing temp/dewp and `29.92 inHg` for missing altimeter. The model cannot represent unknown, so every consumer reads a fabricated value indistinguishable from a real one. `0 °C` is a legitimate temperature and `29.92` is a legitimate altimeter setting — the same placeholder-collision shape as F6 (visibility `0.0`) and F8 (wind `0 kt`). A missing altimeter fabricated as standard pressure also propagates into density altitude and pressure altitude, which are computed from it. Resolution requires making the three fields optional and gating every consumer, as F8 did for wind. Not fixed in commit 9. The widget builder bypasses `Metar` for these three fields (reads `raw`) to avoid inheriting the defect.
+- **The class:** a model field that can't represent "unknown" or a range, so a fabricated value is indistinguishable from a real one — the placeholder-collision shape shared by F6 (visibility `0.0`), F8 (wind `0 kt`), and this finding. **The visibility instance is now RESOLVED** (commit 10): `Metar`/`TafForecast.visibility` is a `Visibility` enum (`.exact`/`.greaterThan`/`.unknown`), so unknown and greater-than are first-class, not fabricated numbers. The three scalars below remain.
+- **Symptom (still OPEN — temp/dewp/altimeter):** `Metar.temperature` and `Metar.dewpoint` are non-optional `Int`; `Metar.altimeter` is non-optional `Double`. `MetarParser.parse` substitutes `0 °C` for missing temp/dewp and `29.92 inHg` for missing altimeter. The model cannot represent unknown, so every consumer reads a fabricated value. `0 °C` is a legitimate temperature and `29.92` a legitimate altimeter setting. Resolution requires making the three fields optional (or a `Reading` enum like `Visibility`) and gating every consumer, as F8 did for wind and commit 10 did for visibility. Not fixed in commit 10. The widget builder bypasses `Metar` for these three fields (reads `raw`) to avoid inheriting the defect.
 - **Why this is the worst instance of the class:** a fabricated `29.92` flowing into a **density-altitude / pressure-altitude** readout is worse than the display bugs — it produces a plausible number a pilot uses for **takeoff-performance planning**. A wrong DA off a fabricated altimeter is an operational hazard, not a cosmetic one.
-- **Ruling:** code issue, not a CFII call. Its own commit (model-optionality change threading through every temp/dewp/altimeter consumer, like F8's wind work).
+- **Ruling:** code issue, not a CFII call. Its own commit (model-optionality change threading through every temp/dewp/altimeter consumer, like F8's wind work and commit 10's visibility work).
 
 ## 🟡 Finding 13 — `GoNoGo Verdict` cannot express "factor not evaluated" vs "factor passed"  **[LOW — structural; OPEN, not fixed in commit 7]**
 
@@ -219,13 +220,13 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 
 # Requires human judgment (CFII)
 
-These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). **None of the below is "resolved."**
+These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). Items 1–4 and 6 remain **open** (Mike/CFII). **Item 5 (P6SM) was decided by Jeff and is now resolved** — see below.
 
 1. **Freezing-precip pilot-note tier — red or amber?** The icing note currently ships at `.warning` (orange). The present-weather *chip* already reds `FZ`; the *note* tier was never escalated. OPEN.
 2. **`SQ` (squall) — red or amber?** Not escalated on the METAR note side. OPEN.
 3. **`+FC` (funnel cloud / tornado) — red tier?** Not escalated on the METAR note side. OPEN.
 4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? Ships as-is. OPEN.
-5. **`P6SM` → 6.0 lossiness** — the "greater than 6 SM" nuance is dropped (maps to `6.0`; VFR either way). Acceptable, or does `P6SM` need its own representation? OPEN.
+5. **`P6SM` → 6.0 lossiness** — ✅ **RESOLVED (commit 10, decided by Jeff).** Parsed visibility is now a `Visibility` enum (`.exact` / `.greaterThan` / `.unknown`); `P6SM`/`6+` → `.greaterThan(6)`, distinct from an exact 6, rendering `6+ SM` (and never stamping `6+` onto a genuine exact-6 report — the sibling bug). Flight category is provably unchanged (`.greaterThan(6)` → VFR, same as the old 6.0 — the cascade thresholds on the floor). Regression: `VisibilityCategoryParityTests` (green both ways, boundaries locked), `VisibilityDisplayTests`.
 6. **Missing-visibility vs missing-wind note asymmetry (Deferred item #6).** Post-F8, unreported wind renders "—" in cells **and** carries a "wind not reported" pilot note; unreported visibility renders "—" in cells but has **no** analogous note. The full gate changed the *surface area* of the asymmetry but not the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric? OPEN.
 
 ---

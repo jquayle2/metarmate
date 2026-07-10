@@ -43,7 +43,7 @@ enum TafHeroBrief {
                                    color: isLow ? Brand.valueRed : Brand.mvfrBlue)
             var tailParts: [String] = []
             if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
-            if let v = w.visibility, v < 5 { tailParts.append("visibility \(TafFormat.visText(v))") }
+            if let v = w.visibility.lowerBoundSM, v < 5 { tailParts.append("visibility \(TafFormat.visText(w.visibility))") }
             if !w.weatherPhenomena.isEmpty { tailParts.append(WeatherDecoder.decodeAll(w.weatherPhenomena).lowercased()) }
             let tailText: String
             if tailParts.isEmpty {

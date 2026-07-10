@@ -53,7 +53,7 @@ struct AlertConditions {
                   windGust: metar.wind.isReported ? metar.wind.gust : nil,
                   ceilingFeet: metar.ceilingFeet,
                   ceilingCoverage: metar.ceilingCoverage,
-                  visibilitySM: metar.visibilityReported ? metar.visibility : nil,
+                  visibilitySM: metar.visibility.lowerBoundSM,   // .greaterThan uses its floor; a >n clears a min if n does; .unknown -> nil (criterion skipped)
                   flightCategory: metar.flightCategory,
                   source: .metar,
                   timestamp: metar.observationTime)

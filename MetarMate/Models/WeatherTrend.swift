@@ -204,11 +204,12 @@ struct ObservedTrend: Codable {
         let newest = metars.first!
         let oldest = metars.last!
 
-        // Visibility trend/delta use the newest and oldest samples that actually reported
-        // visibility (metars are newest-first). Filter, never substitute a placeholder.
-        let visReported = metars.filter { $0.visibilityReported }
-        let visTrend: TrendDirection = visReported.count >= 2
-            ? TrendThresholds.visibilityTrend(old: visReported.last!.visibility, new: visReported.first!.visibility)
+        // Visibility trend/delta use only EXACT reported visibilities (newest-first, order kept).
+        // A .greaterThan (P6SM) can't be ordered against another value without fabricating one, and
+        // .unknown isn't a value — both are excluded rather than substituted (Flag 4 / Finding 15).
+        let visExact: [Double] = metars.compactMap { $0.visibility.exactSM }
+        let visTrend: TrendDirection = visExact.count >= 2
+            ? TrendThresholds.visibilityTrend(old: visExact.last!, new: visExact.first!)
             : .unknown
         let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
 
@@ -249,13 +250,13 @@ struct ObservedTrend: Codable {
 
         let roc = RateOfChange(
             ceilingDeltaFt: ceilDelta,
-            visibilityDeltaSM: visReported.count >= 2 ? visReported.first!.visibility - visReported.last!.visibility : nil,
+            visibilityDeltaSM: visExact.count >= 2 ? visExact.first! - visExact.last! : nil,
             windDeltaKt: windReported.count >= 2 ? windReported.first!.wind.speed - windReported.last!.wind.speed : nil,
             spanHours: hoursSpan,
             oldCeilingFt: oldest.ceilingFeet,
             newCeilingFt: newest.ceilingFeet,
-            oldVisibilitySM: visReported.last?.visibility,
-            newVisibilitySM: visReported.first?.visibility,
+            oldVisibilitySM: visExact.last,
+            newVisibilitySM: visExact.first,
             oldWindKt: oldWindSustained,
             newWindKt: newWindSustained,
             oldGustKt: windReported.last.flatMap { $0.wind.gust },
@@ -310,11 +311,14 @@ struct ForecastTrend: Codable {
         let compareBlock = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) ?? current
         let isForwardLooking = compareBlock.fromTime > current.fromTime
 
-        // Only compare visibility when the METAR actually reported it — the `?? metar.visibility`
-        // fallback must not lean on the 0.0 placeholder.
-        let visTrend: TrendDirection = metar.visibilityReported
-            ? TrendThresholds.visibilityTrend(old: metar.visibility, new: compareBlock.visibility ?? metar.visibility)
-            : .unknown
+        // Only compare visibility when BOTH the METAR and the compared period report an EXACT
+        // value — a .greaterThan / .unknown can't be ordered without fabricating one (Flag 4).
+        let visTrend: TrendDirection
+        if let mv = metar.visibility.exactSM, let cv = compareBlock.visibility.exactSM {
+            visTrend = TrendThresholds.visibilityTrend(old: mv, new: cv)
+        } else {
+            visTrend = .unknown
+        }
 
         let compareCeiling = ceilingFromClouds(compareBlock.clouds)
         let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: compareCeiling)

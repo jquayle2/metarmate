@@ -15,9 +15,8 @@ struct MetarParser {
         }
 
         let wind = parseWind(wdir: raw.wdir, wspd: raw.wspd, wgst: raw.wgst)
-        // nil = visibility not reported / unrecognized. Never fabricate 10 SM VFR: keep a 0.0
-        // placeholder (reads worst-case if a gate is ever missed, never VFR) and flag it unreported.
-        let parsedVis = parseVisibility(raw.visib)
+        // .unknown when absent/unrecognized — never a fabricated number (see Visibility).
+        let visibility = parseVisibility(raw.visib)
         let clouds = parseClouds(raw.clouds, vertVis: raw.vertVis)
         let phenomena = parseWeatherPhenomena(raw.wxString, rawOb: rawText)
 
@@ -41,8 +40,7 @@ struct MetarParser {
             stationId: icao,
             observationTime: obsTime,
             wind: wind,
-            visibility: parsedVis ?? 0.0,
-            visibilityReported: parsedVis != nil,
+            visibility: visibility,
             clouds: clouds,
             temperature: temp,
             dewpoint: dewp,
@@ -93,18 +91,21 @@ struct MetarParser {
     // normalized to SM numbers (verified live: 3/4SM -> 0.75, metric 0150 m -> 0.09); the only
     // strings it emits are "10+"/"6+". The fractional-string branch is defensive for a form NOAA
     // does not currently send.
-    nonisolated private static func parseVisibility(_ vis: AnyCodable?) -> Double? {
-        guard let value = vis?.value else { return nil }
-        if let num = value as? Double { return num }
-        if let num = value as? Int { return Double(num) }
+    nonisolated private static func parseVisibility(_ vis: AnyCodable?) -> Visibility {
+        guard let value = vis?.value else { return .unknown }
+        if let num = value as? Double { return .exact(num) }
+        if let num = value as? Int { return .exact(Double(num)) }
         if let str = value as? String {
             let s = str.trimmingCharacters(in: .whitespaces).uppercased()
-            if s == "10+" { return 10.0 }
-            if s == "6+" || s == "P6SM" { return 6.0 }   // "greater than 6 SM" -> 6 (good visibility)
-            if let d = Double(s) { return d }
-            return parseFractionalSM(s)
+            // The ONLY constructors of .greaterThan — NOAA's greater-than strings at 6 and 10.
+            // Every other input below is .exact; an absent/unrecognized value is .unknown. So
+            // .greaterThan(n) is reachable only for n ∈ {6, 10}.
+            if s == "10+" || s == "P10SM" { return .greaterThan(10) }
+            if s == "6+"  || s == "P6SM"  { return .greaterThan(6) }
+            if let d = Double(s) { return .exact(d) }
+            if let f = parseFractionalSM(s) { return .exact(f) }
         }
-        return nil
+        return .unknown
     }
 
     // Defensive fractional visibility: "1/2", "1 1/4SM", "M1/4SM" -> Double; nil if not a fraction.

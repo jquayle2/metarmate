@@ -68,8 +68,9 @@ enum TafFormat {
         return "\(partOfDay) \(suffix)"
     }
 
-    static func visText(_ vis: Double) -> String {
-        vis >= 6 ? "6+ SM" : "\(String(format: "%g", vis)) SM"
+    // .exact(6) -> "6 SM" (never "6+"), .greaterThan(6) -> "6+ SM", .unknown -> "—".
+    static func visText(_ vis: Visibility) -> String {
+        vis.displayNumber.map { "\($0) SM" } ?? "—"
     }
 
     // Heavy precip or thunderstorm in a period's phenomena — escalates overlay severity to warning.

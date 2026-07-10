@@ -114,13 +114,15 @@ enum MetarPilotNotes {
             notes.append(.init(icon: "wind", text: "Variable wind direction at \(speed) kt — crosswind component unpredictable", severity: .caution))
         }
 
-        // Low visibility — only when visibility was actually reported. An unreported sensor must
-        // never fire "Visibility 0 SM — IFR" off the 0.0 placeholder.
-        if metar.visibilityReported {
-            if metar.visibility < 3 {
-                notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(String(format: "%g", metar.visibility)) SM — IFR conditions", severity: .warning))
-            } else if metar.visibility < 5 {
-                notes.append(.init(icon: "eye.slash", text: "Visibility \(String(format: "%g", metar.visibility)) SM — reduced; VFR marginal", severity: .caution))
+        // Low visibility — only when reported (.unknown -> lowerBoundSM nil -> no note, never off a
+        // placeholder). Only .exact can be below 5 (a .greaterThan is >= 6), so displayNumber here
+        // is always the plain "%g" number, never a "+".
+        if let v = metar.visibility.lowerBoundSM {
+            let visStr = metar.visibility.displayNumber ?? ""
+            if v < 3 {
+                notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(visStr) SM — IFR conditions", severity: .warning))
+            } else if v < 5 {
+                notes.append(.init(icon: "eye.slash", text: "Visibility \(visStr) SM — reduced; VFR marginal", severity: .caution))
             }
         }
 
