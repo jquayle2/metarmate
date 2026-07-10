@@ -204,9 +204,6 @@ enum ColorRules {
         return Brand.vfrGreen
     }
 
-    /// Present-weather phenomena always read as situational caution.
-    static var presentWeatherColor: Color { Brand.cautionOrange }
-
     /// trendStyle(direction, severity) → (arrowDirection, color).
     /// Up/orange for improving or stable; down/red for deteriorating.
     static func trendStyle(_ direction: TrendDirection) -> (up: Bool, color: Color) {

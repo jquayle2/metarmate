@@ -108,7 +108,7 @@ struct WeatherDetailView: View {
     private func metarSectionsInOrder(_ metar: Metar) -> some View {
         let notes = pilotNotes(for: metar, history: vm.metarHistory)
         let hasAmberNote = !notes.isEmpty
-        let hasRedNote   = notes.contains(where: { $0.severity == .warning })
+        let hasRedNote   = notes.contains(where: { $0.severity == .warning || $0.severity == .danger })
 
         let da = DensityAltitude.calculate(
             temperatureC: Double(metar.temperature),
@@ -839,12 +839,16 @@ struct WeatherDetailView: View {
     private struct PilotNote {
         let icon: String
         let text: String
-        let severity: Severity   // .caution (yellow) or .warning (orange)
+        let severity: Severity   // .caution (amber) · .warning (orange) · .danger (red)
         var crosswind: CrosswindDisplay? = nil   // when set, renders the 3-line crosswind body
-        enum Severity { case caution, warning }
+        enum Severity { case caution, warning, danger }
         var color: Color {
             if let cw = crosswind { return cw.windColor }   // amber/red wind palette for the icon
-            return severity == .warning ? .orange : Color(red: 1.0, green: 0.6, blue: 0.0)
+            switch severity {
+            case .danger:  return .red
+            case .warning: return .orange
+            case .caution: return Color(red: 1.0, green: 0.6, blue: 0.0)
+            }
         }
     }
 
@@ -1063,9 +1067,9 @@ struct WeatherDetailView: View {
         let hasTS = metar.weatherPhenomena.contains(where: { $0.hasPrefix("TS") || $0.hasPrefix("+TS") || $0.hasPrefix("VCTS") })
         let hasCB = metar.clouds.contains(where: { $0.isCumulonimbus })
         if hasTS {
-            notes.append(.init(icon: "bolt.fill", text: "Thunderstorm reported — do not depart until clear", severity: .warning))
+            notes.append(.init(icon: "bolt.fill", text: "Thunderstorm reported — do not depart until clear", severity: .danger))
         } else if hasCB {
-            notes.append(.init(icon: "bolt", text: "Cumulonimbus cloud reported — convective activity nearby", severity: .warning))
+            notes.append(.init(icon: "bolt", text: "Cumulonimbus cloud reported — convective activity nearby", severity: .danger))
         }
 
         // Low altimeter — only flag when pressure is genuinely low, not just below ISA standard
@@ -1094,9 +1098,18 @@ struct WeatherDetailView: View {
             notes.append(.init(icon: "clock.badge.exclamationmark", text: "Observation is \(minutes) min old — conditions may have changed", severity: .caution))
         }
 
-        // Freezing conditions
-        if metar.temperature <= 0 && metar.weatherPhenomena.contains(where: { $0.contains("FZ") || $0.contains("FZRA") }) {
-            notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing conditions on aircraft and runway surfaces", severity: .warning))
+        // Freezing precipitation — fire regardless of the reported surface temp. Freezing precip is
+        // reported precisely because it's freezing on contact, routinely at a 2 m temp of 0 to +3 C;
+        // the old `temp <= 0` gate suppressed the icing warning at ice-storm onset. Match the "FZ"
+        // descriptor on ANY precip (FZRA/FZDZ/FZUP) — everything the old contains("FZ") caught EXCEPT
+        // freezing fog, handled just below; narrowing to FZRA/FZDZ would silently drop FZUP.
+        // (Color severity stays .warning pending a CFII red/amber ruling — see audit doc.)
+        let hasFreezingPrecip = metar.weatherPhenomena.contains { let c = $0.uppercased(); return c.contains("FZ") && !c.contains("FZFG") }
+        let hasFreezingFog = metar.weatherPhenomena.contains { $0.uppercased().contains("FZFG") }
+        if hasFreezingPrecip {
+            notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing on aircraft and runway surfaces", severity: .warning))
+        } else if hasFreezingFog {
+            notes.append(.init(icon: "cloud.fog.fill", text: "Freezing fog — icing and obscuration", severity: .warning))
         } else if metar.temperature <= 2 && metar.temperature - metar.dewpoint <= 3 {
             notes.append(.init(icon: "thermometer.snowflake", text: "Near-freezing with high moisture — frost or freezing precip risk", severity: .caution))
         }
