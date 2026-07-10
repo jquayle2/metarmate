@@ -96,7 +96,7 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 | F11 | Widget duplicate parser drifted | ✅ Resolved (parity) — `de90a9c`; **but see F14 — the duplication itself is structural and slated for de-duplication (commit 9).** |
 | F12 | Widget missing category → `.vfr` | ✅ Resolved (`.unknown`) — `de90a9c` |
 | F13 | GoNoGo `Verdict` can't express skip-vs-pass | 🔶 **OPEN** — structural; not fixed. Code issue, not CFII. |
-| F14 | Widget carried a duplicate parser (no shared `MetarParser`) | ✅ Resolved — **commit 9**; widget delegates to `MetarParser`; regression `WidgetSnapshotParityTests` (10 cases). |
+| F14 | Widget carried a duplicate parser (no shared `MetarParser`) | ✅ Resolved — `a6c8d57` (commit 9); widget delegates to `MetarParser`; regression `WidgetSnapshotParityTests` (10 cases). |
 | F15 | `Metar` temp/dewp/altimeter can't be unknown (`0 °C`/`29.92` substituted) | 🔶 **OPEN** — structural; needs the three fields optional + consumer gating (own commit). Worst instance feeds density/pressure altitude. |
 
 Six items require human (CFII) judgment and are **not** resolved by any code change or test — see [Requires human judgment (CFII)](#requires-human-judgment-cfii).
@@ -196,7 +196,7 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 - **Symptom:** the widget mapped an absent `fltCat` to `.vfr` (green) instead of `.unknown` — a fail-permissive default on the single most important datum.
 - **Resolution:** `FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown` (matches `MetarParser`; no fail-permissive green).
 
-## 🟡 Finding 14 — Widget target carried a duplicate parser; drift was unobservable by any test  **[LOW — structural]** — ✅ RESOLVED (commit 9)
+## 🟡 Finding 14 — Widget target carried a duplicate parser; drift was unobservable by any test  **[LOW — structural]** — ✅ RESOLVED (`a6c8d57`, commit 9)
 
 - **Symptom:** The widget target did not link MetarMate's `MetarParser` and carried a duplicate implementation of `parseVisibility`/`parseCeiling`/`parseWindDirection`, including the `P6SM`/`6+`/`vertVis` branches. Drift between the two parsers was unobservable by any test in either target. F11/F12 are the observed instances; the class was structural.
 - **Resolution (commit 9):** `MetarParser.swift` linked into the widget target; the snapshot builder moved out of the widget's private `WidgetFetcher` to `WidgetWeatherSnapshot.from(rawMetar:icao:)` (shared, unit-testable) and now delegates wind/visibility/ceiling/category/obsTime to `MetarParser.parse` — one parser, no drift possible. 10 parity tests (`WidgetSnapshotParityTests`) pin `P6SM`/`6+`/`10+`/numeric vis, VV003, OVX-no-base, missing wind, VRB, missing `fltCat`; written against the duplicate, unchanged through the swap.
