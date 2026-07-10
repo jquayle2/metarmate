@@ -122,15 +122,22 @@ struct TafParser {
         // We need to handle it as an array of [String: Any]
         guard let cloudsArray = cloudsValue as? [[String: Any]] else { return [] }
 
+        // Indefinite ceiling: TAF carries it as cover "OVX" / a top-level vertVis field (hundreds
+        // of feet), same as METAR — map OVX onto .verticalVisibility so it becomes a real ceiling.
+        let vertVis = dict["vertVis"]?.value as? Int
+
         return cloudsArray.compactMap { cloud -> CloudLayer? in
-            guard let coverStr = cloud["cover"] as? String,
-                  let coverage = CloudCoverage(rawValue: coverStr) else { return nil }
+            guard let coverStr = cloud["cover"] as? String else { return nil }
+            let coverKey = (coverStr == "OVX") ? "VV" : coverStr
+            guard let coverage = CloudCoverage(rawValue: coverKey) else { return nil }
 
             var altitudeHundreds = 0
             if let base = cloud["base"] as? Int {
                 altitudeHundreds = base / 100
             } else if let base = cloud["base"] as? Double {
                 altitudeHundreds = Int(base) / 100
+            } else if coverage == .verticalVisibility, let vv = vertVis {
+                altitudeHundreds = vv
             }
 
             let typeStr = cloud["type"] as? String ?? ""

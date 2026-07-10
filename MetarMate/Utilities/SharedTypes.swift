@@ -64,6 +64,7 @@ struct RawMetar: Codable {
     let name: String?
     let cover: String?
     let clouds: [[String: AnyCodable]]?
+    let vertVis: Int?          // indefinite ceiling (raw "VVnnn"), hundreds of feet; paired with cover "OVX"
     let wxString: String?
     let fltCat: String?
     let metarType: String?

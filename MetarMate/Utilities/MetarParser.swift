@@ -16,7 +16,7 @@ struct MetarParser {
 
         let wind = parseWind(wdir: raw.wdir, wspd: raw.wspd, wgst: raw.wgst)
         let visibility = parseVisibility(raw.visib)
-        let clouds = parseClouds(raw.clouds)
+        let clouds = parseClouds(raw.clouds, vertVis: raw.vertVis)
         let phenomena = parseWeatherPhenomena(raw.wxString, rawOb: rawText)
 
         let temp = Int(raw.temp ?? 0)
@@ -94,11 +94,15 @@ struct MetarParser {
 
     // MARK: - Clouds
     // API returns base in feet AGL (e.g. 25000), not hundreds
-    nonisolated private static func parseClouds(_ clouds: [[String: AnyCodable]]?) -> [CloudLayer] {
+    nonisolated private static func parseClouds(_ clouds: [[String: AnyCodable]]?, vertVis: Int? = nil) -> [CloudLayer] {
         guard let clouds = clouds else { return [] }
         return clouds.compactMap { dict -> CloudLayer? in
-            guard let coverageStr = dict["cover"]?.value as? String,
-                  let coverage = CloudCoverage(rawValue: coverageStr) else { return nil }
+            guard let coverageStr = dict["cover"]?.value as? String else { return nil }
+            // NOAA encodes an indefinite ceiling (raw "VVnnn") as cover "OVX" plus a sibling
+            // vertVis field — NOT as cover "VV". Map it onto .verticalVisibility so the obscuration
+            // becomes a real ceiling (dropping it silently hid 100-200 ft LIFR fog ceilings).
+            let coverKey = (coverageStr == "OVX") ? "VV" : coverageStr
+            guard let coverage = CloudCoverage(rawValue: coverKey) else { return nil }
 
             // API gives base in feet; CloudLayer stores hundreds of feet
             var altitudeHundreds = 0
@@ -106,6 +110,9 @@ struct MetarParser {
                 altitudeHundreds = base / 100
             } else if let base = dict["base"]?.value as? Double {
                 altitudeHundreds = Int(base) / 100
+            } else if coverage == .verticalVisibility, let vv = vertVis {
+                // Obscuration layer with no base — fall back to vertVis (already in hundreds of feet).
+                altitudeHundreds = vv
             }
 
             let typeStr = dict["type"]?.value as? String ?? ""
