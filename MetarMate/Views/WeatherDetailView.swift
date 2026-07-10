@@ -2033,8 +2033,59 @@ struct WeatherDetailView: View {
         // A LATER period we couldn't determine (.unknown) must likewise never read as a worst-case
         // OR as an improvement — excluding it prevents "IFR now, improving to UNKN by 09:00."
         let known = bases.filter { $0.flightCategory != .unknown }
-        guard let worst = known.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) }),
-              tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
+        let worst = known.max(by: { tafCategorySeverity($0.flightCategory) < tafCategorySeverity($1.flightCategory) })
+        let worstBaseSeverity = worst.map { tafCategorySeverity($0.flightCategory) } ?? tafCategorySeverity(first.flightCategory)
+
+        // Worst-base story: lead category/time + limiting tail — "MVFR by 09:00. Ceiling 2,500 ft."
+        // Shared by the overlay path and the plain worsening branch so the tail never diverges.
+        func worstBaseStory(_ w: TafForecast) -> Text {
+            let isLow = w.flightCategory == .ifr || w.flightCategory == .lifr
+            let lead = Text("\(w.flightCategory.rawValue) by \(tafTimeLabel(w.fromTime)). ")
+                .foregroundColor(isLow ? Brand.valueRed : Brand.mvfrBlue)
+            var tailParts: [String] = []
+            if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
+            if let v = w.visibility, v < 5 { tailParts.append("visibility \(tafVisText(v))") }
+            if !w.weatherPhenomena.isEmpty { tailParts.append(WeatherDecoder.decodeAll(w.weatherPhenomena).lowercased()) }
+            let tailText: String
+            if tailParts.isEmpty {
+                tailText = "Watch the trend through the period."
+            } else {
+                let joined = tailParts.joined(separator: ", ")
+                tailText = joined.prefix(1).uppercased() + joined.dropFirst() + "."
+            }
+            return lead + Text(tailText).foregroundColor(Brand.slate)
+        }
+
+        // A significant TEMPO/PROB overlay is a distinct hazard from the base trend and must surface
+        // REGARDLESS of what the bases do — a PROB30 thunderstorm is not covered by an "MVFR by
+        // 09:00" base story. Lead with it when it's convective/heavy (always), or when it is IFR/LIFR
+        // AND more severe than the worst base. Hoisted above the worsening guard on purpose. (PROB
+        // reaches overlayForecasts via the F2 fix.)
+        if let overlay = taf.overlayForecasts.first(where: {
+            tafHasConvectiveOrHeavy($0)
+                || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
+                    && tafCategorySeverity($0.flightCategory) > worstBaseSeverity)
+        }) {
+            let label = overlay.type == .becmg ? "BECMG" : (overlay.type == .tempo ? "TEMPO" : overlay.type.rawValue)
+            let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
+            let what = low
+                ? overlay.flightCategory.rawValue
+                : (overlay.weatherPhenomena.isEmpty ? "convective activity" : WeatherDecoder.decodeAll(overlay.weatherPhenomena).lowercased())
+            let overlayClause = Text(" \(label) \(what) \(tafWindowLabel(from: overlay.fromTime, to: overlay.toTime)).")
+                .foregroundColor(low ? Brand.valueRed : Brand.cautionOrange)
+            let basesWorsen = worst.map { tafCategorySeverity($0.flightCategory) > tafCategorySeverity(first.flightCategory) } ?? false
+            if basesWorsen, let w = worst {
+                // Keep the full worst-base story (lead + limiting tail), then the overlay as a
+                // separate sentence — both hazards, base detail intact.
+                return worstBaseStory(w) + Text(" Plus").foregroundColor(Brand.slate) + overlayClause
+            }
+            // Benign/steady base — contrast the current category with the overlay hazard.
+            return Text("\(first.flightCategory.rawValue) now,").foregroundColor(ColorRules.flightCategoryColor(first.flightCategory))
+                + Text(" but").foregroundColor(Brand.slate) + overlayClause
+        }
+
+        // No significant overlay — the base trend logic. Nothing worse than the first period?
+        guard let worst, tafCategorySeverity(worst.flightCategory) > tafCategorySeverity(first.flightCategory) else {
             // Nothing gets WORSE than the first period. But the forecast may still IMPROVE —
             // e.g. starts IFR and clears to VFR. Saying "IFR the entire forecast period" there
             // is wrong and would keep a pilot on the ground when the TAF says it lifts.
@@ -2061,25 +2112,8 @@ struct WeatherDetailView: View {
                 + Text("No significant changes expected.").foregroundColor(Brand.slate)
         }
 
-        let isLow = worst.flightCategory == .ifr || worst.flightCategory == .lifr
-        let leadColor: Color = isLow ? Brand.valueRed : Brand.mvfrBlue
-        let lead = Text("\(worst.flightCategory.rawValue) by \(tafTimeLabel(worst.fromTime)). ")
-            .foregroundColor(leadColor)
-
-        var tailParts: [String] = []
-        if let c = ForecastRules.ceilingFeet(worst), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
-        if let v = worst.visibility, v < 5 { tailParts.append("visibility \(tafVisText(v))") }
-        if !worst.weatherPhenomena.isEmpty {
-            tailParts.append(WeatherDecoder.decodeAll(worst.weatherPhenomena).lowercased())
-        }
-        let tailText: String
-        if tailParts.isEmpty {
-            tailText = "Watch the trend through the period."
-        } else {
-            let joined = tailParts.joined(separator: ", ")
-            tailText = joined.prefix(1).uppercased() + joined.dropFirst() + "."
-        }
-        return lead + Text(tailText).foregroundColor(Brand.slate)
+        // Bases worsen with no significant overlay — the full worst-base story (lead + limiting tail).
+        return worstBaseStory(worst)
     }
 
     // Compact hero-strip time label, e.g. "5P", "8P", "11P", "12A".
