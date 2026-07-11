@@ -76,6 +76,7 @@ struct RawMetar: Codable {
 enum WeatherError: LocalizedError {
     case invalidURL
     case badResponse
+    case httpStatus(Int)   // non-200 HTTP response; carries the status code
     case noData
     case parseError(String)
 
@@ -83,6 +84,7 @@ enum WeatherError: LocalizedError {
         switch self {
         case .invalidURL: return "Invalid URL"
         case .badResponse: return "Server returned an error"
+        case .httpStatus(let code): return "Server returned HTTP \(code)"
         case .noData: return "No weather data available"
         case .parseError(let msg): return "Parse error: \(msg)"
         }

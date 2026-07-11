@@ -35,6 +35,12 @@ actor WeatherService {
     /// does NOT include a clean "no data" response — a station that genuinely reports
     /// nothing should fall through to advisory promptly, not retry-loop.
     private static func isTransient(_ error: Error) -> Bool {
+        // Retryable HTTP statuses: 5xx server errors and 429 rate-limit. A 4xx (esp. 404
+        // "no such product for this station") is NOT transient — it should fall to advisory
+        // promptly rather than retry-loop.
+        if case WeatherError.httpStatus(let code) = error {
+            return code == 429 || (500...599).contains(code)
+        }
         let ns = error as NSError
         guard ns.domain == NSURLErrorDomain else { return false }
         switch ns.code {
@@ -175,8 +181,13 @@ actor WeatherService {
     }
 
     private func validateResponse(_ response: URLResponse) throws {
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+        guard let http = response as? HTTPURLResponse else {
             throw WeatherError.badResponse
+        }
+        guard http.statusCode == 200 else {
+            // Carry the real status so callers can distinguish a genuine 404 (station has
+            // no product — fall to advisory) from a 5xx/429 server hiccup (retryable).
+            throw WeatherError.httpStatus(http.statusCode)
         }
     }
 }
