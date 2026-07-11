@@ -8,6 +8,42 @@ actor WeatherService {
     private let baseURL = "https://aviationweather.gov/api/data"
     private let session: URLSession
 
+    // MARK: - In-memory METAR cache
+    // Short-lived cache keyed by ICAO. Purpose: kill the redundant re-fetches the logs
+    // showed — the nearby sheet re-requesting the same stations across pages, and tapping
+    // a station whose METAR a batch call already returned seconds earlier. This is an
+    // actor, so access is automatically serialized; no locking needed.
+    //
+    // SAFETY: TTL governs only when we re-hit the NETWORK. It never hides staleness from
+    // the pilot — callers display the METAR's own observationTime/age exactly as before,
+    // whether the value came from the network or this cache. A cached METAR is the same
+    // object NOAA returned; we're only avoiding a duplicate round-trip within the TTL.
+    private var metarCache: [String: (metar: Metar, fetchedAt: Date)] = [:]
+    private let metarCacheTTL: TimeInterval = 300   // 5 minutes
+
+    private func cachedMetar(for icao: String) -> Metar? {
+        guard let entry = metarCache[icao] else { return nil }
+        let age = Date().timeIntervalSince(entry.fetchedAt)
+        guard age < metarCacheTTL else {
+            metarCache[icao] = nil   // expired; drop it
+            return nil
+        }
+        let obsAge = Date().timeIntervalSince(entry.metar.observationTime)
+        Log.net.info("[cache] METAR \(icao, privacy: .public) HIT - fetched \(String(format: "%.0f", age), privacy: .public)s ago, obs \(String(format: "%.0f", obsAge / 60), privacy: .public)m old")
+        return entry.metar
+    }
+
+    private func store(_ metar: Metar, for icao: String) {
+        metarCache[icao] = (metar, Date())
+    }
+
+    /// Drop all cached METARs — call on an explicit pull-to-refresh so the user always
+    /// gets a genuine network fetch when they deliberately ask for fresh data.
+    func clearMetarCache() {
+        metarCache.removeAll()
+        Log.net.info("[cache] cleared (manual refresh)")
+    }
+
     private init() {
         // Explicit timeouts so a slow/unresponsive NOAA endpoint fails fast and we can
         // surface it (or fall back) in seconds, not the 60s URLSession default.
@@ -88,6 +124,8 @@ actor WeatherService {
             let parsed = try await attempt()
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] METAR history \(icao, privacy: .public) hours=\(hours) - \(String(format: "%.0f", ms), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
+            // Cache the newest obs so a nearby sheet / list showing this station is instant.
+            if let newest = parsed.first { store(newest, for: icao) }
             return parsed
         } catch let err where Self.isNoContent(err) {
             // 204: station has no METAR in the window. Clean empty result, not a failure.
@@ -120,14 +158,30 @@ actor WeatherService {
     }
 
     func fetchMetars(for icaos: [String]) async throws -> [String: Metar] {
-        let ids = icaos.joined(separator: ",")
+        // Serve any fresh cached stations directly; only hit the network for the rest.
+        // This is what kills the nearby-sheet churn — paging back over stations already
+        // fetched on a previous page now costs nothing.
+        var result: [String: Metar] = [:]
+        var needed: [String] = []
+        for icao in icaos {
+            if let cached = cachedMetar(for: icao) {
+                result[icao] = cached
+            } else {
+                needed.append(icao)
+            }
+        }
+        guard !needed.isEmpty else {
+            Log.net.info("[cache] batch METAR \(icaos.count, privacy: .public) all served from cache")
+            return result
+        }
+
+        let ids = needed.joined(separator: ",")
         let url = try buildURL(path: "metar", params: ["ids": ids, "format": "json", "hours": "2"])
         let start = DispatchTime.now()
         do {
             let (data, response) = try await session.data(from: url)
             try validateResponse(response)
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
-            var result: [String: Metar] = [:]
             for raw in raws {
                 if let metar = try? MetarParser.parse(raw: raw) {
                     if let existing = result[metar.stationId] {
@@ -140,19 +194,22 @@ actor WeatherService {
                 }
             }
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
-            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes, \(result.count, privacy: .public) returned")
+            Log.net.info("[net] batch METAR \(needed.count, privacy: .public) fetched (\(icaos.count - needed.count, privacy: .public) cached) [\(ids, privacy: .public)] - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes, \(result.count, privacy: .public) total")
+            // Populate cache so a subsequent tap on any of these stations is instant.
+            for icao in needed { if let m = result[icao] { store(m, for: icao) } }
             return result
         } catch let err where Self.isNoContent(err) {
-            // 204: none of the requested stations had a METAR in the window. Empty result.
+            // 204: none of the still-needed stations had a METAR. Return whatever we already
+            // served from cache (don't discard cached hits).
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
-            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] no content (204) - \(String(format: "%.0f", ms), privacy: .public) ms")
-            return [:]
+            Log.net.info("[net] batch METAR \(needed.count, privacy: .public) req [\(ids, privacy: .public)] no content (204), \(result.count, privacy: .public) from cache - \(String(format: "%.0f", ms), privacy: .public) ms")
+            return result
         } catch let err where Self.isCancellation(err) {
-            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) cancelled (navigated away)")
+            Log.net.info("[net] batch METAR \(needed.count, privacy: .public) cancelled (navigated away)")
             throw err
         } catch {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
-            Log.net.error("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
+            Log.net.error("[net] batch METAR \(needed.count, privacy: .public) req [\(ids, privacy: .public)] FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
             throw error
         }
     }

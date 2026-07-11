@@ -38,10 +38,16 @@ class WeatherViewModel: ObservableObject {
     var hasASOSData: Bool { synopticLatest != nil }
 
     // MARK: - Load with full Airport (preferred — enables hasMetar routing)
-    func load(airport: Airport) async {
-        if let last = lastUpdated, Date().timeIntervalSince(last) < 60 {
+    // force: true (pull-to-refresh) skips the 60s throttle AND clears the METAR cache so
+    // the user always gets a genuine network fetch when they deliberately ask for one.
+    func load(airport: Airport, force: Bool = false) async {
+        if !force, let last = lastUpdated, Date().timeIntervalSince(last) < 60 {
             Log.load.info("[load] \(airport.icao, privacy: .public) skipped (cached \(String(format: "%.0f", Date().timeIntervalSince(last)), privacy: .public)s ago)")
             return
+        }
+        if force {
+            await weatherService.clearMetarCache()
+            Log.load.info("[load] \(airport.icao, privacy: .public) FORCE refresh (cache cleared)")
         }
         let loadStart = DispatchTime.now()
         Log.load.info("[load] \(airport.icao, privacy: .public) START hasMetar=\(airport.hasMetar, privacy: .public)")

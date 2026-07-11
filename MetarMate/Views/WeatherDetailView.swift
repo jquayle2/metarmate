@@ -99,7 +99,7 @@ struct WeatherDetailView: View {
             }
         }
         .refreshable {
-            await vm.load(airport: airport)
+            await vm.load(airport: airport, force: true)
         }
     }
 
