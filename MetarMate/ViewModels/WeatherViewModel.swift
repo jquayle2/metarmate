@@ -178,6 +178,12 @@ class WeatherViewModel: ObservableObject {
                 )
                 WidgetDataManager.save(snapshot: snapshot)
             }
+        } catch is CancellationError {
+            // User navigated away mid-load. Not a failure — don't set error (which would
+            // otherwise trip the METAR→advisory fallback for a load we abandoned anyway).
+            Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
+        } catch let err as URLError where err.code == .cancelled {
+            Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
         } catch {
             self.error = error
         }

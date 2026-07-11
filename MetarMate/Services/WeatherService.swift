@@ -89,6 +89,15 @@ actor WeatherService {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] METAR history \(icao, privacy: .public) hours=\(hours) - \(String(format: "%.0f", ms), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
             return parsed
+        } catch let err where Self.isNoContent(err) {
+            // 204: station has no METAR in the window. Clean empty result, not a failure.
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] METAR history \(icao, privacy: .public) no content (204) - \(String(format: "%.0f", ms), privacy: .public) ms")
+            return []
+        } catch let err where Self.isCancellation(err) {
+            // Navigated away; not a failure, don't retry, don't count as fallback trigger.
+            Log.net.info("[net] METAR history \(icao, privacy: .public) cancelled (navigated away)")
+            throw err
         } catch {
             let ms1 = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             guard Self.isTransient(error) else {
@@ -133,6 +142,14 @@ actor WeatherService {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes, \(result.count, privacy: .public) returned")
             return result
+        } catch let err where Self.isNoContent(err) {
+            // 204: none of the requested stations had a METAR in the window. Empty result.
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] no content (204) - \(String(format: "%.0f", ms), privacy: .public) ms")
+            return [:]
+        } catch let err where Self.isCancellation(err) {
+            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) cancelled (navigated away)")
+            throw err
         } catch {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.error("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
@@ -152,6 +169,14 @@ actor WeatherService {
             Log.net.info("[net] TAF \(icao, privacy: .public) - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes")
             guard let first = raw.first else { throw WeatherError.noData }
             return try TafParser.parse(raw: first)
+        } catch let err where Self.isNoContent(err) {
+            // 204: this station has no active TAF (common for GA fields). Not an error.
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] TAF \(icao, privacy: .public) no content (204, no active TAF) - \(String(format: "%.0f", ms), privacy: .public) ms")
+            throw WeatherError.noContent
+        } catch let err where Self.isCancellation(err) {
+            Log.net.info("[net] TAF \(icao, privacy: .public) cancelled (navigated away)")
+            throw err
         } catch {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.error("[net] TAF \(icao, privacy: .public) FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
@@ -184,11 +209,32 @@ actor WeatherService {
         guard let http = response as? HTTPURLResponse else {
             throw WeatherError.badResponse
         }
+        // 204 No Content is NOAA's normal "this station has no product" response (e.g. a
+        // GA field with no TAF, or no METAR in the window). It is NOT an error — callers
+        // treat it as an empty result and fall to advisory if appropriate.
+        if http.statusCode == 204 {
+            throw WeatherError.noContent
+        }
         guard http.statusCode == 200 else {
             // Carry the real status so callers can distinguish a genuine 404 (station has
             // no product — fall to advisory) from a 5xx/429 server hiccup (retryable).
             throw WeatherError.httpStatus(http.statusCode)
         }
+    }
+
+    /// URLSession task cancellation (-999) — happens when SwiftUI's .task is torn down as
+    /// the user navigates away. Not a failure, not retryable, and should never trigger a
+    /// fallback; callers filter it so it doesn't masquerade as an error in the logs.
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        let ns = error as NSError
+        return ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled
+    }
+
+    /// HTTP 204 No Content — station exists but has no product right now. Clean empty result.
+    private static func isNoContent(_ error: Error) -> Bool {
+        if case WeatherError.noContent = error { return true }
+        return false
     }
 }
 
