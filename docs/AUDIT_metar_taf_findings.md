@@ -98,6 +98,8 @@ The brief's **highest-priority** concern — `parseVisibility` fractional string
 | F13 | GoNoGo `Verdict` can't express skip-vs-pass | 🔶 **OPEN** — structural; not fixed. Code issue, not CFII. |
 | F14 | Widget carried a duplicate parser (no shared `MetarParser`) | ✅ Resolved — `a6c8d57` (commit 9); widget delegates to `MetarParser`; regression `WidgetSnapshotParityTests` (10 cases). |
 | F15 | `Metar` can't represent unknown temp/dewp/altimeter (`0 °C`/`29.92`) | 🔶 **temp/dewp/altimeter OPEN** — own commit. **Visibility sibling ✅ Resolved — commit 10** (`Visibility` enum; also fixes P6SM CFII item + the exact-6-shows-"6+" bug). Regression `VisibilityCategoryParityTests`/`VisibilityDisplayTests`. |
+| F17 | Observation-history line omits present weather (`TS`/`SQ`/`+FC` invisible there) | 🔶 **OPEN** — design/product; pre-existing, surfaced by the injection harness (`d941598`). Flag for Mike alongside CFII item 6. Not fixed. |
+| F18 | "Clear" reported when only SCT/FEW layers exist | 🔶 **OPEN (LOW)** — phrasing; pre-existing, surfaced by the injection harness. Not fixed. |
 
 Six items require human (CFII) judgment and are **not** resolved by any code change or test — see [Requires human judgment (CFII)](#requires-human-judgment-cfii).
 
@@ -224,6 +226,23 @@ Six items require human (CFII) judgment and are **not** resolved by any code cha
 
 ---
 
+## 🟠 Finding 17 — Observation-history line omits present weather  **[MEDIUM — design/product; pre-existing, surfaced by the injection harness, not fixed]**
+
+- **Observation:** `WeatherDetailView.historyConditionLine` renders the latest observation as `ceiling · vis · wind · altimeter` and **never reads `weatherPhenomena`**. A pilot reading the observation-history line sees visibility and ceiling but not that the ob contained `TS`, `SQ`, or `+FC`. A `+FC` (funnel cloud / tornado) present in the observation is **invisible** on that surface. This is the same class as the audit's core concern — safety-relevant data omitted from a surface a pilot reads.
+- **Where it DOES render:** the present-weather chip — the "Weather" row of the Decoded METAR card (`wxPhenomenaConditionColor`) — surfaces the phenomena and reds `TS`/`SQ`/`FZ`/`+FC`. So the commit-11 escalation is visible there; the omission is specific to the observation-history line's formatter.
+- **Provenance:** pre-existing production formatter choice (`ceiling · vis · wind · altimeter`), **NOT** a harness or audit-regression bug. Surfaced by the METAR-injection harness (`d941598`) while auditing A9/A10/A11.
+- **Ruling:** design/product question — should the observation-history line surface present weather, at least the hazardous phenomena (`TS`/`SQ`/`+FC`)? **Flag for Mike (CFII) alongside item 6.** Not fixed.
+
+---
+
+## 🟢 Finding 18 — "Clear" reported when only SCT/FEW layers exist  **[LOW — phrasing; pre-existing, not fixed]**
+
+- **Observation:** `historyConditionLine` (and the decoded-conditions ceiling logic) count only BKN/OVC as a ceiling (`ceilingFeet`), so an observation with only SCT/FEW layers renders **"Clear."** A10's `SCT@1500` reads "Clear" on the observation line. Ceiling-correct (there is no ceiling), but "Clear" misreads when a scattered layer is present.
+- **Provenance:** pre-existing production behavior, **NOT** a harness/regression bug. Surfaced by the injection harness while auditing A10.
+- **Ruling:** low-severity phrasing question — consider "SCT 1500" or "no ceiling" instead of "Clear" when a non-ceiling layer exists. **Flagged, not fixed.**
+
+---
+
 # Requires human judgment (CFII)
 
 These are **domain/UX decisions, not code defects.** No commit or test resolves them; a test asserting the current behavior would silently ratify an unmade decision, so the regression tests deliberately avoid pinning these (e.g. F3 asserts the icing note *fires*, never its severity; F5 asserts TS/CB `.danger` but never SQ/+FC). **Items 1–4 were ruled by Mike (CFII) and are now resolved — commit `ac0f0d3`.** Item 5 (P6SM) was decided by Jeff (commit 10). **Only item 6 remains OPEN (Mike/CFII).**
@@ -234,6 +253,8 @@ These are **domain/UX decisions, not code defects.** No commit or test resolves 
 4. **"Improving to IFR" hero phrasing** when LIFR lifts to IFR — acceptable, or reword? — ✅ **RESOLVED (Mike/CFII, commit `ac0f0d3`): reword.** `TafHeroBrief`'s improving segment drops the destination-category suffix — "improving by 09:00." not "improving to IFR by 09:00." Segment color still carries the improved category; deteriorating/steady phrasing and all segment colors untouched.
 5. **`P6SM` → 6.0 lossiness** — ✅ **RESOLVED (commit 10, decided by Jeff).** Parsed visibility is now a `Visibility` enum (`.exact` / `.greaterThan` / `.unknown`); `P6SM`/`6+` → `.greaterThan(6)`, distinct from an exact 6, rendering `6+ SM` (and never stamping `6+` onto a genuine exact-6 report — the sibling bug). Flight category is provably unchanged (`.greaterThan(6)` → VFR, same as the old 6.0 — the cascade thresholds on the floor). Regression: `VisibilityCategoryParityTests` (green both ways, boundaries locked), `VisibilityDisplayTests`.
 6. **Missing-visibility vs missing-wind note asymmetry (Deferred item #6).** Post-F8, unreported wind renders "—" in cells **and** carries a "wind not reported" pilot note; unreported visibility renders "—" in cells but has **no** analogous note. The full gate changed the *surface area* of the asymmetry but not the domain question: should wind carry a note that visibility doesn't, or should the two be symmetric? OPEN.
+
+> **Also for Mike (related, not a numbered CFII item):** **Finding 17** — present weather is absent from the observation-history line, so a `+FC`/`TS`/`SQ` in an ob is invisible on that surface (it does render on the Decoded METAR "Weather" chip). Should hazardous present weather appear on the observation-history line? Same judgment shape as item 6.
 
 ---
 
