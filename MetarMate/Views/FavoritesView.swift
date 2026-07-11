@@ -78,19 +78,6 @@ struct FavoritesView: View {
             .navigationTitle("Favorites")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Test Harness entry (Debug/TestFlight only): a 5-second long-press on the header
-                // opens the METAR Injection screen. The gesture is convenience; the receipt check on
-                // TestHarnessGate.isAvailable is the actual boundary — this ToolbarItem is absent
-                // entirely in an App Store production build, so the header renders the plain title.
-                if TestHarnessGate.isAvailable {
-                    ToolbarItem(placement: .principal) {
-                        Text("Favorites")
-                            .font(.headline)
-                            .foregroundColor(Brand.cloud)
-                            .contentShape(Rectangle())
-                            .onLongPressGesture(minimumDuration: 5) { showInjectionHarness = true }
-                    }
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !favorites.isEmpty {
                         Button(editMode == .active ? "Done" : "Edit") {
@@ -99,6 +86,31 @@ struct FavoritesView: View {
                             }
                         }
                     }
+                }
+            }
+            // Test Harness entry (Debug/TestFlight only): FIVE taps on this chip open the METAR
+            // Injection screen. Moved OFF the nav-bar header — the top ~20 pt screen edge is where
+            // iOS's system gesture gate wins ("System gesture gate timed out"), which starved the old
+            // long-press so the app's recognizer never fired. A 5-tap target inside the content area,
+            // clear of the top edge, competes with no system gesture. The receipt check on
+            // TestHarnessGate.isAvailable is UNCHANGED and remains the actual App Store boundary — this
+            // whole inset is absent in a production build, so it can't be reached or seen there.
+            .safeAreaInset(edge: .bottom) {
+                if TestHarnessGate.isAvailable {
+                    HStack(spacing: 6) {
+                        Image(systemName: "ladybug.fill")
+                        Text("METAR Injection — tap 5×")
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.secondary.opacity(0.14)))
+                    .contentShape(Capsule())
+                    .onTapGesture(count: 5) { showInjectionHarness = true }
+                    .padding(.bottom, 4)
+                    .accessibilityElement(children: .combine)   // one queryable element for the UITest
+                    .accessibilityIdentifier("harnessEntryChip")
                 }
             }
             .fullScreenCover(isPresented: $showInjectionHarness) {

@@ -52,6 +52,15 @@ enum SimulatedDecode {
         return try MetarParser.parse(raw: first)
     }
 
+    /// Parse ALL observations in the array (newest-first, order preserved) — the history a fixture
+    /// injects so the trend engine (which needs ≥2 obs) can derive an OBSERVED summary. Throws if ANY
+    /// observation fails to parse; no partial/fallback series.
+    static func parseMetars(json: String) throws -> [Metar] {
+        let raws = try JSONDecoder().decode([RawMetar].self, from: Data(json.utf8))
+        guard !raws.isEmpty else { throw WeatherError.noData }
+        return try raws.map { try MetarParser.parse(raw: $0) }
+    }
+
     static func parseTaf(json: String) throws -> Taf {
         let raws = try JSONDecoder().decode([RawTaf].self, from: Data(json.utf8))
         guard let first = raws.first else { throw WeatherError.noData }

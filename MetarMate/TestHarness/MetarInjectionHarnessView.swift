@@ -3,9 +3,9 @@ import os
 
 // MARK: - METAR Injection Harness (TestFlight / Debug only)
 //
-// Entry: 5-second long-press on the Favorites list header (see FavoritesView). BOTH the gesture and
-// this screen are gated on TestHarnessGate.isAvailable (sandbox receipt) so it is unreachable in an
-// App Store production build.
+// Entry: five taps on the "METAR Injection — tap 5×" chip at the bottom of the Favorites content
+// (see FavoritesView). BOTH the entry chip and this screen are gated on TestHarnessGate.isAvailable
+// (sandbox receipt) so it is unreachable in an App Store production build.
 //
 // Sections:
 //   1. Canned adverse fixtures (A1–A13, T1–T4) — injected, SIMULATED, banner-marked.
@@ -65,6 +65,12 @@ struct MetarInjectionHarnessView: View {
             Section {
                 Text("Every injected screen is fabricated weather, marked with a permanent SIMULATED banner. Read-only: no network, no favorites/SwiftData writes, no widget snapshot.")
                     .font(.footnote)
+                    .foregroundColor(.secondary)
+                Button { HarnessAudit.logAll() } label: {
+                    Label("Print audit report → Xcode console", systemImage: "doc.text.magnifyingglass")
+                }
+                Text("Dumps every fixture's parsed values (visibility, wind, ceiling, category, phenomena, DA, trend, TAF hero) to the console. Filter Xcode/Console.app by “harness”. Tapping a fixture also logs just that one.")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
             }
 
@@ -156,6 +162,7 @@ struct MetarInjectionHarnessView: View {
     }
 
     private func present(fixture fx: InjectionFixture) {
+        HarnessAudit.log(fx)   // also dump this one case to the console for auditing
         do {
             let injection = try fx.make()
             simPayload = SimPayload(id: fx.id, title: fx.title, airport: fx.airport, injection: injection)

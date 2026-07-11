@@ -12,7 +12,11 @@ source of truth (it's what actually runs).
 
 ## How the harness is gated (kept out of the App Store)
 
-- Entry: **5-second long-press on the Favorites list header** → opens the harness (`FavoritesView`).
+- Entry: **five taps on the "METAR Injection — tap 5×" chip** at the bottom of the Favorites content
+  → opens the harness (`FavoritesView`). (Was a 5-second long-press on the nav-bar header; moved off
+  the top screen edge because iOS's system gesture gate wins there — "System gesture gate timed out" —
+  starving the app recognizer. The chip and its 5-tap gesture sit inside the content area, clear of
+  the top edge, and compete with no system gesture. The chip is present only when the gate is open.)
 - The gesture is convenience; the **App Store receipt** is the real boundary. Both the gesture and
   the screen are gated on `TestHarnessGate.isAvailable`:
   - `appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"` → **allowed** (Debug device+sim, TestFlight)
@@ -69,6 +73,14 @@ There is **no separate text parser**. The parser reads NOAA's **structured** fie
 authored as structured JSON. A pasted **raw** line is wrapped into the same JSON shape with only
 `rawOb`/`rawTAF` populated; the fields a raw line can't carry then render honestly as `—`/unknown,
 never a fabricated default (the harness contains **no `?? <number>`** fallbacks).
+
+**Each fixture injects a 3-observation history** (newest first; obsTime now / −60 min / −120 min) so
+the trend engine — which needs ≥2 observations (`ObservedTrend.derive` guards `metars.count >= 2`) —
+produces a real OBSERVED summary instead of "Unknown". The `minAgo:0` observation is the current one
+under test (structured fields unchanged, so the current render is identical); the two priors trend
+INTO the current condition — adverse cases deteriorate (visibility dropping, ceiling lowering, winds
+building), benign VFR cases stay steady. Altimeter is held constant per fixture to avoid a spurious
+pressure-trend note. Regression: `SimulatedBannerSnapshotTests.testFixturesInjectHistoryForTrend`.
 
 **METAR `fltCat` is a passthrough** — `MetarParser` reads it verbatim and never computes it. So
 A1–A12 set `fltCat` to NOAA's real value (flagged per-row below). **TAF category is computed** by

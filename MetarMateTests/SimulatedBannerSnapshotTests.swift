@@ -96,6 +96,40 @@ final class SimulatedBannerSnapshotTests: XCTestCase {
         }
     }
 
+    // MARK: - Fixtures inject a history so the OBSERVED trend populates (not all-Unknown)
+
+    func testFixturesInjectHistoryForTrend() throws {
+        for fx in MetarInjectionFixtures.all {
+            let n = try fx.make().metars.count
+            XCTAssertGreaterThanOrEqual(n, 2, "\(fx.id) must inject ≥2 observations so the trend engine can derive")
+        }
+        // A4 fog deteriorates across its history — the OBSERVED trend must now show a real visibility
+        // direction and a real summary, not the single-obs "Unknown" / "Not enough observations" that
+        // this fix addresses.
+        let a4 = try XCTUnwrap(MetarInjectionFixtures.metars.first { $0.id == "A4" })
+        let trend = WeatherTrend.derive(metars: try a4.make().metars, taf: nil)
+        XCTAssertNotEqual(trend.observed.visibility, .unknown, "A4 observed visibility trend should not be Unknown")
+        XCTAssertNotEqual(trend.observed.summaryText, "Not enough observations for trend analysis.")
+        XCTAssertGreaterThanOrEqual(trend.observed.metarCount, 2)
+    }
+
+    // MARK: - Console audit report covers every fixture and parses cleanly
+
+    func testAuditReportCoversAllFixtures() {
+        let lines = HarnessAudit.reportAll()
+        let text = lines.joined(separator: "\n")
+        print("\n" + text + "\n")   // surfaces the exact console dump in the test log
+        let att = XCTAttachment(string: text)   // also attach so the exact dump is extractable
+        att.name = "harness-audit-report"
+        att.lifetime = .keepAlways
+        add(att)
+        for fx in MetarInjectionFixtures.all {
+            XCTAssertTrue(text.contains("[\(fx.id)]"), "audit report missing \(fx.id)")
+        }
+        XCTAssertFalse(text.contains("PARSE FAILED"), "a fixture failed to parse")
+        XCTAssertFalse(text.contains("no observation parsed"), "a fixture produced no observation")
+    }
+
     // MARK: - Rendering helpers
 
     /// Render `view` in a real key window (so SwiftUI `.task` runs), let it settle, capture pixels.
