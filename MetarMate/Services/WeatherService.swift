@@ -1,13 +1,22 @@
 import Foundation
+import os
 
 // MARK: - Weather Service
 // Fetches METAR and TAF data from aviationweather.gov (NOAA AviationWeather API)
 actor WeatherService {
     static let shared = WeatherService()
     private let baseURL = "https://aviationweather.gov/api/data"
-    private let session = URLSession.shared
+    private let session: URLSession
 
-    private init() {}
+    private init() {
+        // Explicit timeouts so a slow/unresponsive NOAA endpoint fails fast and we can
+        // surface it (or fall back) in seconds, not the 60s URLSession default.
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 8    // seconds per request (idle-between-bytes)
+        config.timeoutIntervalForResource = 15   // seconds total incl. retries
+        config.waitsForConnectivity = false      // fail immediately if offline
+        session = URLSession(configuration: config)
+    }
 
     /// NOAA `ids=` candidate for a US identifier that isn't already a 4-letter ICAO.
     /// 3-char FAA LIDs — letters AND/OR digits (CMA, 36K, 1G4, 06C) — publish under a
@@ -21,6 +30,26 @@ actor WeatherService {
         return "K" + u
     }
 
+    /// True for transient connection-level failures (timeout, connection lost, network
+    /// dropped) that a quick retry on a fresh connection is likely to fix. Deliberately
+    /// does NOT include a clean "no data" response — a station that genuinely reports
+    /// nothing should fall through to advisory promptly, not retry-loop.
+    private static func isTransient(_ error: Error) -> Bool {
+        let ns = error as NSError
+        guard ns.domain == NSURLErrorDomain else { return false }
+        switch ns.code {
+        case NSURLErrorTimedOut,
+             NSURLErrorNetworkConnectionLost,
+             NSURLErrorCannotConnectToHost,
+             NSURLErrorNotConnectedToInternet,
+             NSURLErrorDNSLookupFailed,
+             NSURLErrorResourceUnavailable:
+            return true
+        default:
+            return false
+        }
+    }
+
     // MARK: - METAR
     func fetchMetar(for icao: String) async throws -> Metar {
         let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "2"])
@@ -31,44 +60,97 @@ actor WeatherService {
         return try MetarParser.parse(raw: first)
     }
 
-    // Fetch METAR history for trend analysis (returns newest first)
+    // Fetch METAR history for trend analysis (returns newest first).
+    // Retries once on a transient connection/timeout error — the observed failure mode is
+    // a single stalled connection (CFNetwork -1001) on a station that otherwise has data,
+    // which a fresh request almost always recovers. This is the automatic version of the
+    // manual "just load it again" workaround, and it prevents a full-reporting station
+    // from being silently dumped into advisory on a one-off network hiccup.
     func fetchMetarHistory(for icao: String, hours: Int = 6) async throws -> [Metar] {
         let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "\(hours)"])
-        let (data, response) = try await session.data(from: url)
-        try validateResponse(response)
-        let raws = try JSONDecoder().decode([RawMetar].self, from: data)
-        return raws.compactMap { try? MetarParser.parse(raw: $0) }
+
+        func attempt() async throws -> [Metar] {
+            let (data, response) = try await session.data(from: url)
+            try validateResponse(response)
+            let raws = try JSONDecoder().decode([RawMetar].self, from: data)
+            let parsed = raws.compactMap { try? MetarParser.parse(raw: $0) }
+            return parsed
+        }
+
+        let start = DispatchTime.now()
+        do {
+            let parsed = try await attempt()
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] METAR history \(icao, privacy: .public) hours=\(hours) - \(String(format: "%.0f", ms), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
+            return parsed
+        } catch {
+            let ms1 = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            guard Self.isTransient(error) else {
+                Log.net.error("[net] METAR history \(icao, privacy: .public) FAILED after \(String(format: "%.0f", ms1), privacy: .public) ms (non-transient, no retry) - \(String(describing: error), privacy: .public)")
+                throw error
+            }
+            Log.net.warning("[net] METAR history \(icao, privacy: .public) transient failure after \(String(format: "%.0f", ms1), privacy: .public) ms - retrying once")
+            let retryStart = DispatchTime.now()
+            do {
+                let parsed = try await attempt()
+                let ms2 = Double(DispatchTime.now().uptimeNanoseconds - retryStart.uptimeNanoseconds) / 1_000_000
+                Log.net.info("[net] METAR history \(icao, privacy: .public) RETRY OK - \(String(format: "%.0f", ms2), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
+                return parsed
+            } catch {
+                let ms2 = Double(DispatchTime.now().uptimeNanoseconds - retryStart.uptimeNanoseconds) / 1_000_000
+                Log.net.error("[net] METAR history \(icao, privacy: .public) RETRY FAILED after \(String(format: "%.0f", ms2), privacy: .public) ms - \(String(describing: error), privacy: .public)")
+                throw error
+            }
+        }
     }
 
     func fetchMetars(for icaos: [String]) async throws -> [String: Metar] {
         let ids = icaos.joined(separator: ",")
         let url = try buildURL(path: "metar", params: ["ids": ids, "format": "json", "hours": "2"])
-        let (data, response) = try await session.data(from: url)
-        try validateResponse(response)
-        let raws = try JSONDecoder().decode([RawMetar].self, from: data)
-        var result: [String: Metar] = [:]
-        for raw in raws {
-            if let metar = try? MetarParser.parse(raw: raw) {
-                if let existing = result[metar.stationId] {
-                    if metar.observationTime > existing.observationTime {
+        let start = DispatchTime.now()
+        do {
+            let (data, response) = try await session.data(from: url)
+            try validateResponse(response)
+            let raws = try JSONDecoder().decode([RawMetar].self, from: data)
+            var result: [String: Metar] = [:]
+            for raw in raws {
+                if let metar = try? MetarParser.parse(raw: raw) {
+                    if let existing = result[metar.stationId] {
+                        if metar.observationTime > existing.observationTime {
+                            result[metar.stationId] = metar
+                        }
+                    } else {
                         result[metar.stationId] = metar
                     }
-                } else {
-                    result[metar.stationId] = metar
                 }
             }
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes, \(result.count, privacy: .public) returned")
+            return result
+        } catch {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.error("[net] batch METAR \(icaos.count, privacy: .public) req [\(ids, privacy: .public)] FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
+            throw error
         }
-        return result
     }
 
     // MARK: - TAF
     func fetchTaf(for icao: String) async throws -> Taf {
         let url = try buildURL(path: "taf", params: ["ids": icao, "format": "json"])
-        let (data, response) = try await session.data(from: url)
-        try validateResponse(response)
-        let raw = try JSONDecoder().decode([RawTaf].self, from: data)
-        guard let first = raw.first else { throw WeatherError.noData }
-        return try TafParser.parse(raw: first)
+        let start = DispatchTime.now()
+        do {
+            let (data, response) = try await session.data(from: url)
+            try validateResponse(response)
+            let raw = try JSONDecoder().decode([RawTaf].self, from: data)
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] TAF \(icao, privacy: .public) - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes")
+            guard let first = raw.first else { throw WeatherError.noData }
+            return try TafParser.parse(raw: first)
+        } catch {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.error("[net] TAF \(icao, privacy: .public) FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
+            throw error
+        }
     }
 
     // MARK: - Nearby stations with METAR

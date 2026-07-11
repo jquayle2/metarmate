@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import CoreLocation
+import os
 
 struct NearbyAirportsView: View {
     let referenceAirport: Airport
@@ -139,8 +140,19 @@ class NearbyAirportsViewModel: ObservableObject {
 
         // Fetch METARs for METAR airports in this page
         let icaos = newAirports.filter { $0.hasMetar }.map { $0.icao }
-        if !icaos.isEmpty, let fetched = try? await weatherService.fetchMetars(for: icaos) {
+        guard !icaos.isEmpty else {
+            Log.load.info("[nearbySheet] page \(self.currentPage, privacy: .public): no hasMetar airports to fetch")
+            return
+        }
+        let fetchStart = DispatchTime.now()
+        do {
+            let fetched = try await weatherService.fetchMetars(for: icaos)
             metars.merge(fetched) { _, new in new }
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - fetchStart.uptimeNanoseconds) / 1_000_000
+            Log.load.info("[nearbySheet] page \(self.currentPage, privacy: .public): \(fetched.count, privacy: .public)/\(icaos.count, privacy: .public) METARs in \(String(format: "%.0f", ms), privacy: .public) ms")
+        } catch {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - fetchStart.uptimeNanoseconds) / 1_000_000
+            Log.load.error("[nearbySheet] page \(self.currentPage, privacy: .public): batch METAR FAILED after \(String(format: "%.0f", ms), privacy: .public) ms — \(icaos.count, privacy: .public) rows will show 'METAR unavailable' — \(String(describing: error), privacy: .public)")
         }
     }
 

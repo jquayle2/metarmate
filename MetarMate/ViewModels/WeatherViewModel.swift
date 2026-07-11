@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import SwiftUI
 import CoreLocation
+import os
 
 // MARK: - Nearby Reporting Airport
 struct NearbyReportingAirport: Identifiable {
@@ -38,7 +39,12 @@ class WeatherViewModel: ObservableObject {
 
     // MARK: - Load with full Airport (preferred — enables hasMetar routing)
     func load(airport: Airport) async {
-        if let last = lastUpdated, Date().timeIntervalSince(last) < 60 { return }
+        if let last = lastUpdated, Date().timeIntervalSince(last) < 60 {
+            Log.load.info("[load] \(airport.icao, privacy: .public) skipped (cached \(String(format: "%.0f", Date().timeIntervalSince(last)), privacy: .public)s ago)")
+            return
+        }
+        let loadStart = DispatchTime.now()
+        Log.load.info("[load] \(airport.icao, privacy: .public) START hasMetar=\(airport.hasMetar, privacy: .public)")
         isLoading = true
         error = nil
         noWeatherReporting = false
@@ -66,15 +72,23 @@ class WeatherViewModel: ObservableObject {
             let icaoForFetch = WeatherService.noaaCandidate(for: airport.icao) ?? airport.icao
             await loadMETAR(icao: icaoForFetch)
             if noWeatherReporting || (metar == nil && error != nil) {
+                // This is the silent-fallback case: a hasMetar station couldn't return a
+                // real METAR (usually a slow/timed-out fetch), so we drop to advisory.
+                // Log loudly so we can see when it happens and why.
+                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR fallback → ADVISORY (noWeatherReporting=\(self.noWeatherReporting, privacy: .public), metar=\(self.metar != nil, privacy: .public), err=\(self.error != nil ? String(describing: self.error!) : "none", privacy: .public))")
                 isMetarFallback = true
                 error = nil
                 await loadAdvisory(airport: airport)
+            } else {
+                Log.load.info("[load] \(airport.icao, privacy: .public) METAR OK (\(self.metarHistory.count, privacy: .public) obs)")
             }
 
             if StoreManager.shared.isAsosUser {
                 await fetchASOS(icao: icaoForFetch)
             }
         }
+        let totalMs = Double(DispatchTime.now().uptimeNanoseconds - loadStart.uptimeNanoseconds) / 1_000_000
+        Log.load.info("[load] \(airport.icao, privacy: .public) DONE - \(String(format: "%.0f", totalMs), privacy: .public) ms total, fallback=\(self.isMetarFallback, privacy: .public), advisory=\(self.advisoryWeather != nil, privacy: .public)")
         isLoading = false
     }
     func load(icao: String) async {
@@ -218,7 +232,11 @@ class WeatherViewModel: ObservableObject {
     }
 
     private func loadNearbyReporting(icao: String) async {
-        guard let airport = AirportService.shared.airport(icao: icao) else { return }
+        guard let airport = AirportService.shared.airport(icao: icao) else {
+            Log.load.warning("[nearby] \(icao, privacy: .public) no airport record — skipping nearby lookup")
+            return
+        }
+        let start = DispatchTime.now()
 
         let location = CLLocation(latitude: airport.latitude, longitude: airport.longitude)
         let nearby = AirportService.shared.nearest(
@@ -226,12 +244,21 @@ class WeatherViewModel: ObservableObject {
         ).filter { $0.icao != icao && $0.hasMetar }
 
         let icaos = nearby.map { $0.icao }
-        guard let metars = try? await weatherService.fetchMetars(for: icaos) else { return }
+        Log.load.info("[nearby] \(icao, privacy: .public) fetching batch METAR for \(icaos.count, privacy: .public) reporting stations: \(icaos.joined(separator: ","), privacy: .public)")
+
+        guard let metars = try? await weatherService.fetchMetars(for: icaos) else {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.load.error("[nearby] \(icao, privacy: .public) batch METAR fetch failed/threw after \(String(format: "%.0f", ms), privacy: .public) ms — list will show all 'METAR unavailable'")
+            return
+        }
 
         nearbyReportingAirports = nearby.compactMap { apt in
             guard let m = metars[apt.icao] else { return nil }
             return NearbyReportingAirport(airport: apt, metar: m)
         }.prefix(5).map { $0 }
+
+        let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+        Log.load.info("[nearby] \(icao, privacy: .public) DONE - \(String(format: "%.0f", ms), privacy: .public) ms, \(self.nearbyReportingAirports.count, privacy: .public) of \(icaos.count, privacy: .public) with usable METAR")
     }
 
     func refresh(icao: String) async {
