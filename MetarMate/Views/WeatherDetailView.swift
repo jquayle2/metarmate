@@ -5,6 +5,11 @@ import CoreLocation
 struct WeatherDetailView: View {
     let airport: Airport
 
+    // Test Harness only: when non-nil, the view seeds this fabricated model instead of fetching, and
+    // the SIMULATED chrome is painted by the presenting screen. Default nil → the production render
+    // path below is untouched (every existing call site passes nothing). See MetarMate/TestHarness.
+    var simulatedInjection: SimulatedInjection? = nil
+
     @StateObject private var vm = WeatherViewModel()
     @Query private var favorites: [AirportFavorite]
     @Environment(\.modelContext) private var modelContext
@@ -52,28 +57,33 @@ struct WeatherDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 4) {
-                    Button {
-                        showNearbyAirports = true
-                    } label: {
-                        Image(systemName: "airplane.circle")
-                            .foregroundColor(.secondary)
-                    }
-                    Button {
-                        showLayoutSettings = true
-                    } label: {
-                        Image(systemName: "slider.horizontal.3")
-                            .foregroundColor(.secondary)
-                    }
-                    Button {
-                        if store.isProUser {
-                            toggleFavorite()
-                        } else {
-                            showProSheet = true
+                // Simulated mode hides the actions that would touch the network (Nearby) or write
+                // SwiftData (favorite star) — the harness is strictly read-only. Default nil → the
+                // original three buttons, unchanged.
+                if simulatedInjection == nil {
+                    HStack(spacing: 4) {
+                        Button {
+                            showNearbyAirports = true
+                        } label: {
+                            Image(systemName: "airplane.circle")
+                                .foregroundColor(.secondary)
                         }
-                    } label: {
-                        Image(systemName: isFavorite ? "star.fill" : "star")
-                            .foregroundColor(isFavorite ? Brand.accentOrange : Brand.slate)
+                        Button {
+                            showLayoutSettings = true
+                        } label: {
+                            Image(systemName: "slider.horizontal.3")
+                                .foregroundColor(.secondary)
+                        }
+                        Button {
+                            if store.isProUser {
+                                toggleFavorite()
+                            } else {
+                                showProSheet = true
+                            }
+                        } label: {
+                            Image(systemName: isFavorite ? "star.fill" : "star")
+                                .foregroundColor(isFavorite ? Brand.accentOrange : Brand.slate)
+                        }
                     }
                 }
             }
@@ -91,15 +101,24 @@ struct WeatherDetailView: View {
             ProUpgradeView(mode: .pro)
         }
         .task {
-            await vm.load(airport: airport)
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(300))
-                guard !Task.isCancelled else { break }
+            // Simulated mode: seed the fabricated model in-memory and DO NOT fetch or start the
+            // refresh loop (no network). Default nil → the production fetch path below is unchanged.
+            if let simulatedInjection {
+                vm.seedSimulated(simulatedInjection)
+            } else {
                 await vm.load(airport: airport)
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(300))
+                    guard !Task.isCancelled else { break }
+                    await vm.load(airport: airport)
+                }
             }
         }
         .refreshable {
-            await vm.load(airport: airport, force: true)
+            // No network in simulated mode. Default nil → unchanged pull-to-refresh.
+            if simulatedInjection == nil {
+                await vm.load(airport: airport, force: true)
+            }
         }
     }
 

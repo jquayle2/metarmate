@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 import Combine
+import os
 
 // MARK: - Deep Link Router
 // Bridges the widget's `.widgetURL(metarmate://airport/<ICAO>)` tap into a modal presentation
@@ -49,6 +50,11 @@ struct MetarMateApp: App {
         WindowGroup {
             SplashScreenView()
                 .task {
+                    // Log the App Store receipt filename at launch so the Test Harness gate's real
+                    // runtime value is observable in any build (incl. a Release-config run). This is
+                    // the honest production-unreachability evidence: the gate is DENIED unless this
+                    // reads "sandboxReceipt" (Debug/TestFlight); an App Store install reads "receipt".
+                    Log.load.info("[harness] launch receiptName=\(TestHarnessGate.receiptName ?? "nil", privacy: .public) harnessAvailable=\(TestHarnessGate.isAvailable, privacy: .public)")
                     // Set the notification delegate so foreground notifications present.
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).

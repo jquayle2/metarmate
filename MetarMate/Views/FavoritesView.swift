@@ -24,6 +24,7 @@ struct FavoritesView: View {
     @State private var favAdvisories: [String: AdvisoryWeather] = [:]
     @State private var isLoading = false
     @State private var editMode: EditMode = .inactive
+    @State private var showInjectionHarness = false   // Test Harness (Debug/TestFlight only)
 
     var body: some View {
         NavigationStack {
@@ -77,6 +78,19 @@ struct FavoritesView: View {
             .navigationTitle("Favorites")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Test Harness entry (Debug/TestFlight only): a 5-second long-press on the header
+                // opens the METAR Injection screen. The gesture is convenience; the receipt check on
+                // TestHarnessGate.isAvailable is the actual boundary — this ToolbarItem is absent
+                // entirely in an App Store production build, so the header renders the plain title.
+                if TestHarnessGate.isAvailable {
+                    ToolbarItem(placement: .principal) {
+                        Text("Favorites")
+                            .font(.headline)
+                            .foregroundColor(Brand.cloud)
+                            .contentShape(Rectangle())
+                            .onLongPressGesture(minimumDuration: 5) { showInjectionHarness = true }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !favorites.isEmpty {
                         Button(editMode == .active ? "Done" : "Edit") {
@@ -86,6 +100,9 @@ struct FavoritesView: View {
                         }
                     }
                 }
+            }
+            .fullScreenCover(isPresented: $showInjectionHarness) {
+                MetarInjectionHarnessView()
             }
         }
         .task {

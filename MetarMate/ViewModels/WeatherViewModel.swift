@@ -105,6 +105,34 @@ class WeatherViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Simulated seed (Test Harness only)
+    // Seeds already-parsed, in-memory models straight onto the published properties — the exact
+    // fields loadMETAR would set — WITHOUT any side effects. Deliberately does NOT: touch the
+    // network, write the widget App-Group snapshot (no WidgetDataManager.save), fetch ASOS, or read
+    // SwiftData. Trend/verification are derived with the same pure functions the live path uses.
+    func seedSimulated(_ injection: SimulatedInjection) {
+        isLoading = false
+        error = nil
+        noWeatherReporting = false
+        nearbyReportingAirports = []
+        advisoryWeather = nil
+        isMetarFallback = false
+        synopticError = nil
+        synopticLatest = nil
+        synopticHistory = []
+
+        metarHistory = injection.metars
+        metar = injection.metars.first
+        taf = injection.taf
+        trend = WeatherTrend.derive(metars: injection.metars, taf: injection.taf)
+        if let taf = injection.taf {
+            tafVerification = TafVerification.derive(metars: injection.metars, taf: taf)
+        } else {
+            tafVerification = nil
+        }
+        lastUpdated = Date()
+    }
+
     // MARK: - METAR path (aviationweather.gov)
     private func loadMETAR(icao: String) async {
         error = nil
