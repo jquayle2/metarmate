@@ -106,6 +106,10 @@ class NearbyAirportsViewModel: ObservableObject {
             navigationTitle = "Near \(reference.icao)"
         }
 
+        // Diagnostics only: log the resolved origin airport/coordinate + source.
+        let originSource = locationService.currentLocation != nil ? "GPS" : "fallback"
+        Log.load.info("[nearbySheet] origin \(reference.icao, privacy: .public) lat=\(reference.latitude, privacy: .public) lon=\(reference.longitude, privacy: .public) source=\(originSource, privacy: .public)")
+
         // Get 50 nearest — we'll page through them
         allNearby = airportService.nearest(to: refLocation, count: 50)
             .filter { $0.icao != reference.icao }  // exclude the reference airport itself
@@ -135,6 +139,14 @@ class NearbyAirportsViewModel: ObservableObject {
 
         let newAirports = Array(allNearby[start..<end])
         airports.append(contentsOf: newAirports)
+
+        // Diagnostics only: log the display row list state after this page is appended.
+        if let ref = referenceAirport, let nearest = airports.first {
+            let originLoc = CLLocation(latitude: ref.latitude, longitude: ref.longitude)
+            let nearestNm = nearest.distance(from: originLoc) / 1852.0
+            Log.load.info("[nearbySheet] rows=\(self.airports.count, privacy: .public) origin=\(ref.icao, privacy: .public) nearest=\(nearest.icao, privacy: .public) \(String(format: "%.1f", nearestNm), privacy: .public) nm")
+        }
+
         currentPage += 1
         canLoadMore = end < allNearby.count
 
