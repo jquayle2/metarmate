@@ -602,7 +602,7 @@ struct WeatherDetailView: View {
                             Text("\(layer.coverage.rawValue) \(layer.altitude.formatted()) ft")
                                 .font(.subheadline)
                                 .foregroundColor(layerColor)
-                                .fontWeight(layerColor == .green || layerColor == .primary ? .regular : .semibold)
+                                .fontWeight(layerColor == Brand.vfrGreen ? .regular : .semibold)
                         }
                     }
                     Spacer()
@@ -647,15 +647,16 @@ struct WeatherDetailView: View {
         let altFt = layer.altitude
         switch layer.coverage {
         case .few, .scattered:
-            if altFt < 3000 { return Color(red: 1.0, green: 0.6, blue: 0.0) }
-            return .green
+            if altFt < 3000 { return Brand.cautionOrange }
+            return Brand.vfrGreen
         case .broken, .overcast, .verticalVisibility:
-            if altFt < 200  { return Color(red: 0.75, green: 0.0, blue: 0.75) }
-            if altFt < 1000 { return .red }
-            if altFt < 3000 { return Color(red: 0.2, green: 0.5, blue: 1.0) }
-            return .green
+            // Ceiling-category ramp (magenta/red/blue/green), so blue is a legitimate MVFR-axis use.
+            if altFt < 200  { return Brand.lifrMagenta }
+            if altFt < 1000 { return Brand.valueRed }
+            if altFt < 3000 { return Brand.mvfrBlue }
+            return Brand.vfrGreen
         case .clear, .skyClear:
-            return .green
+            return Brand.vfrGreen
         }
     }
 
@@ -709,7 +710,7 @@ struct WeatherDetailView: View {
         let color = daSeverityColor(severity)
         return HStack(alignment: .top, spacing: 10) {
             Image(systemName: "airplane.departure")
-                .foregroundColor(color == .green ? .secondary : color.opacity(0.8))
+                .foregroundColor(severity == .green ? .secondary : color.opacity(0.8))
                 .frame(width: 20)
             Text("Density Altitude")
                 .font(.subheadline)
@@ -1144,9 +1145,9 @@ struct WeatherDetailView: View {
     // labeled performance metric, NOT flight category and NOT go/no-go.
     private func daSeverityColor(_ severity: DASeverity) -> Color {
         switch severity {
-        case .green: return .green
-        case .amber: return Color(red: 1.0, green: 0.6, blue: 0.0)
-        case .red:   return .red
+        case .green: return Brand.vfrGreen
+        case .amber: return Brand.cautionOrange
+        case .red:   return Brand.valueRed
         }
     }
 
@@ -2141,7 +2142,7 @@ struct WeatherDetailView: View {
         var crosswind: CrosswindDisplay? = nil   // when set, renders the 3-line crosswind body
     }
 
-    private static let tafAmber = Color(red: 1.0, green: 0.6, blue: 0.0)
+    private static let tafAmber = Brand.cautionOrange
 
     // Ceiling (lowest BKN/OVC/VV layer) in feet for a forecast period, if any.
     // Single source of truth lives in ForecastRules (WeatherStory.swift) — the TAF hero and
@@ -2328,22 +2329,22 @@ struct WeatherDetailView: View {
         if let wd = windReportDiv, abs(wd) > 5 {
             let stronger = wd > 0 ? "stronger" : "lighter"
             let label = gustDiv != nil ? "Gusts \(abs(wd)) kt \(stronger) than forecast" : "Wind \(abs(wd)) kt \(stronger) than forecast"
-            let color: Color = abs(wd) >= 10 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            let color: Color = abs(wd) >= 10 ? Brand.valueRed : Brand.cautionOrange
             items.append(("wind", label, color))
         }
 
         // Ceiling: threshold >300ft
         if let cd = ceilDiv, abs(cd) > 300 {
             let higher = cd > 0 ? "higher" : "lower"
-            let color: Color = abs(cd) >= 800 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            let color: Color = abs(cd) >= 800 ? Brand.valueRed : Brand.cautionOrange
             items.append(("cloud.fill", "Ceiling \(abs(cd).formatted()) ft \(higher) than forecast", color))
         } else if point.actualCeilingFt != nil && point.forecastCeilingFt == nil {
             // Ceiling formed when TAF said clear — severity depends on how low
             let ceilFt = point.actualCeilingFt ?? 0
-            let color: Color = ceilFt < 1000 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0)
+            let color: Color = ceilFt < 1000 ? Brand.valueRed : Brand.cautionOrange
             items.append(("cloud.fill", "Ceiling formed — not forecast", color))
         } else if point.actualCeilingFt == nil && point.forecastCeilingFt != nil {
-            items.append(("cloud.fill", "Ceiling cleared — not forecast", .green))
+            items.append(("cloud.fill", "Ceiling cleared — not forecast", Brand.vfrGreen))
         }
 
         // Visibility: threshold >0.5SM, ignore when both solidly VFR
@@ -2352,7 +2353,7 @@ struct WeatherDetailView: View {
             if !bothVFR && abs(vd) > 0.5 {
                 let better = vd > 0 ? "better" : "worse"
                 // Better than forecast = green; worse = amber/red
-                let color: Color = vd > 0 ? .green : (abs(vd) >= 1.5 ? .red : Color(red: 1.0, green: 0.6, blue: 0.0))
+                let color: Color = vd > 0 ? Brand.vfrGreen : (abs(vd) >= 1.5 ? Brand.valueRed : Brand.cautionOrange)
                 items.append(("eye.fill", "Visibility \(String(format: "%g", abs(vd))) SM \(better) than forecast", color))
             }
         }
@@ -2365,10 +2366,10 @@ struct WeatherDetailView: View {
         }()
 
         if windOnTarget && point.forecastWindKt != nil {
-            items.append(("checkmark.circle.fill", "Wind on target", .green))
+            items.append(("checkmark.circle.fill", "Wind on target", Brand.vfrGreen))
         }
         if ceilOnTarget && (point.actualCeilingFt != nil || point.forecastCeilingFt != nil) {
-            items.append(("checkmark.circle.fill", "Ceiling on target", .green))
+            items.append(("checkmark.circle.fill", "Ceiling on target", Brand.vfrGreen))
         }
 
         guard !items.isEmpty else { return nil }
@@ -2387,8 +2388,8 @@ struct WeatherDetailView: View {
                         .frame(width: 16)
                     Text(item.text)
                         .font(.caption)
-                        .foregroundColor(item.color == .green ? .secondary : .primary)
-                        .fontWeight(item.color == .green ? .regular : .medium)
+                        .foregroundColor(item.color == Brand.vfrGreen ? .secondary : .primary)
+                        .fontWeight(item.color == Brand.vfrGreen ? .regular : .medium)
                 }
             }
         })
@@ -2766,7 +2767,7 @@ struct WeatherDetailView: View {
                              color: tempDewConditionColor(temp: Int(wx.temperatureC.rounded()),
                                                           dew: Int(dp.rounded())))
                 // Fog risk row
-                let fogColor: Color = wx.fogRisk == .high ? .red : wx.fogRisk == .moderate ? Color(red:1,green:0.6,blue:0) : .secondary
+                let fogColor: Color = wx.fogRisk == .high ? Brand.valueRed : wx.fogRisk == .moderate ? Brand.cautionOrange : .secondary
                 if wx.fogRisk != .low {
                     conditionRow("cloud.fog.fill", "Fog Risk",
                                  "~\(wx.fogRisk.rawValue)  (T-D spread \(String(format: "%.0f", spread))°C)",
@@ -2793,13 +2794,13 @@ struct WeatherDetailView: View {
 
             // Precipitation
             if wx.precipitationMm >= 0.1 {
-                let precipColor: Color = wx.precipitationMm >= 4.0 ? .red : wx.precipitationMm >= 1.0 ? Color(red:1,green:0.6,blue:0) : .primary
+                let precipColor: Color = wx.precipitationMm >= 4.0 ? Brand.valueRed : wx.precipitationMm >= 1.0 ? Brand.cautionOrange : .primary
                 conditionRow("cloud.rain.fill", "Precipitation",
                              wx.precipDescription + (wx.precipitationProbability.map { " (\($0)% prob)" } ?? ""),
                              color: precipColor)
             } else if let pct = wx.precipitationProbability, pct >= 30 {
                 conditionRow("cloud.rain", "Precip Chance", "\(pct)%",
-                             color: pct >= 60 ? Color(red:1,green:0.6,blue:0) : .primary)
+                             color: pct >= 60 ? Brand.cautionOrange : .primary)
             }
         }
         .padding()
@@ -2810,18 +2811,19 @@ struct WeatherDetailView: View {
     private func advisoryWindColor(_ wx: AdvisoryWeather) -> Color {
         let speed = wx.windSpeedKtRounded
         let gust  = wx.windGustKtRounded ?? 0
-        if gust >= 20 || speed >= 25 { return .orange }
-        if gust >= 15 || speed >= 20 { return Color(red:1,green:0.6,blue:0) }
-        if speed > 0 { return .green }
-        return .green  // calm is green
+        if gust >= 20 || speed >= 25 { return Brand.cautionOrange }
+        if gust >= 15 || speed >= 20 { return Brand.cautionOrange }
+        if speed > 0 { return Brand.vfrGreen }
+        return Brand.vfrGreen  // calm is green
     }
 
     private func advisoryCloudColor(_ pct: Int) -> Color {
+        // Sky-cover severity (category-adjacent ceiling axis), so blue is a legitimate MVFR-axis use.
         switch pct {
-        case 75...:   return Color(red: 0.2, green: 0.5, blue: 1.0)
-        case 50..<75: return Color(red: 0.2, green: 0.5, blue: 1.0)
-        case 13..<50: return Color(red: 1.0, green: 0.6, blue: 0.0)
-        default:       return .green
+        case 75...:   return Brand.mvfrBlue
+        case 50..<75: return Brand.mvfrBlue
+        case 13..<50: return Brand.cautionOrange
+        default:       return Brand.vfrGreen
         }
     }
 
@@ -2879,7 +2881,7 @@ struct WeatherDetailView: View {
         let icon: String
         let text: String
         let isWarning: Bool
-        var color: Color { isWarning ? .orange : Color(red:1,green:0.6,blue:0) }
+        var color: Color { Brand.cautionOrange }   // caution tier (was .orange / #FF9900)
     }
 
     private func advisoryPilotAdvisories(_ wx: AdvisoryWeather) -> [AdvisoryNote] {
@@ -2939,7 +2941,7 @@ struct WeatherDetailView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(notes.contains(where: { $0.isWarning }) ? .orange : Color(red:1,green:0.6,blue:0))
+                    .foregroundColor(Brand.cautionOrange)   // caution tier (was .orange / #FF9900)
                     .font(.caption)
                 Text("ESTIMATED ADVISORIES")
                     .font(.caption.bold())
@@ -3103,7 +3105,7 @@ struct WeatherDetailView: View {
             if hour.precipitationMm >= 0.1 {
                 Image(systemName: "drop.fill")
                     .font(.system(size: 10))
-                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                    .foregroundColor(Brand.cautionOrange)   // precip = present-wx caution (was info-blue)
             } else {
                 Color.clear.frame(height: 12)
             }
@@ -3214,7 +3216,7 @@ struct WeatherDetailView: View {
                 if hour.precipitationMm >= 0.1 {
                     Label(hour.precipDescription, systemImage: "drop.fill")
                         .font(.caption)
-                        .foregroundColor(Color(red: 0.2, green: 0.5, blue: 1.0))
+                        .foregroundColor(Brand.cautionOrange)   // precip = present-wx caution (was info-blue)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

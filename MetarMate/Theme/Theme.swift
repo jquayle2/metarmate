@@ -9,7 +9,7 @@
 //  Color discipline (the whole point of the refresh):
 //   • Red is rationed — only genuine danger (IFR, sub-minimum vis, deteriorating trend).
 //   • In-range scalar values get NO color — neutral Fog/Cloud. Color is signal, not decoration.
-//   • Two-tier orange: accent (#FF4E00) = brand / caution-low; caution (#FF8A3D) = situational.
+//   • Two-tier orange: accent (#F14F00) = brand / caution-low; caution (#FF9E3D) = situational.
 //   • Gust discipline — a wind code lights orange only if it gusts.
 //
 
@@ -58,28 +58,28 @@ enum Brand {
     static let cloud   = Color(hex: "#F6F4F1")   // headlines, ICAO, primary values
     static let fog     = Color(hex: "#DBDDE3")   // strong body text
     static let fog2    = Color(hex: "#C4CCD6")   // row labels
-    // Neutral text greys — brightened for cockpit legibility (contrast pass, B5).
-    // These are non-semantic; the category/caution/go-no-go color axes are unchanged.
-    static let slate   = Color(hex: "#9EABBB")   // secondary labels, distances
-    static let monoDim  = Color(hex: "#8695A9")  // raw METAR strings
-    static let monoDim2 = Color(hex: "#7A8A9E")  // chevrons / dimmest mono
+    // Neutral text greys — canonical tokens.json values (slate on-navy + muted mono).
+    // These are non-semantic; the category/caution/go-no-go color axes are separate.
+    static let slate   = Color(hex: "#8A97A8")   // secondary labels, distances
+    static let monoDim  = Color(hex: "#5B6B80")  // raw METAR strings (canonical `muted`)
+    static let monoDim2 = Color(hex: "#5B6B80")  // chevrons / dimmest mono (canonical `muted`)
 
     // Semantic (use ONLY for the documented meaning)
-    static let accentOrange  = Color(hex: "#FF4E00") // brand accent; caution-low altimeter; trend-up
-    static let cautionOrange = Color(hex: "#FF8A3D") // gusts, present wx, advisory
-    static let vfrGreen      = Color(hex: "#00FF00") // good / in-limits — Garmin CDI green (was #5FC588)
+    static let accentOrange  = Color(hex: "#F14F00") // brand accent; caution-low altimeter; trend-up
+    static let cautionOrange = Color(hex: "#FF9E3D") // gusts, present wx, advisory
+    static let vfrGreen      = Color(hex: "#2FBF87") // good / in-limits — CVD-tuned category green
     static let dangerRed     = Color(hex: "#F0473F") // deteriorating trend mark / alert chrome
     static let valueRed      = Color(hex: "#FF5A50") // danger values in text (IFR, sub-min vis)
-    static let ifrBadgeBG    = Color(hex: "#E0453D") // solid fill behind white "IFR"
+    static let ifrBadgeBG    = Color(hex: "#E0453D") // solid fill behind white "IFR"; IFR category fill
 
     // Flight-category axis (VFR/MVFR/IFR/LIFR) — reserved ONLY for category signaling.
-    // Brightened for cockpit legibility on the navy ground.
-    static let mvfrBlue      = Color(hex: "#4FA3F0") // MVFR
-    static let lifrMagenta   = Color(hex: "#E06AD0") // LIFR (aviation magenta)
+    // Canonical tokens.json fill values.
+    static let mvfrBlue      = Color(hex: "#3B82C4") // MVFR
+    static let lifrMagenta   = Color(hex: "#B85CC9") // LIFR (aviation magenta)
 
-    // VFR pill  (Garmin CDI green; was 84/177/122)
-    static let vfrPillFill   = Color(red: 0/255, green: 255/255, blue: 0/255).opacity(0.16)
-    static let vfrPillBorder = Color(red: 0/255, green: 255/255, blue: 0/255).opacity(0.40)
+    // VFR pill  (category green #2FBF87 at README opacities)
+    static let vfrPillFill   = Color(hex: "#2FBF87").opacity(0.16)
+    static let vfrPillBorder = Color(hex: "#2FBF87").opacity(0.40)
 
     // Tinted card washes
     static let pilotNotesTop    = accentOrange.opacity(0.07)
@@ -137,7 +137,7 @@ enum ColorRules {
         switch cat {
         case .vfr:     return Brand.vfrGreen
         case .mvfr:    return Brand.mvfrBlue
-        case .ifr:     return Brand.valueRed
+        case .ifr:     return Brand.ifrBadgeBG    // canonical category IFR fill #E0453D
         case .lifr:    return Brand.lifrMagenta
         case .unknown: return Brand.slate
         }

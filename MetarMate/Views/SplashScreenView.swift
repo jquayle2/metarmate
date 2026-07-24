@@ -10,7 +10,7 @@ struct SplashScreenView: View {
             ContentView()
         } else {
             ZStack {
-                Color(red: 0.05, green: 0.10, blue: 0.22)
+                Brand.navy
                     .ignoresSafeArea()
 
                 VStack(spacing: 20) {

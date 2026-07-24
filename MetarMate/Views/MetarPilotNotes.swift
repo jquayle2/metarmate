@@ -17,9 +17,9 @@ struct PilotNote {
     var color: Color {
         if let cw = crosswind { return cw.windColor }   // amber/red wind palette for the icon
         switch severity {
-        case .danger:  return .red
-        case .warning: return .orange
-        case .caution: return Color(red: 1.0, green: 0.6, blue: 0.0)
+        case .danger:  return Brand.valueRed        // danger advisory (was .red)
+        case .warning: return Brand.cautionOrange   // caution tier (was .orange)
+        case .caution: return Brand.cautionOrange   // caution tier (was #FF9900)
         }
     }
 }
@@ -38,8 +38,8 @@ struct CrosswindDisplay {
     let vref: String?
     let ident: String
     /// Calc wind palette: amber by default, red when the gust crosswind crosses the threshold.
-    static let amberWind = Color(red: 1.0, green: 0.6, blue: 0.0)
-    var windColor: Color { isRed ? .red : Self.amberWind }
+    static let amberWind = Brand.cautionOrange
+    var windColor: Color { isRed ? Brand.valueRed : Self.amberWind }
 }
 
 // MARK: - Derivation

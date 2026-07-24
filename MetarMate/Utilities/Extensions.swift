@@ -4,15 +4,15 @@ import CoreLocation
 
 // MARK: - FlightCategory SwiftUI Color
 extension FlightCategory {
-    // Four-way category axis (VFR green / MVFR blue / IFR red / LIFR magenta), brightened
-    // for cockpit legibility. Kept self-contained (this file is shared with the Widget
+    // Four-way category axis (VFR green / MVFR blue / IFR red / LIFR magenta) — canonical
+    // tokens.json fill values. Kept self-contained (this file is shared with the Widget
     // target, which does not compile Theme.swift); values mirror Brand + ColorRules.
     nonisolated var swiftUIColor: Color {
         switch self {
-        case .vfr:     return Color(red: 0.373, green: 0.773, blue: 0.533) // #5FC588
-        case .mvfr:    return Color(red: 0.310, green: 0.639, blue: 0.941) // #4FA3F0
-        case .ifr:     return Color(red: 1.0,   green: 0.353, blue: 0.314) // #FF5A50
-        case .lifr:    return Color(red: 0.878, green: 0.416, blue: 0.816) // #E06AD0
+        case .vfr:     return Color(red: 0.184, green: 0.749, blue: 0.529) // #2FBF87
+        case .mvfr:    return Color(red: 0.231, green: 0.510, blue: 0.769) // #3B82C4
+        case .ifr:     return Color(red: 0.878, green: 0.271, blue: 0.239) // #E0453D
+        case .lifr:    return Color(red: 0.722, green: 0.361, blue: 0.788) // #B85CC9
         case .unknown: return Color(red: 0.541, green: 0.592, blue: 0.659) // #8A97A8
         }
     }
