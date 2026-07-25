@@ -34,12 +34,22 @@ struct CrosswindDisplay {
     let side: String          // calc convention: "L" arrow-before-points-right, "R" arrow-after-points-left
     let xwLow: Int, xwHigh: Int
     let hwLow: Int, hwHigh: Int   // along-track; negative = tailwind (rare on the best runway)
-    let isRed: Bool           // gust (high-end) crosswind crosses the calc's red threshold
+    let tier: Tier            // severity of the high-end (gust) crosswind component
     let vref: String?
     let ident: String
-    /// Calc wind palette: amber by default, red when the gust crosswind crosses the threshold.
+    /// Crosswind severity, keyed to the high-end (gust) component. Stays on the wind axis:
+    /// neutral grey (informational) -> amber (caution) -> red (warning). Never green — that's
+    /// reserved for the flight-category axis (Finding 16).
+    enum Tier { case neutral, caution, danger }
     static let amberWind = Brand.cautionOrange
-    var windColor: Color { isRed ? Brand.valueRed : Self.amberWind }
+    static let neutralWind = Color(white: 0.65)   // matches the HW/along-track neutral
+    var windColor: Color {
+        switch tier {
+        case .neutral: return Self.neutralWind
+        case .caution: return Self.amberWind
+        case .danger:  return Brand.valueRed
+        }
+    }
 }
 
 // MARK: - Derivation

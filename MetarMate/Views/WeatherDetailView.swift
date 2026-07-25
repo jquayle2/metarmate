@@ -869,6 +869,9 @@ struct WeatherDetailView: View {
 
     /// Calc red-crosswind threshold (CrosswindKeypadView.severityColor): red at ≥20 kt.
     private static let crosswindRedThreshold = 20
+    /// Amber caution floor for the crosswind note; below this the note reads neutral/informational.
+    /// Placeholder pending Mike (CFII) ruling, alongside the 5 kt note-visibility floor.
+    private static let crosswindAmberThreshold = 10
 
     /// Crosswind/headwind ranges (sustained→gust) for the best runway, plus the runner-up when
     /// it's a genuine near-tie (see RunwayService.bestRunways) — best first, at most two. Selection
@@ -906,14 +909,15 @@ struct WeatherDetailView: View {
 
         // Reuse the calc's RunwayResult.isLeft so the arrow matches CrosswindReadout exactly.
         let side = xwHigh == 0 ? "" : (gustResult.isLeft ? "R" : "L")
-        let isRed = xwHigh >= Self.crosswindRedThreshold
+        let tier: CrosswindDisplay.Tier = xwHigh >= Self.crosswindRedThreshold ? .danger
+            : (xwHigh >= Self.crosswindAmberThreshold ? .caution : .neutral)
 
         let hasGust = (wind.gust ?? 0) > wind.speed
         let g = wind.gust ?? wind.speed
         let vref: String? = hasGust ? "\(g >= 20 ? "add" : "consider adding") \(g / 2) kt to approach speed" : nil
 
         return CrosswindDisplay(side: side, xwLow: xwLow, xwHigh: xwHigh,
-                                hwLow: hwLow, hwHigh: hwHigh, isRed: isRed, vref: vref, ident: ident)
+                                hwLow: hwLow, hwHigh: hwHigh, tier: tier, vref: vref, ident: ident)
     }
 
     private func crosswindXWText(_ cw: CrosswindDisplay) -> String {
@@ -2210,7 +2214,7 @@ struct WeatherDetailView: View {
                     // Crosswind line uses the calc wind palette (amber, red when the gust XW crosses
                     // the red threshold); ranks with the red/amber tiers so the card accent follows.
                     notes.append(.init(icon: "wind", text: cw.line1,
-                                       color: cw.windColor, rank: cw.isRed ? 0 : 2,
+                                       color: cw.windColor, rank: cw.tier == .danger ? 0 : 2,
                                        time: p.fromTime, crosswind: cw))
                 }
             } else {
