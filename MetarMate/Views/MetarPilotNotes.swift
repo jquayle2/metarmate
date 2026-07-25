@@ -78,9 +78,12 @@ enum MetarPilotNotes {
         }
 
         // Crosswind — one consolidated note showing the sustained→gust range on the best runway.
-        // Triggers on a notable sustained wind or any gust crossing the caution threshold.
+        // Triggers on a notable sustained wind, any gust crossing the caution threshold, OR a
+        // steady crosswind component >= 5 kt on the best runway — so a meaningful steady crosswind
+        // surfaces even with no gust (e.g. 9 kt straight across a runway). Component floor: Mike (CFII).
         let hasGust = gust > speed
-        if speed >= 20 || gust >= 15 {
+        let bestSustainedXW = crosswindDisplays.first?.xwLow ?? 0
+        if speed >= 20 || gust >= 15 || bestSustainedXW >= 5 {
             let severity: PilotNote.Severity = (speed >= 25 || gust >= 20) ? .warning : .caution
             let displays = crosswindDisplays
             if !displays.isEmpty {
