@@ -103,6 +103,14 @@ class StoreManager: ObservableObject {
 
     // MARK: - Entitlement check
     func checkEntitlements() async {
+        // Sweep unfinished transactions first. A verified-but-unfinished transaction
+        // (seen on iOS 26 TestFlight/sandbox) can block entitlements from resolving.
+        for await result in Transaction.unfinished {
+            if let transaction = try? checkVerified(result) {
+                await transaction.finish()
+            }
+        }
+
         var foundPro = false
         var foundAsos = false
 

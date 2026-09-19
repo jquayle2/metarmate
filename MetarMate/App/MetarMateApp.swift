@@ -67,6 +67,10 @@ struct MetarMateApp: App {
                     // starts considering the task). Safe to call repeatedly; it replaces the
                     // pending request for the same identifier.
                     if phase == .background { AlertScheduler.schedule() }
+                    // Re-check entitlements on every foreground so the widget's App Group
+                    // Pro flag is rewritten and timelines reloaded — guards against a missed
+                    // reload leaving the widget stuck on "Pro Required".
+                    if phase == .active { Task { await StoreManager.shared.checkEntitlements() } }
                 }
                 .onOpenURL { url in
                     // metarmate://airport/<ICAO> — sent by the home screen widget's widgetURL.
