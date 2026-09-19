@@ -12,6 +12,10 @@ nonisolated enum WidgetDataManager {
     private static let configKey = "widget.configs"
     static let isProKey = "widget.isPro"
 
+    /// Pro-gate for widgets and Siri. Lives here (not FeatureFlags) because this file is the
+    /// one shared with the widget extension target. Flip to `true` to re-enable the gate.
+    static let widgetsRequirePro = false
+
     private static var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
     }
@@ -93,7 +97,8 @@ nonisolated enum WidgetDataManager {
     }
 
     nonisolated static func loadProStatus() -> Bool {
-        sharedDefaults?.bool(forKey: isProKey) ?? false
+        guard widgetsRequirePro else { return true }
+        return sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
     // MARK: - Reload all MetarMate widgets

@@ -14,4 +14,8 @@ enum FeatureFlags {
     /// (no paywall). The gating code in FavoritesView is kept intact — flip to `true` to put
     /// Favorites back behind a pro purchase.
     static let favoritesRequirePro = false
+
+    /// Widgets + Siri pro-gate. Defined in `WidgetDataManager.widgetsRequirePro` because that
+    /// file is shared with the widget extension target; mirrored here for discoverability.
+    static var widgetsRequirePro: Bool { WidgetDataManager.widgetsRequirePro }
 }
