@@ -75,7 +75,7 @@ struct WeatherDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                         Button {
-                            if store.isProUser {
+                            if store.isProUser || !FeatureFlags.favoritesRequirePro {
                                 toggleFavorite()
                             } else {
                                 showProSheet = true
