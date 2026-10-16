@@ -19,15 +19,15 @@ struct SelectAirportIntent: WidgetConfigurationIntent {
 // intent), so it only touches the App-Group-shared WidgetDataManager — never AirportService or
 // anything else main-app-only.
 
-/// Forces the widget's timeline to re-run immediately instead of waiting for the next scheduled
-/// refresh. ConfigurableProvider.timeline(for:) always re-fetches from network on every run, so
-/// reloading the timeline is enough — no need to duplicate the fetch here.
+/// Refresh button on the widget. WidgetKit reloads the tapped widget's timeline itself after an
+/// interactive intent's perform() returns, and ConfigurableProvider.timeline(for:) re-fetches from
+/// network on every run — so this does nothing. Calling reloadAllTimelines() here was a budgeted
+/// request from the extension and became a no-op once the daily reload budget was spent.
 struct RefreshWidgetIntent: AppIntent {
     static var title: LocalizedStringResource = "Refresh Weather"
     static var isDiscoverable: Bool = false
 
     func perform() async throws -> some IntentResult {
-        WidgetDataManager.reloadWidgets()
-        return .result()
+        .result()
     }
 }

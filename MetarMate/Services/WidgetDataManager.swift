@@ -22,17 +22,20 @@ nonisolated enum WidgetDataManager {
 
     // MARK: - Write (called by main app after every weather fetch)
 
-    nonisolated static func save(snapshot: WidgetWeatherSnapshot) {
+    /// `reload: false` from the widget's own TimelineProvider: reloading from inside a timeline
+    /// run re-triggers every widget, which loops and burns WidgetKit's daily reload budget.
+    nonisolated static func save(snapshot: WidgetWeatherSnapshot, reload: Bool = true) {
         guard let defaults = sharedDefaults else { return }
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         defaults.set(data, forKey: snapshotPrefix + snapshot.icao)
-        reloadWidgets()
+        if reload { reloadWidgets() }
     }
 
     nonisolated static func save(snapshots: [WidgetWeatherSnapshot]) {
         for snapshot in snapshots {
-            save(snapshot: snapshot)
+            save(snapshot: snapshot, reload: false)
         }
+        if !snapshots.isEmpty { reloadWidgets() }
     }
 
     // MARK: - Read (called by widget TimelineProvider)
@@ -102,7 +105,7 @@ nonisolated enum WidgetDataManager {
     }
 
     // MARK: - Reload all MetarMate widgets
-    // Called after every snapshot write so the widget picks up fresh data immediately.
+    // Called after app-side snapshot writes so the widget picks up fresh data immediately.
 
     nonisolated static func reloadWidgets() {
         WidgetCenter.shared.reloadAllTimelines()

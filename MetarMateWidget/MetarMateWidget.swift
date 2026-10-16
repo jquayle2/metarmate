@@ -53,14 +53,6 @@ private func shortTrendLabel(_ headline: String) -> String {
     return headline
 }
 
-/// Relative age string: "2m ago", "1h ago"
-private func ageString(_ date: Date) -> String {
-    let secs = Date().timeIntervalSince(date)
-    if secs < 120 { return "Just now" }
-    if secs < 3600 { return "\(Int(secs / 60))m ago" }
-    return "\(Int(secs / 3600))h ago"
-}
-
 /// Deep link opened by MetarMateApp.onOpenURL to jump straight to this airport's detail page —
 /// a tap outside the widget's interactive buttons follows this instead of just opening the app
 /// to wherever it was last left.
@@ -93,7 +85,10 @@ private enum WidgetFetcher {
     static func fetchSnapshot(icao: String) async -> WidgetWeatherSnapshot? {
         guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return nil }
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            // Bypass the URL cache (a refresh must hit NOAA) and fail fast instead of the 60 s
+            // default — the extension's run time is limited.
+            let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
+            let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
             guard let raw = raws.first else { return nil }
@@ -120,7 +115,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             let cached = WidgetDataManager.load(icao: icao)
             if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
                 let merged = mergeWithCached(live: live, cached: cached)
-                WidgetDataManager.save(snapshot: merged)
+                WidgetDataManager.save(snapshot: merged, reload: false)
                 return MetarMateEntry(date: .now, snapshot: merged, requestedICAO: nil)
             }
             return MetarMateEntry(date: .now, snapshot: cached, requestedICAO: cached == nil ? icao : nil)
@@ -138,7 +133,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             let cached = WidgetDataManager.load(icao: icao)
             if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
                 let merged = mergeWithCached(live: live, cached: cached)
-                WidgetDataManager.save(snapshot: merged)
+                WidgetDataManager.save(snapshot: merged, reload: false)
                 snapshot = merged
             } else {
                 snapshot = cached
@@ -394,7 +389,7 @@ struct HomeScreenSmallView: View {
                     }
 
                     // Age centered at bottom
-                    Text(ageString(snap.observationTime))
+                    Text(snap.observationTime, style: .relative)
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(.quaternary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -553,7 +548,7 @@ struct HomeScreenMediumView: View {
 
                     // Bottom: age + advisory
                     HStack(spacing: 6) {
-                        Text(ageString(snap.observationTime))
+                        Text(snap.observationTime, style: .relative)
                             .font(.system(.caption2, design: .monospaced))
                             .foregroundStyle(.tertiary)
                         if snap.isAdvisory {
