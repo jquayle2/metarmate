@@ -26,25 +26,19 @@ struct MetarMateApp: App {
         UserDefaults.standard.register(defaults: ["globalCrosswindMinimumKt": 15])
         // Register the background alert-check task here, in App.init, so it's registered before
         // launch completes and the system can hand back a task scheduled while the app was dead.
-        AlertScheduler.register(container: sharedModelContainer)
+        // NOTE: register() must NOT touch sharedModelContainer — doing so would force-open the
+        // App Group store on every launch, including pure background (BGTask) launches, leaving
+        // its WAL lock held across the subsequent suspension. That lock-across-suspension is
+        // exactly what RunningBoard kills with 0xdead10cc. The task builds its own short-lived
+        // container only when it actually fires.
+        AlertScheduler.register()
     }
 
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([AirportFavorite.self, MinimumsProfile.self, AirportWatch.self])
-        // Store lives in the shared App Group container so the app, widget, and
-        // background alert task all read/write the same SwiftData store.
-        guard let groupURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: "group.com.jeffquayle.MetarMate") else {
-            fatalError("App Group container group.com.jeffquayle.MetarMate is unavailable")
-        }
-        let storeURL = groupURL.appendingPathComponent("MetarMate.store")
-        let config = ModelConfiguration(schema: schema, url: storeURL)
-        do {
-            return try ModelContainer(for: schema, configurations: [config])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    // Lazy, process-wide singleton: a `static let` is built on first access, not during
+    // App.init() or as a stored-property initializer. A foreground launch builds it when the
+    // scene/`.task` below first touch it; a background-only launch never touches it, so the
+    // store is never opened (and never locked) in that path.
+    static let sharedModelContainer: ModelContainer = ModelStore.makeContainer()
 
     var body: some Scene {
         WindowGroup {
@@ -58,7 +52,7 @@ struct MetarMateApp: App {
                     // Set the notification delegate so foreground notifications present.
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
-                    MinimumsProfile.seedBuiltInsIfNeeded(in: sharedModelContainer.mainContext)
+                    MinimumsProfile.seedBuiltInsIfNeeded(in: Self.sharedModelContainer.mainContext)
                     // Submit an initial background alert-check request.
                     AlertScheduler.schedule()
                 }
@@ -90,6 +84,6 @@ struct MetarMateApp: App {
                     }
                 }
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(Self.sharedModelContainer)
     }
 }
