@@ -33,6 +33,8 @@ enum AlertPipeline {
 
         var fired = 0
         for watch in watches {
+            // BG task expired (expirationHandler cancelled us): stop posting and wind down.
+            if Task.isCancelled { break }
             guard let c = conditions[watch.icao] else { continue }   // no data this cycle → leave side untouched
             let verdict = GoNoGoEvaluator.evaluate(profile, c, previousSide: watch.side, icao: watch.icao)
             if verdict.shouldFire {
@@ -43,7 +45,12 @@ enum AlertPipeline {
             watch.side = verdict.newSide
             watch.lastEvaluatedDate = Date()
         }
-        try? context.save()
+        // Don't write to the App Group store after expiry — the process may be suspended mid-write
+        // while holding the SQLite lock (0xdead10cc). Trade-off: a watch whose notification already
+        // posted this run keeps its old side, so it can re-fire next cycle.
+        if !Task.isCancelled {
+            try? context.save()
+        }
         return Outcome(watchesChecked: watches.count, notificationsFired: fired)
     }
 
