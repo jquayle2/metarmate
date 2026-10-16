@@ -53,6 +53,30 @@ private func shortTrendLabel(_ headline: String) -> String {
     return headline
 }
 
+/// Observation time in the detail view's convention (local, then Zulu hour): "2:53 PM  (21Z)".
+/// Same output as WeatherDetailView.historyTimeLabel, which isn't in the widget target.
+/// Static so the formatters aren't re-allocated on every widget render.
+private enum ObsTimeFormat {
+    static let local: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        // autoupdating, not .current: this formatter is static, so a snapshot of the zone would
+        // go stale if the device changes time zone while the extension process is alive.
+        f.timeZone = .autoupdatingCurrent
+        return f
+    }()
+    static let utc: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH'Z'"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    static func string(_ date: Date) -> String {
+        "\(local.string(from: date))  (\(utc.string(from: date)))"
+    }
+}
+
 /// Deep link opened by MetarMateApp.onOpenURL to jump straight to this airport's detail page —
 /// a tap outside the widget's interactive buttons follows this instead of just opening the app
 /// to wherever it was last left.
@@ -388,9 +412,11 @@ struct HomeScreenSmallView: View {
                             .lineLimit(1)
                     }
 
-                    // Age centered at bottom
-                    Text(snap.observationTime, style: .relative)
+                    // Observation time centered at bottom
+                    Text(ObsTimeFormat.string(snap.observationTime))
                         .font(.system(size: 9, design: .monospaced))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .foregroundStyle(.quaternary)
                         .frame(maxWidth: .infinity, alignment: .center)
 
@@ -546,10 +572,12 @@ struct HomeScreenMediumView: View {
 
                     Spacer(minLength: 0)
 
-                    // Bottom: age + advisory
+                    // Bottom: observation time + advisory
                     HStack(spacing: 6) {
-                        Text(snap.observationTime, style: .relative)
+                        Text(ObsTimeFormat.string(snap.observationTime))
                             .font(.system(.caption2, design: .monospaced))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .foregroundStyle(.tertiary)
                         if snap.isAdvisory {
                             Text("~Advisory")
