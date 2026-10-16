@@ -40,9 +40,11 @@ class StoreManager: ObservableObject {
         return elapsed < Self.asosFreeDays * 86400
     }
 
-    // True if ASOS data should be shown (subscribed OR in free period)
+    // True if ASOS data should be shown (subscribed OR in free period). Gated on the feature
+    // flag: every Synoptic fetch (detail load, auto-refresh, background alerts) keys off this,
+    // so with ASOS off no build may call Synoptic — free period or not.
     var isAsosUser: Bool {
-        isAsosSubscriber || isAsosInFreePeriod
+        FeatureFlags.asosAvailable && (isAsosSubscriber || isAsosInFreePeriod)
     }
 
     // Days remaining in free period (0 if expired)
