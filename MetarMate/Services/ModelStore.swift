@@ -1,4 +1,5 @@
 import Foundation
+import os
 import SwiftData
 
 // MARK: - ModelStore
@@ -7,10 +8,13 @@ import SwiftData
 // task (short-lived, per-run container) build through here, so they can never drift to
 // mismatched URLs / schemas — the classic cross-context SwiftData lock-fight cause.
 //
-// Container creation includes WAL-sidecar recovery: a failed open is usually a stale or
-// locked -wal/-shm sidecar left behind when a prior run (often a background task) was
-// killed mid-write, or a schema mismatch (SwiftData 134110). Clearing the sidecars
-// preserves the real data in MetarMate.store and lets SQLite rebuild them cleanly.
+// Container creation includes non-destructive recovery: if the store won't open, the store
+// and its -wal/-shm sidecars are moved aside together (renamed, never deleted) and a fresh
+// store is created, so the user's data stays on disk for later recovery.
+//
+// We never delete the -wal on its own: in WAL mode, committed transactions live in the -wal
+// until SQLite checkpoints them into the main file. Deleting it silently discards those
+// commits and can leave the main file inconsistent. The three files only make sense as a set.
 enum ModelStore {
     static let appGroupID = "group.com.jeffquayle.MetarMate"
     static let storeName = "MetarMate.store"
@@ -34,42 +38,62 @@ enum ModelStore {
         ModelConfiguration(schema: schema, url: storeURL)
     }
 
+    // UTC stamp for moved-aside filenames, e.g. "MetarMate.store.corrupt-20261016-185300".
+    private static let corruptStampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f
+    }()
+
     // Build a container, recovering from a corrupt/locked store rather than crashing.
+    // Nothing in this path deletes a file.
     static func makeContainer() -> ModelContainer {
         let schema = self.schema
-        let config = makeConfiguration()
         let storeURL = self.storeURL
 
-        func build() throws -> ModelContainer {
-            try ModelContainer(for: schema, configurations: [config])
+        func build(at url: URL) throws -> ModelContainer {
+            try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url)])
         }
 
         do {
-            return try build()
+            return try build(at: storeURL)
         } catch {
-            // Sidecars are named by appending to the FULL store filename:
-            // "MetarMate.store-wal" / "MetarMate.store-shm". Build the paths by string
-            // append — appendingPathExtension would wrongly yield "MetarMate.store.wal".
-            let fm = FileManager.default
-            let wal = URL(fileURLWithPath: storeURL.path + "-wal")
-            let shm = URL(fileURLWithPath: storeURL.path + "-shm")
-            try? fm.removeItem(at: wal)
-            try? fm.removeItem(at: shm)
+            Log.load.error("[store] open failed at \(storeURL.lastPathComponent, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+
+        // Move the store and its sidecars aside as a set. Sidecars are named by appending to
+        // the FULL store filename ("MetarMate.store-wal"), so build paths by string append —
+        // appendingPathExtension would wrongly yield "MetarMate.store.wal".
+        let fm = FileManager.default
+        let stamp = corruptStampFormatter.string(from: Date())
+        let corruptBase = storeURL.path + ".corrupt-" + stamp
+        var renameFailed = false
+        for suffix in ["", "-wal", "-shm"] {
+            let source = storeURL.path + suffix
+            guard fm.fileExists(atPath: source) else { continue }
+            let destination = corruptBase + suffix
             do {
-                return try build()
+                try fm.moveItem(atPath: source, toPath: destination)
+                Log.load.error("[store] moved \((source as NSString).lastPathComponent, privacy: .public) aside to \((destination as NSString).lastPathComponent, privacy: .public)")
             } catch {
-                // Last resort: the store itself is unusable. Drop it (and any sidecars) so
-                // the app can launch with a fresh store rather than crash-looping. User data
-                // is lost here, but a launchable app beats an unlaunchable one.
-                try? fm.removeItem(at: storeURL)
-                try? fm.removeItem(at: wal)
-                try? fm.removeItem(at: shm)
-                do {
-                    return try build()
-                } catch {
-                    fatalError("Could not create ModelContainer even after recovery: \(error)")
-                }
+                renameFailed = true
+                Log.load.error("[store] could not move \((source as NSString).lastPathComponent, privacy: .public) aside: \(String(describing: error), privacy: .public)")
             }
+        }
+
+        // If any rename failed, the original URL may still hold some of the old files (e.g. a
+        // stray -wal SQLite would try to replay), so open the fresh store at a new URL instead.
+        let freshURL = renameFailed
+            ? URL(fileURLWithPath: storeURL.path + ".fresh-" + stamp)
+            : storeURL
+        do {
+            let container = try build(at: freshURL)
+            Log.load.error("[store] created fresh store at \(freshURL.lastPathComponent, privacy: .public)")
+            return container
+        } catch {
+            fatalError("Could not create ModelContainer even after recovery: \(error)")
         }
     }
 }
