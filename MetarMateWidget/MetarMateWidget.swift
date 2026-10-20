@@ -205,6 +205,9 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         // (late at obs+65, no current METAR at obs+75, then the "last report" age), so the
         // widget goes late/stale on time even when WidgetKit denies the next reload.
         let now = Date.now
+        #if DEBUG
+        snapshot = debugForcedAge(snapshot, now: now)
+        #endif
         let futureDates = snapshot?.ageChangeDates(after: now) ?? []
         let entries = ([now] + futureDates).map {
             MetarMateEntry(date: $0, snapshot: snapshot, requestedICAO: requestedICAO)
@@ -212,6 +215,16 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
         return Timeline(entries: entries, policy: .after(nextUpdate))
     }
+
+    #if DEBUG
+    /// DEBUG only: when the harness has set a forced report age, re-date the snapshot so it is
+    /// exactly that old at `now`. Display only; the saved snapshot keeps its real observation time.
+    private func debugForcedAge(_ snapshot: WidgetWeatherSnapshot?, now: Date) -> WidgetWeatherSnapshot? {
+        let minutes = WidgetDataManager.debugForcedObsAgeMinutes()
+        guard minutes > 0, let snapshot else { return snapshot }
+        return snapshot.withObservationTime(now.addingTimeInterval(-TimeInterval(minutes * 60)))
+    }
+    #endif
 
     private func resolveICAO(for configuration: SelectAirportIntent) -> String? {
         guard let code = configuration.airportCode, !code.isEmpty else { return nil }
@@ -840,3 +853,80 @@ struct MetarMateHomeMedium: Widget {
         .supportedFamilies([.systemMedium])
     }
 }
+
+#if DEBUG
+// MARK: - Previews (DEBUG only)
+// Each family steps through current (20 min), late (68 min), no current METAR (2 h 10 min) and an
+// advisory with no current data. States come from the entry date vs observation time, exactly as
+// the live timeline renders them.
+
+private enum WidgetPreviewData {
+    static let now = Date()
+
+    static func metar(ageMinutes: Int) -> WidgetWeatherSnapshot {
+        WidgetWeatherSnapshot(
+            icao: "KVGT", iata: "VGT", airportName: "North Las Vegas", flightCategory: .mvfr,
+            windDirection: 210, windSpeed: 15, windGust: 25, windIsVariable: false, windReported: true,
+            visibility: 4, visibilityReported: true, ceilingFeet: 2_500,
+            temperature: 18, dewpoint: 9, altimeter: 29.92,
+            trendDirection: .deteriorating, trendHeadline: "Ceiling Falling",
+            tafAccuracyPct: 78, forecastWindDivergenceKt: 8, forecastCeilingDivergenceFt: -600,
+            forecastVisibilityDivergenceSM: nil, isAdvisory: false,
+            observationTime: now.addingTimeInterval(-TimeInterval(ageMinutes * 60)), snapshotTime: now
+        )
+    }
+
+    static func advisory(ageMinutes: Int) -> WidgetWeatherSnapshot {
+        WidgetWeatherSnapshot(
+            icao: "L15", iata: nil, airportName: "Henderson Field", flightCategory: .vfr,
+            windDirection: 180, windSpeed: 8, windGust: nil, windIsVariable: false, windReported: true,
+            visibility: 10, visibilityReported: true, ceilingFeet: nil,
+            temperature: 20, dewpoint: 5, altimeter: nil,
+            trendDirection: .steady, trendHeadline: "Advisory Data",
+            tafAccuracyPct: nil, forecastWindDivergenceKt: nil, forecastCeilingDivergenceFt: nil,
+            forecastVisibilityDivergenceSM: nil, isAdvisory: true,
+            observationTime: now.addingTimeInterval(-TimeInterval(ageMinutes * 60)), snapshotTime: now
+        )
+    }
+
+    static var entries: [MetarMateEntry] {
+        [
+            MetarMateEntry(date: now, snapshot: metar(ageMinutes: 20), requestedICAO: nil),
+            MetarMateEntry(date: now, snapshot: metar(ageMinutes: 68), requestedICAO: nil),
+            MetarMateEntry(date: now, snapshot: metar(ageMinutes: 130), requestedICAO: nil),
+            MetarMateEntry(date: now, snapshot: advisory(ageMinutes: 68), requestedICAO: nil),
+            MetarMateEntry(date: now, snapshot: advisory(ageMinutes: 130), requestedICAO: nil),
+        ]
+    }
+}
+
+#Preview("Small", as: .systemSmall) {
+    MetarMateHomeSmall()
+} timeline: {
+    for entry in WidgetPreviewData.entries { entry }
+}
+
+#Preview("Medium", as: .systemMedium) {
+    MetarMateHomeMedium()
+} timeline: {
+    for entry in WidgetPreviewData.entries { entry }
+}
+
+#Preview("Lock circular", as: .accessoryCircular) {
+    MetarMateLockScreenCircular()
+} timeline: {
+    for entry in WidgetPreviewData.entries { entry }
+}
+
+#Preview("Lock rectangular", as: .accessoryRectangular) {
+    MetarMateLockScreenRectangular()
+} timeline: {
+    for entry in WidgetPreviewData.entries { entry }
+}
+
+#Preview("Lock inline", as: .accessoryInline) {
+    MetarMateLockScreenInline()
+} timeline: {
+    for entry in WidgetPreviewData.entries { entry }
+}
+#endif

@@ -104,6 +104,23 @@ nonisolated enum WidgetDataManager {
         return sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
+    #if DEBUG
+    // MARK: - Debug: forced report age (DEBUG builds only; compiled out of Release)
+    // Makes every widget treat its report as exactly N minutes old at each timeline refresh, to
+    // exercise the late (65 min) and no-current (75 min) states without waiting. Written by the
+    // app's harness screen; read only by the widget's timeline provider. 0 = off.
+    private static let debugForcedObsAgeKey = "debug.widget.forcedObsAgeMinutes"
+
+    nonisolated static func setDebugForcedObsAge(minutes: Int) {
+        sharedDefaults?.set(minutes, forKey: debugForcedObsAgeKey)
+        reloadWidgets()
+    }
+
+    nonisolated static func debugForcedObsAgeMinutes() -> Int {
+        sharedDefaults?.integer(forKey: debugForcedObsAgeKey) ?? 0
+    }
+    #endif
+
     // MARK: - Reload all MetarMate widgets
     // Called after app-side snapshot writes so the widget picks up fresh data immediately.
 

@@ -11,6 +11,7 @@ import os
 //   1. Canned adverse fixtures (A1–A13, T1–T4) — injected, SIMULATED, banner-marked.
 //   2. Live spot-check airports — a NORMAL live fetch, clearly labeled LIVE (no banner).
 //   3. Free-text paste — arbitrary raw METAR/TAF or NOAA JSON through the same decode→parse seam.
+//   4. (DEBUG builds only) Widget forced report age — exercises the widgets' late/no-current states.
 struct MetarInjectionHarnessView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -24,6 +25,13 @@ struct MetarInjectionHarnessView: View {
     @State private var freeKind: FreeKind = .metar
 
     enum FreeKind: String, CaseIterable, Identifiable { case metar = "METAR", taf = "TAF"; var id: String { rawValue } }
+
+    #if DEBUG
+    // Widget forced report age (section ④). Write-only: the widget is the only reader of the key.
+    @State private var widgetForcedAge: Int = 0
+    @State private var widgetForcedAgeApplied: Int?
+    private static let widgetForcedAgeChoices = [0, 66, 74, 76, 130, 725]
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -124,6 +132,31 @@ struct MetarInjectionHarnessView: View {
                 }
                 .disabled(rawInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+
+            #if DEBUG
+            Section {
+                Picker("Report age", selection: $widgetForcedAge) {
+                    ForEach(Self.widgetForcedAgeChoices, id: \.self) { minutes in
+                        Text(minutes == 0 ? "Off (real age)" : "\(minutes) min").tag(minutes)
+                    }
+                }
+                Button {
+                    WidgetDataManager.setDebugForcedObsAge(minutes: widgetForcedAge)
+                    widgetForcedAgeApplied = widgetForcedAge
+                } label: {
+                    Label("Apply to widgets", systemImage: "rectangle.stack.badge.play")
+                }
+                if let applied = widgetForcedAgeApplied {
+                    Text(applied == 0 ? "Widgets back on real report age." : "Widgets now treat their report as \(applied) min old at each refresh.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            } header: {
+                Text("④ Widget report age (DEBUG build only)")
+            } footer: {
+                Text("Each widget refresh pretends the report is exactly this old, then ages normally. Late from 65 min, no current METAR from 75. Display only; nothing saved changes. Not compiled into Release or TestFlight builds.")
+            }
+            #endif
         }
     }
 

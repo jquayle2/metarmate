@@ -282,6 +282,28 @@ extension WidgetWeatherSnapshot {
     }
 }
 
+#if DEBUG
+// MARK: - Debug: re-dated copy (DEBUG builds only)
+// For the widget's forced-report-age override and its previews. Compiled out of Release.
+extension WidgetWeatherSnapshot {
+    nonisolated func withObservationTime(_ observationTime: Date) -> WidgetWeatherSnapshot {
+        WidgetWeatherSnapshot(
+            icao: icao, iata: iata, airportName: airportName, flightCategory: flightCategory,
+            windDirection: windDirection, windSpeed: windSpeed, windGust: windGust,
+            windIsVariable: windIsVariable, windReported: windReported,
+            visibility: visibility, visibilityReported: visibilityReported,
+            visibilityIsGreaterThan: visibilityIsGreaterThan, ceilingFeet: ceilingFeet,
+            temperature: temperature, dewpoint: dewpoint, altimeter: altimeter,
+            trendDirection: trendDirection, trendHeadline: trendHeadline,
+            tafAccuracyPct: tafAccuracyPct, forecastWindDivergenceKt: forecastWindDivergenceKt,
+            forecastCeilingDivergenceFt: forecastCeilingDivergenceFt,
+            forecastVisibilityDivergenceSM: forecastVisibilityDivergenceSM,
+            isAdvisory: isAdvisory, observationTime: observationTime, snapshotTime: snapshotTime
+        )
+    }
+}
+#endif
+
 // MARK: - Widget Airport Configuration
 // Tracks which airport a widget instance should display.
 // Stored in App Group UserDefaults, keyed by widget instance ID.
