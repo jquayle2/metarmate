@@ -1,8 +1,9 @@
 """Scale test: OMO (hfmetar archive) vs official METAR, sky/ceiling and gust.
 
 Inputs: hourly OMO files (data/hfmetar/archive/*.gz) and METAR history from
-fetch_metar_history.py (data/metars/<ICAO>.json). Each METAR inside the OMO time span is
-paired with the nearest OMO record for its station within +/- --window-min.
+fetch_metar_history.py (data/metars/<ICAO>.json). Only the overlap of the OMO span and
+the METAR span is analysed (reported with station-hours and gust-event counts). Each METAR
+in it is paired with the nearest OMO record for its station within +/- --window-min.
 
 AUTO vs augmented: a METAR is "AUTO" if its text carries the AUTO modifier, otherwise
 "augmented" (an observer was involved). For the sky test, stations are classified by
@@ -20,10 +21,13 @@ Sky/ceiling metrics (per paired METAR):
     restricted to layers <= 12,000 ft (the classic ceilometer range; some ASOS ceilometers
     report higher, e.g. KADF 22,000 ft in OMO and METAR alike).
   OMO CLR/12,500 ft is a sentinel, never a layer (findings H5).
+  OMO gust 254/255 kt with windGustDD "X" is a sentinel, read as no gust (see omo_dump).
 
 Gust (all stations): for each METAR whose wind group has G, does the nearest OMO record
 carry a gust, and the delta (OMO - METAR, kt) when it does. Caveat: OMO files keep only
-the 5-minute marks.
+the 5-minute marks, while a METAR gust is the peak of the last 10 minutes; so also: does
+any OMO record from 10 min before to --window-min after the METAR carry a gust, and the
+delta of the largest one (gust_10min).
 
 Writes logs/scale_results_<UTC>.json and prints a summary.
 """
@@ -56,6 +60,7 @@ def load_omo(paths):
         sid = nc.chartostring(ds["stationId"][:])
         t = ds["observationTime"][:]
         gust = ds["windGust"][:]
+        gust_x = np.ma.filled(ds["windGustDD"][:], b" ") == b"X"
         vis = ds["visibility"][:]
         cov = nc.chartostring(ds["skyCvr"][:])
         base = ds["skyCovLayerBase"][:]
@@ -69,7 +74,7 @@ def load_omo(paths):
                 if c and c not in CLEAR:
                     layers.append((c, None if np.ma.is_masked(b) else round(m_to_ft(float(b)))))
             by[str(sid[i])][int(t[i])] = {
-                "gust": None if np.ma.is_masked(gust[i]) else ms_to_kt(float(gust[i])),
+                "gust": None if np.ma.is_masked(gust[i]) or gust_x[i] else ms_to_kt(float(gust[i])),
                 "vis": None if np.ma.is_masked(vis[i]) else m_to_sm(float(vis[i])),
                 "layers": layers,
                 "sky_reported": reported,  # False = no sky group at all (missing, not clear)
@@ -93,6 +98,19 @@ def nearest(omo, icao, t, window_s):
             if best is None or abs(ts[k] - t) < abs(ts[best] - t):
                 best = k
     return (None, None) if best is None else (recs[best], int(ts[best] - t))
+
+
+def in_range(omo, icao, t0, t1):
+    if icao not in omo:
+        return []
+    ts, recs = omo[icao]
+    return recs[np.searchsorted(ts, t0):np.searchsorted(ts, t1, side="right")]
+
+
+def summarize(d):
+    return ({"n": len(d), "median": float(np.median(d)), "mean": round(float(np.mean(d)), 2),
+             "abs_le_2": round(sum(abs(x) <= 2 for x in d) / len(d), 3),
+             "hist": dict(sorted(Counter(d).items()))} if d else None)
 
 
 def metar_vis(m):
@@ -155,16 +173,32 @@ def main():
     files = sorted(glob.glob(args.omo_glob))
     omo = load_omo(files)
     span = (min(v[0][0] for v in omo.values()), max(v[0][-1] for v in omo.values()))
+    raw = {os.path.basename(p)[:-5]: json.load(open(p))
+           for p in glob.glob(os.path.join(HERE, "data", "metars", "*.json"))}
+    times = [m["obsTime"] for ms in raw.values() for m in ms]
+    mspan = (min(times), max(times))
+    # Analyse only the overlap of the two sources; the archive rolls, so don't assume 5 days.
+    overlap = (max(span[0], mspan[0]), min(span[1], mspan[1]))
     metars = {}
-    for p in glob.glob(os.path.join(HERE, "data", "metars", "*.json")):
-        icao = os.path.basename(p)[:-5]
-        ms = [m for m in json.load(open(p)) if span[0] - window <= m["obsTime"] <= span[1] + window]
+    for icao, ms in raw.items():
+        ms = [m for m in ms if overlap[0] <= m["obsTime"] <= overlap[1]]
         if ms:
             metars[icao] = ms
     iso = lambda s: datetime.fromtimestamp(s, timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    kind = lambda m: "AUTO" if " AUTO " in m["rawOb"] else "augmented"
+    sh, gev = defaultdict(set), Counter()
+    for s, ms in metars.items():
+        for m in ms:
+            sh[kind(m)].add((s, m["obsTime"] // 3600))
+            gev[kind(m)] += bool(GUST.search(m["rawOb"]))
     res = {"omo_files": len(files), "omo_span": [iso(span[0]), iso(span[1])],
+           "metar_span": [iso(mspan[0]), iso(mspan[1])],
+           "overlap": [iso(overlap[0]), iso(overlap[1])],
+           "overlap_hours": round((overlap[1] - overlap[0]) / 3600, 1),
            "omo_stations": len(omo), "metar_stations": len(metars),
-           "metars_in_span": sum(len(v) for v in metars.values())}
+           "metars_in_overlap": sum(len(v) for v in metars.values()),
+           "station_hours": {k: len(v) for k, v in sh.items()},
+           "gust_metar_events": dict(gev)}
 
     # --- station classification by AUTO share
     share = {s: sum(" AUTO " in m["rawOb"] for m in ms) / len(ms) for s, ms in metars.items()}
@@ -223,6 +257,7 @@ def main():
     # --- gust, all stations
     gust = {"AUTO": Counter(), "augmented": Counter()}
     deltas = {"AUTO": [], "augmented": []}
+    deltas10 = {"AUTO": [], "augmented": []}
     misses = {"AUTO": [], "augmented": []}
     for s, ms in metars.items():
         for m in ms:
@@ -236,6 +271,11 @@ def main():
                 gust[k]["not_covered"] += 1
                 continue
             gust[k]["paired"] += 1
+            g10 = [r["gust"] for r in in_range(omo, s, m["obsTime"] - 600, m["obsTime"] + window)
+                   if r["gust"] is not None]
+            if g10:
+                gust[k]["omo_gust_10min"] += 1
+                deltas10[k].append(round(max(g10)) - int(g.group(1)))
             if rec["gust"] is None:
                 gust[k]["omo_no_gust"] += 1
                 if len(misses[k]) < 8:
@@ -249,9 +289,9 @@ def main():
         res["gust"][k] = {
             "counts": dict(gust[k]),
             "share_paired_with_gust": round(gust[k]["omo_gust"] / gust[k]["paired"], 3) if gust[k]["paired"] else None,
-            "delta_kt": ({"n": len(d), "median": float(np.median(d)), "mean": round(float(np.mean(d)), 2),
-                          "abs_le_2": round(sum(abs(x) <= 2 for x in d) / len(d), 3),
-                          "hist": dict(sorted(Counter(d).items()))} if d else None),
+            "delta_kt": summarize(d),
+            "share_paired_with_gust_10min": round(gust[k]["omo_gust_10min"] / gust[k]["paired"], 3) if gust[k]["paired"] else None,
+            "delta_kt_10min_max": summarize(deltas10[k]),
             "examples_no_gust": misses[k],
         }
 
