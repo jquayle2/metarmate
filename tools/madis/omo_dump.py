@@ -13,6 +13,9 @@ Format notes (from the files themselves):
   - rawMessage is the original comma-separated OMO message in kt / SM / inHg / ft.
   - Sky: CLR with base 12,500 ft is a sentinel for "nothing below 12,000 ft", not a layer.
     It is never emitted as a layer; see parse_sky.
+  - Gust: 254/255 kt with windGustDD "X" (failed QC) is a sentinel, not a gust. In the
+    2026-10-15..20 archive, X occurs exactly on the 254/255 kt values (5,559) and never
+    elsewhere. wgst_kt is None for it (the raw message still carries 254/255).
 
 Usage: omo_dump.py FILE [FILE ...] [--stations KVGT,KLAS] [--out data/omo_dump.json]
 """
@@ -97,7 +100,7 @@ def records(ds, stations):
             "receive_lag_s": round(rcv - obs),
             "wdir": num(v["windDir"][i], nd=0),
             "wspd_kt": num(v["windSpeed"][i], ms_to_kt, 1),
-            "wgst_kt": num(v["windGust"][i], ms_to_kt, 1),
+            "wgst_kt": None if text(v["windGustDD"][i]) == "X" else num(v["windGust"][i], ms_to_kt, 1),
             "vis_sm": num(v["visibility"][i], m_to_sm, 2),
             "sky": sky,
             "sky_clear_below_12k": sky_clear,
