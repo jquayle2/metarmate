@@ -94,6 +94,14 @@ file, one station per request (AWC caps a response at 400), paced 1.2 s apart. R
 tools/madis/.venv/bin/python tools/madis/fetch_metar_history.py tools/madis/data/hfmetar/20261019_2200.gz --hours 124
 ```
 
+**scale_compare.py**: OMO archive vs METAR at scale. Sky/ceiling agreement for about 50 AUTO-only
+and 50 never-AUTO CONUS stations (seeded sample), and gust coverage across all OMO stations,
+split AUTO vs augmented. Results in `logs/scale_results_<UTC>.json`. Run after both fetchers.
+
+```
+tools/madis/.venv/bin/python tools/madis/scale_compare.py
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
