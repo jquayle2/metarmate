@@ -72,6 +72,14 @@ PASS / FAIL / NOT COVERED. Supply the hourly files that cover the gust METARs.
 tools/madis/.venv/bin/python tools/madis/gust_acceptance.py tools/madis/data/hfmetar/20261019_2100.gz tools/madis/data/hfmetar/20261019_2200.gz
 ```
 
+**freshness_poll.py**: polls the hfmetar listing every 2 min for N minutes and downloads the
+current or previous hour file only when it changes. Logs newest obs / received time vs fetch
+time to `logs/freshness_<UTC>.csv`. Forces IPv4.
+
+```
+cd tools/madis && nohup caffeinate -i .venv/bin/python freshness_poll.py --minutes 62 > logs/freshness_run.out 2>&1 &
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
