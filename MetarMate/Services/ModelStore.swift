@@ -1,6 +1,7 @@
 import Foundation
 import os
 import SwiftData
+import UIKit
 
 // MARK: - ModelStore
 // The single source of truth for the SwiftData store's schema, configuration, and
@@ -38,6 +39,15 @@ enum ModelStore {
         ModelConfiguration(schema: schema, url: storeURL)
     }
 
+    private static var appStateDescription: String {
+        switch UIApplication.shared.applicationState {
+        case .active: return "active"
+        case .inactive: return "inactive"
+        case .background: return "background"
+        @unknown default: return "unknown"
+        }
+    }
+
     // UTC stamp for moved-aside filenames, e.g. "MetarMate.store.corrupt-20261016-185300".
     private static let corruptStampFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -48,8 +58,11 @@ enum ModelStore {
     }()
 
     // Build a container, recovering from a corrupt/locked store rather than crashing.
-    // Nothing in this path deletes a file.
-    static func makeContainer() -> ModelContainer {
+    // Nothing in this path deletes a file. `owner` names the caller ("app" / "bgtask") for the
+    // open log, which records the application state so a device log shows whether the store
+    // was ever opened during a background launch.
+    static func makeContainer(for owner: String) -> ModelContainer {
+        Log.load.info("[store] container opened for=\(owner, privacy: .public) appState=\(appStateDescription, privacy: .public)")
         let schema = self.schema
         let storeURL = self.storeURL
 

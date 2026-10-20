@@ -35,10 +35,12 @@ struct MetarMateApp: App {
     }
 
     // Lazy, process-wide singleton: a `static let` is built on first access, not during
-    // App.init() or as a stored-property initializer. A foreground launch builds it when the
-    // scene/`.task` below first touch it; a background-only launch never touches it, so the
-    // store is never opened (and never locked) in that path.
-    static let sharedModelContainer: ModelContainer = ModelStore.makeContainer()
+    // App.init() or as a stored-property initializer. Every access sits inside the WindowGroup
+    // content closure, which SwiftUI only runs when a scene connects. A background-only launch
+    // (BGTask, Siri) may still evaluate `body`, but should never build the window content, so
+    // the store is never opened (and never locked) in that path. The "[store] container opened"
+    // log in ModelStore.makeContainer records the app state, to confirm this on device.
+    static let sharedModelContainer: ModelContainer = ModelStore.makeContainer(for: "app")
 
     var body: some Scene {
         WindowGroup {
@@ -83,7 +85,9 @@ struct MetarMateApp: App {
                             }
                     }
                 }
+                // On the window content, not the Scene: a Scene modifier's argument is evaluated
+                // whenever `body` is, which would open the App Group store on background launches.
+                .modelContainer(Self.sharedModelContainer)
         }
-        .modelContainer(Self.sharedModelContainer)
     }
 }
