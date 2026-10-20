@@ -31,11 +31,27 @@ _session = requests.Session()
 _session.headers["User-Agent"] = USER_AGENT
 
 
-def get(url, params=None, headers=None, timeout=30):
-    """GET with timing. Returns (response, fetched_at_utc, elapsed_s)."""
-    t0 = time.monotonic()
-    r = _session.get(url, params=params, headers=headers, timeout=timeout)
-    return r, datetime.now(timezone.utc), time.monotonic() - t0
+# Spike rule: every network call has a hard 20 s timeout and at most 2 retries.
+TIMEOUT_S = 20
+MAX_RETRIES = 2
+
+
+def get(url, params=None, headers=None):
+    """GET with timing; retries (max 2) on connection errors, timeouts and 5xx.
+
+    Returns (response, fetched_at_utc, elapsed_s, attempts). 4xx is returned, not retried.
+    """
+    for attempt in range(1, MAX_RETRIES + 2):
+        t0 = time.monotonic()
+        try:
+            r = _session.get(url, params=params, headers=headers, timeout=TIMEOUT_S)
+        except requests.RequestException:
+            if attempt > MAX_RETRIES:
+                raise
+            continue
+        if r.status_code >= 500 and attempt <= MAX_RETRIES:
+            continue
+        return r, datetime.now(timezone.utc), time.monotonic() - t0, attempt
 
 
 # --- unit conversions (exact definitions) ---
