@@ -35,6 +35,14 @@ summary in `logs/nws_cadence_<UTC>.json`.
 tools/madis/.venv/bin/python tools/madis/nws_cadence.py --hours 6
 ```
 
+**check_nws_units.py**: checks api.weather.gov conversions against the METAR text on every
+METAR-bearing obs from the latest `nws_cadence.py` pull, and lists 24 h of AWC gust METARs.
+Prints mismatches. Run `nws_cadence.py` first.
+
+```
+tools/madis/.venv/bin/python tools/madis/check_nws_units.py
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
