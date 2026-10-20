@@ -27,6 +27,14 @@ timeouts, 5xx). Descriptive User-Agent on every request.
 
 All commands run from the repo root.
 
+**nws_cadence.py**: last N hours of api.weather.gov observations per station; interval
+distribution, newest-obs age, field fill on METAR vs off-hour obs. Raw JSON in `data/`,
+summary in `logs/nws_cadence_<UTC>.json`.
+
+```
+tools/madis/.venv/bin/python tools/madis/nws_cadence.py --hours 6
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
