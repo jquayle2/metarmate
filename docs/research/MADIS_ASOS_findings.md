@@ -95,7 +95,23 @@ Findings:
 - **The documented public OMO sample directory returns 403 to anonymous requests.** Directory listing is forbidden. Individual filenames are unknown, so files couldn't be tried directly.
 - The doc pages work intermittently: 504s and long stalls, and IPv6 hangs after TLS. A proxy hitting this host needs short timeouts and should prefer IPv4.
 - `madis-data.ncep.noaa.gov` (distribution) wasn't probed before the stop.
-- The OMO sample parse (Phase 1.1) is **blocked** for now. I'll retry once at the end of Phase 1.
+- The documented sample directory is still unusable. The single end-of-phase retry (03:31:41Z, `access_probe.py`) got **503** on all 3 attempts. The OMO sample parse was instead done on the public hfmetar directory below.
+
+Access probe, 2026-10-20 03:31–03:33Z (`tools/madis/access_probe.py`; IPv4 forced; 20 s timeout, ≤2 retries; `logs/access_probe_20261020T0331Z.csv`):
+
+| Time (Z) | URL | Status | Attempts | Note |
+|---|---|---|---|---|
+| 03:31:41 | `https://madis.ncep.noaa.gov/sample_data/software/sampledata/LDAD/OMO/netCDF/` | 503 | 3 | |
+| 03:32:36 | `https://madis.ncep.noaa.gov/madis_OMO.shtml` | 503 | 3 | |
+| 03:32:36 | `https://madis.ncep.noaa.gov/sfc_OMO_variable_list.shtml` | 503 | 3 | |
+| 03:32:37 | `https://madis-data.ncep.noaa.gov/` | 200 | 1 | distribution home |
+| 03:32:37 | `https://madis-data.ncep.noaa.gov/madisPublic1/data/` | 200 | 1 | directory index (path was a guess) |
+| 03:32:37 | `https://madis-data.ncep.noaa.gov/madisPublic1/data/LDAD/hfmetar/netCDF/` | **200** | 1 | **directory index, anonymous: the OMO files** (path was a guess) |
+| 03:32:37 | `https://madis-data.ncep.noaa.gov/madisResearch/data/` | 403 | 1 | forbidden (path was a guess) |
+| 03:32:37 | `https://madis-data.ncep.noaa.gov/madisPublic/cgi-bin/madisXmlPublicDir` | 503 | 3 | Text/XML viewer (path was a guess) |
+| 03:32:37 | `ftp://madis-data.ncep.noaa.gov/` | timeout | 1 | anonymous FTP |
+
+- `madis-data` also hangs over IPv6. The first `freshness_poll.py` start (not yet forcing IPv4) logged a listing **read timeout on all 3 attempts at 03:40:45Z**. I deleted that CSV when I restarted the poller, so this sentence is the only record of it. All MADIS scripts now force IPv4.
 
 ### api.weather.gov / aviationweather.gov
 
@@ -135,6 +151,62 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 
 ---
 
+## MADIS OMO via the public hfmetar directory
+
+### H1. What it is
+
+- URL: `https://madis-data.ncep.noaa.gov/madisPublic1/data/LDAD/hfmetar/netCDF/`. Anonymous HTTPS directory index (200), found by `access_probe.py`.
+- **Being openly browseable doesn't confirm we're licensed to use it from a paid app's proxy.** The OMO dataset is marked "No restrictions. All observations are publicly accessible" (`madis_OMO.shtml`). However, each file's `license` attribute says "To access MADIS data fill out the application at https://madis.ncep.noaa.gov/data_application.shtml. Some of the MADIS data are restricted." Jeff is confirming with MADIS support.
+- Listing at 03:36:20Z: **123 files**, `YYYYMMDD_HHMM.gz`, hourly from `20261015_0100.gz` to `20261020_0300.gz` (a rolling ~5 days). Sizes are 1.1–1.3 MB gzipped (~19 MB unpacked). The current hour was 504K and still growing.
+- Listing mtimes are UTC (they match the download's `Last-Modified` GMT header). The current and previous hour are rewritten every few minutes. Each file's last write is at about **HH+2:41**, which fits the doc's "data that arrive after 2 hours … data recovery mode".
+- File inspected: `20261019_2200.gz` (final, not the newest).
+  - `NETCDF3_CLASSIC`, `title = "MADIS - Meteorological Surface - High frequency METAR"`, `dataProvider`/`stationType = "HF-METAR"`.
+  - 12,110 records, 1,023 stations.
+- **It is OMO.** The OMO page says these obs were "originally referred to as HF-METAR". Every variable in the OMO variable list has a netCDF counterpart (API mnemonic → netCDF name): FFGUST→`windGust` (m/s, max QC level 1), SKYCOV→`skyCvr` (3 layers × 8 chars), SKYCVLB→`skyCovLayerBase` (m), PRESWEA→`presWx`, VIS→`visibility` (m, max QC level 1), ALTSE→`altimeter` (Pa), DENSALT→`densityAltitude`, RVRVR/RVRID/RVRTYPE/RVRLOC→`runwayVisualRange`/`runwayId`/`runwayVRType`/`runwayVRLocation`, DDSS/FFSS/TSS/TDSS/PSS/SCLBSS/VISSS/PCPTSS/PCPASS/FRZRSS/RVRSS→`windDirStatus`…`runwayVRStatus`, OPSTAT→`siteStatus`, PARACT→`parameterActiveStatus`, ARMKST/AUTORMK/OPERRMK→`autoRemarkStatus`/`autoRemark`/`operatorRemark`, ALERT1/2→`alertData1/2`. Each obs also carries DD/QCA/QCR QC words and the original OMO message (`rawMessage`).
+- Not CONUS only: the file includes Alaska and Hawaii stations (e.g. PASH, PHKO), contrary to the dataset page.
+- Format: `stationId` is a 4-char ICAO. Times are float seconds since epoch (UTC). Units are SI. Missing values are `_FillValue` 3.4028235e+38 or `missing_value` -9999 (netCDF4 masks both); `-999` in `rawMessage`. `rawMessage` holds the original values in kt / SM / inHg / ft.
+
+### H2. Content and cadence (`omo_dump.py`, files 21Z and 22Z on 2026-10-19)
+
+- KVGT, KLAS, KHND, KIGM, KEED, KPHX and KSLC each have **12 records/hour, one per 5-minute mark**. Median receive lag at MADIS (`receivedTime − observationTime`) is **139 s**.
+- **KBVU and KIFP are not in the feed.** AWOS coverage isn't uniform: KHND and KSGU are AWOS-3PT in NASR and *are* present, while KIFP (AWOS-3PT) is not.
+- Field fill in the 22Z hour: wind 10–12/12, vis 12/12, sky 12/12, altimeter 12/12 (including KLAS, KHND and KIGM, where api.weather.gov had none or almost none), T/Td 12/12, density altitude 12/12, present weather 0/12 (clear day), RVR at KPHX and KSLC only, gust 0/12 except KEED 1/12.
+- **Conversions:** 168 of 168 station records (7 stations × 2 h) match their own raw OMO message on direction, speed, gust, vis, altimeter, T/Td, density altitude and layer-1 base. The raw field positions are inferred from the format, but every value matched independently.
+- **vs METAR** (nearest OMO record within ±5 min, 21Z–22Z): wind, vis, altimeter and temperature agree within timing and rounding. OMO temperature is whole °C, while METAR T-groups are 0.1 °C. Two exceptions:
+  - the KIGM gust (H3)
+  - the KSLC sky condition (H4)
+
+### H3. Gust acceptance (n=1): FAIL
+
+`gust_acceptance.py` over the 21Z and 22Z files and the 24 h of AWC METARs to 03:39Z:
+- **FAIL:** KIGM 2251Z `25006G16KT`. The nearest OMO record (22:50Z) is 250°/7 kt with gust `-999` in the raw OMO message (DD `Z`).
+- **NOT COVERED:** KIFP 2149Z `20004G11KT` (KIFP isn't in the OMO feed).
+- The OMO KIGM records at 22:45/22:50/22:55 are **value-for-value identical** to api.weather.gov's 5-minute obs. That supports the hypothesis that api.weather.gov's 5-minute obs are OMO, and that the missing gust is missing upstream.
+- Positive control: OMO does carry gusts when the sensor reports one. KEED 22:40Z `060/09 G14` (DD `C`). No KEED METAR that hour had a gust.
+- Caveat: hfmetar files store only the 5-minute marks, so a gust at the minute in between (22:51) isn't visible. n=1, calm day. The scale test is pending.
+
+### H4. KSLC sky condition: OMO flattens layers (recorded; Mike's list)
+
+| Time (Z) | METAR | Nearest OMO |
+|---|---|---|
+| 2154 / 21:55 | `FEW080 FEW100 BKN120` (ceiling 12,000 BKN) | `OVC110` |
+| 2254 / 22:55 | `FEW085 BKN110` (ceiling 11,000 BKN) | `OVC110` |
+
+- Every KSLC OMO record from 21:45 to 22:55 has **one layer, always OVC**, at 11,000–12,000 ft. The METAR's lower FEW layers are missing and BKN becomes OVC. At 2154Z the ceiling is also one 1,000-ft increment lower than the METAR (OMO was OVC120 at 21:50 and OVC110 at 21:55).
+- Flight category is unaffected (VFR either way). OMO doesn't always flatten layers: KPHX (two layers), KIGM and KLAS match their METARs.
+- **Decision (Jeff, 2026-10-20):** recorded as a systematic sky-condition difference and added to Mike's list. Ceiling/coverage agreement becomes a Phase 2 acceptance check alongside gust.
+- Hypothesis under test: OMO is raw sensor output, while METARs at staffed or augmented stations (KSLC) include observer edits, extra FEW layers, coverage changes and layers above the ceilometer's 12,000 ft limit. Prediction: OMO sky agrees with AUTO METARs and diverges from augmented ones. The scale test is pending.
+
+### H5. Parsing rule: the CLR / 12,500 ft sentinel
+
+OMO reports a clear sky as cover `CLR` with layer base **12,500 ft** (3,810 m). It means "no layers detected below 12,000 ft", the ceilometer limit, and is **never a real layer**. A consumer must not show it as a cloud layer or use it as a ceiling or layer height. api.weather.gov passes the same sentinel through (`cloudLayers: [{"amount": "CLR", "base": 3810 m}]`).
+
+### H6. Question for MADIS support
+
+The OMO page says "MADIS started processing and handling all 1 minute observations in November 2017", but the public hfmetar files hold only the **5-minute marks** (12 records per station-hour). **Is a full 1-minute feed, or a lower-latency feed than the hourly files rewritten every ~5 min, available with an account (FTP/LDM/OPeNDAP/Text-XML)?** This matters for gusts (H3): a METAR gust at :51 is invisible in 5-minute snapshots.
+
+---
+
 ## Phase 2 acceptance criterion: gust completeness (MADIS OMO, and any future Synoptic eval token)
 
 **Hypothesis:** api.weather.gov's 5-minute obs probably come from the same MADIS 1-minute ASOS (OMO) feed. If so, OMO may also leave gusts out. The OMO variable list shows the gust variable (FFGUST) with QC level 1 only. To be confirmed against the variable list once the page is reachable.
@@ -167,6 +239,7 @@ This is the same "unknown shown as good" class as audit Findings **6, 7, 8, 12, 
 1. Labeling of 5-minute data ("supplemental, not official").
 2. When the 5-minute value and the METAR disagree, which one is shown, and how?
 3. How should "not reported" look for gust, altimeter, vis and ceiling?
+4. **OMO sky condition can differ from the METAR** (H4). OMO can show a single OVC layer where the METAR shows BKN plus lower FEW layers. At augmented stations the METAR may include observer-added layers. Which one should the app show for sky/ceiling, and how is the difference labeled?
 
 ---
 
