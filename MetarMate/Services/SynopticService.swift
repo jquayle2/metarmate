@@ -11,9 +11,10 @@ actor SynopticService {
     private let session = URLSession.shared
     private let baseURL = "https://api.synopticdata.com/v2/stations"
 
-    // TODO: Replace with your actual Synoptic API token
-    // Sign up at https://customer.synopticdata.com to get one (free tier available)
-    private let token = "70c11dd558a54cec8e620ee1284676df"
+    // No token is compiled in. ASOS Updates will go through our own proxy (DECISIONS_2026-10
+    // #23), not a client-side Synoptic key, so every fetch throws .noToken before building a
+    // request. The expired key that used to live here is gone from source.
+    private let token: String? = nil
 
     private init() {}
 
@@ -90,6 +91,7 @@ actor SynopticService {
     }
 
     private func buildURL(service: String, params: [String: String]) throws -> URL {
+        guard let token else { throw SynopticError.noToken }
         var components = URLComponents(string: "\(baseURL)/\(service)")!
         var items = params.map { URLQueryItem(name: $0.key, value: $0.value) }
         items.append(URLQueryItem(name: "token", value: token))
