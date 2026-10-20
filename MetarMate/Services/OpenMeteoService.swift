@@ -107,6 +107,7 @@ actor OpenMeteoService {
         return AdvisoryWeather(
             airport:                   airport,
             fetchTime:                 Date(),
+            validTime:                 c.time.map { Date(timeIntervalSince1970: Double($0)) },
             temperatureC:              c.temperature_2m,
             dewpointC:                 c.dewpoint_2m,
             windSpeedKt:               c.wind_speed_10m,
@@ -223,6 +224,7 @@ extension OpenMeteoResponse: Decodable {
 }
 
 private struct CurrentBlock: Decodable, Sendable {
+    let time:                      Int?      // unixtime (timeformat=unixtime)
     let temperature_2m:            Double
     let dewpoint_2m:               Double?
     let relative_humidity_2m:      Int?

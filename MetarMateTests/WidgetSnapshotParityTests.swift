@@ -18,7 +18,8 @@ struct WidgetSnapshotParityTests {
     private func rawMetar(_ json: String) throws -> RawMetar {
         try JSONDecoder().decode(RawMetar.self, from: Data(json.utf8))
     }
-    // Every valid fixture carries icaoId + rawOb so MetarParser.parse succeeds after the swap.
+    // Every valid fixture carries icaoId + rawOb so MetarParser.parse succeeds after the swap, and
+    // obsTime, which the builder requires (launch-hardening A1; NOAA always sends it).
     private func snapshot(_ json: String, icao: String = "KTST") throws -> WidgetWeatherSnapshot {
         try #require(WidgetWeatherSnapshot.from(rawMetar: rawMetar(json), icao: icao))
     }
@@ -26,25 +27,25 @@ struct WidgetSnapshotParityTests {
     // MARK: - Visibility branches
 
     @Test func p6smVisibilityMapsToSix() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT P6SM FEW040 20/10 A2992","visib":"P6SM","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT P6SM FEW040 20/10 A2992","visib":"P6SM","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(s.visibility == 6)
         #expect(s.visibilityReported == true)
     }
 
     @Test func sixPlusVisibilityMapsToSix() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 6+ FEW040 20/10 A2992","visib":"6+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 6+ FEW040 20/10 A2992","visib":"6+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(s.visibility == 6)
         #expect(s.visibilityReported == true)
     }
 
     @Test func tenPlusVisibilityMapsToTen() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(s.visibility == 10)
         #expect(s.visibilityReported == true)
     }
 
     @Test func plainNumericVisibilityPassesThrough() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 3 1/2SM BR BKN020 20/18 A2992","visib":3.5,"wdir":270,"wspd":8,"fltCat":"MVFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 3 1/2SM BR BKN020 20/18 A2992","visib":3.5,"wdir":270,"wspd":8,"fltCat":"MVFR"}"#)
         #expect(s.visibility == 3.5)
         #expect(s.visibilityReported == true)
     }
@@ -53,20 +54,20 @@ struct WidgetSnapshotParityTests {
 
     @Test func ovxWithBaseYieldsCeiling() throws {
         // VV003 as NOAA sends it: cover OVX + a base + vertVis.
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","visib":0.5,"wdir":0,"wspd":0,"vertVis":3,"clouds":[{"cover":"OVX","base":300}],"fltCat":"LIFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","visib":0.5,"wdir":0,"wspd":0,"vertVis":3,"clouds":[{"cover":"OVX","base":300}],"fltCat":"LIFR"}"#)
         #expect(s.ceilingFeet == 300)
     }
 
     @Test func ovxWithNoBaseUsesVertVis() throws {
         // OVX layer with NO base — ceiling must come from the top-level vertVis field.
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","visib":0.5,"wdir":0,"wspd":0,"vertVis":3,"clouds":[{"cover":"OVX"}],"fltCat":"LIFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","visib":0.5,"wdir":0,"wspd":0,"vertVis":3,"clouds":[{"cover":"OVX"}],"fltCat":"LIFR"}"#)
         #expect(s.ceilingFeet == 300)
     }
 
     // MARK: - Wind branches
 
     @Test func missingWindGroupIsUnreportedNotCalm() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z AUTO 10SM CLR 27/19 A2988","visib":"10+","fltCat":"VFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z AUTO 10SM CLR 27/19 A2988","visib":"10+","fltCat":"VFR"}"#)
         #expect(s.windReported == false)
         #expect(s.windSpeed == 0)
         #expect(s.windDirection == nil)
@@ -75,7 +76,7 @@ struct WidgetSnapshotParityTests {
     }
 
     @Test func vrbWindIsVariableWithNoDirection() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z VRB08KT 10SM CLR 20/10 A2992","visib":"10+","wdir":"VRB","wspd":8,"fltCat":"VFR"}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z VRB08KT 10SM CLR 20/10 A2992","visib":"10+","wdir":"VRB","wspd":8,"fltCat":"VFR"}"#)
         #expect(s.windIsVariable == true)
         #expect(s.windReported == true)
         #expect(s.windDirection == nil)
@@ -85,7 +86,7 @@ struct WidgetSnapshotParityTests {
     // MARK: - Flight category
 
     @Test func missingFlightCategoryIsUnknownNotVFR() throws {
-        let s = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8}"#)
+        let s = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8}"#)
         #expect(s.flightCategory == .unknown)
     }
 
@@ -98,20 +99,75 @@ struct WidgetSnapshotParityTests {
     // Finding 14: de-duplication removed the widget's total-parse fallback. No other parity test
     // changed across the swap.
     @Test func unparseableMetarMissingStationIdReturnsNil() throws {
-        let raw = try rawMetar(#"{"rawOb":"METAR ????? 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        let raw = try rawMetar(#"{"obsTime":1760046780,"rawOb":"METAR ????? 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KPASS") == nil)
     }
 
     // NEW (commit 10): the snapshot carries the greater-than distinction so the lock screen renders
     // "6+" vs "6". The snapshot .visibility stays a Double (unchanged); the bit is the addition.
     @Test func p6smSetsVisibilityIsGreaterThanBit() throws {
-        let p6sm = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT P6SM FEW040 20/10 A2992","visib":"6+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        let p6sm = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT P6SM FEW040 20/10 A2992","visib":"6+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
         #expect(p6sm.visibility == 6)                    // Double unchanged (the floor)
         #expect(p6sm.visibilityIsGreaterThan == true)
         #expect(p6sm.visibilityDisplay == "6+")
 
-        let exact3 = try snapshot(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 3SM BR BKN020 20/18 A2992","visib":3,"wdir":270,"wspd":8,"fltCat":"MVFR"}"#)
+        let exact3 = try snapshot(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 3SM BR BKN020 20/18 A2992","visib":3,"wdir":270,"wspd":8,"fltCat":"MVFR"}"#)
         #expect(exact3.visibilityIsGreaterThan == false)
         #expect(exact3.visibilityDisplay == "3")
+    }
+
+    // MARK: - Missing observation time (launch-hardening A1)
+
+    // MetarParser substitutes Date() for a missing obsTime, which would make the report look fresh
+    // forever; the builder returns nil instead so the widget keeps its cached snapshot.
+    @Test func missingObsTimeReturnsNil() throws {
+        let raw = try rawMetar(#"{"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#)
+        #expect(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KTST") == nil)
+    }
+}
+
+// Report-age states and timeline instants (DECISIONS_2026-10 #4): late from 65 min, no current
+// report from 75 min, measured from the observation time at the supplied date.
+struct WidgetReportAgeTests {
+
+    private func snapshot() throws -> WidgetWeatherSnapshot {
+        let raw = try JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#.utf8))
+        return try #require(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KTST"))
+    }
+
+    private func at(_ s: WidgetWeatherSnapshot, minutes: Double) -> WidgetWeatherSnapshot.ReportAge {
+        s.reportAge(at: s.observationTime.addingTimeInterval(minutes * 60))
+    }
+
+    @Test func boundaries() throws {
+        let s = try snapshot()
+        #expect(at(s, minutes: -5) == .current)
+        #expect(at(s, minutes: 64 + 59.0 / 60) == .current)
+        #expect(at(s, minutes: 65) == .late(minutes: 65))
+        #expect(at(s, minutes: 74 + 59.0 / 60) == .late(minutes: 74))
+        #expect(at(s, minutes: 75) == .noCurrent(minutes: 75))
+        #expect(at(s, minutes: 130) == .noCurrent(minutes: 130))
+    }
+
+    @Test func ageChangeDatesCoverEveryTransition() throws {
+        let s = try snapshot()
+        let minutes = s.ageChangeDates(after: s.observationTime)
+            .map { Int($0.timeIntervalSince(s.observationTime) / 60) }
+        #expect(minutes.first == 65)
+        #expect(minutes.contains(75))
+        #expect(Array(minutes.prefix(11)) == Array(65...75))
+        #expect(minutes.last == 720)
+        // Only future instants are returned.
+        let later = s.ageChangeDates(after: s.observationTime.addingTimeInterval(100 * 60))
+        #expect(later.allSatisfy { $0 > s.observationTime.addingTimeInterval(100 * 60) })
+        #expect(s.ageChangeDates(after: s.observationTime.addingTimeInterval(720 * 60)).isEmpty)
+    }
+
+    @Test func ageText() {
+        #expect(WidgetWeatherSnapshot.ageText(minutes: 68) == "1 h 8 min")
+        #expect(WidgetWeatherSnapshot.ageText(minutes: 59) == "59 min")
+        #expect(WidgetWeatherSnapshot.ageText(minutes: 120) == "2 h")
+        #expect(WidgetWeatherSnapshot.ageText(minutes: 130) == "2 h 10 min")
+        #expect(WidgetWeatherSnapshot.ageText(minutes: 720) == "12+ h")
     }
 }

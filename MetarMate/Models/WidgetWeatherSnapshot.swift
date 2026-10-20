@@ -53,7 +53,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
 
     // Data source
     let isAdvisory: Bool            // true = Open-Meteo estimate, not official METAR
-    let observationTime: Date       // when the METAR was observed (or advisory fetched)
+    let observationTime: Date       // when the METAR was observed (advisory: its valid time)
     let snapshotTime: Date          // when the app wrote this snapshot
 
     // MARK: - Staleness
@@ -63,6 +63,49 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
 
     var age: TimeInterval {
         Date().timeIntervalSince(observationTime)
+    }
+
+    // MARK: - Report age (DECISIONS_2026-10 #4)
+    // Age comes from observationTime, never from when the snapshot was fetched or written. It is
+    // evaluated at a supplied date (the timeline entry's), not Date(), so entries scheduled for
+    // the future render the state they're scheduled for.
+    enum ReportAge: Equatable {
+        case current
+        case late(minutes: Int)        // 65 up to 75 min: warn, conditions still shown
+        case noCurrent(minutes: Int)   // 75 min and over: no current report, conditions withheld
+    }
+
+    static let lateAfterMinutes = 65
+    static let noCurrentAfterMinutes = 75
+
+    func reportAge(at date: Date) -> ReportAge {
+        // Whole minutes, truncated: 64:59 is still current. A future obs time (clock skew) is current.
+        let minutes = Int(date.timeIntervalSince(observationTime) / 60)
+        if minutes >= Self.noCurrentAfterMinutes { return .noCurrent(minutes: minutes) }
+        if minutes >= Self.lateAfterMinutes { return .late(minutes: minutes) }
+        return .current
+    }
+
+    /// The instants after `date` at which the rendered age changes, for timeline entries. The
+    /// widget can't re-render without an entry, and a reload isn't guaranteed. Per minute through
+    /// the late window (so "68 min" is exact), every 5 min to 3 h, every 30 min to 12 h. From 12 h
+    /// the text is "12+ h" and never changes, so no further entries are needed.
+    func ageChangeDates(after date: Date) -> [Date] {
+        let minutes = Array(Self.lateAfterMinutes...Self.noCurrentAfterMinutes)
+            + Array(stride(from: 80, through: 180, by: 5))
+            + Array(stride(from: 210, through: 720, by: 30))
+        return minutes
+            .map { observationTime.addingTimeInterval(TimeInterval($0 * 60)) }
+            .filter { $0 > date }
+    }
+
+    /// Age for the "Last report … ago" line: "2 h", "2 h 10 min", or "12+ h". The late state
+    /// shows plain minutes ("68 min") instead.
+    static func ageText(minutes: Int) -> String {
+        if minutes >= 720 { return "12+ h" }
+        if minutes < 60 { return "\(minutes) min" }
+        let h = minutes / 60, m = minutes % 60
+        return m == 0 ? "\(h) h" : "\(h) h \(m) min"
     }
 
     // MARK: - Wind display (replicates Wind.displayString for widget use)
@@ -150,7 +193,8 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             forecastCeilingDivergenceFt: nil,
             forecastVisibilityDivergenceSM: nil,
             isAdvisory: true,
-            observationTime: advisory.fetchTime,
+            // The advisory's own valid time when Open-Meteo provides it; fetch time only if not.
+            observationTime: advisory.validTime ?? advisory.fetchTime,
             snapshotTime: Date()
         )
     }
@@ -162,7 +206,10 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // Returns nil when the observation can't be parsed: a widget must not render a fabricated
     // snapshot from an unparseable METAR (this replaces the old total `icaoId ?? icao` fallback).
     nonisolated static func from(rawMetar raw: RawMetar, icao: String) -> WidgetWeatherSnapshot? {
-        guard let metar = try? MetarParser.parse(raw: raw) else { return nil }
+        // No obs time → nil, so the widget keeps its cached snapshot. MetarParser substitutes
+        // Date() for a missing obsTime (fixed in A2), which would make this report look fresh
+        // forever and defeat the late/no-current states.
+        guard raw.obsTime != nil, let metar = try? MetarParser.parse(raw: raw) else { return nil }
 
         return WidgetWeatherSnapshot(
             icao: metar.stationId,

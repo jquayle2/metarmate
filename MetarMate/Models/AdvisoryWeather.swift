@@ -80,6 +80,10 @@ struct AdvisoryForecastHour: Codable, Identifiable {
 struct AdvisoryWeather: Codable {
     let airport:                   Airport
     let fetchTime:                 Date
+    // Open-Meteo's own valid time for the current values (`current.time`, the start of the
+    // interval they describe). Optional so a response without it, or a cached value encoded
+    // before this field existed, decodes as nil; consumers fall back to fetchTime.
+    let validTime:                 Date?
 
     // MARK: Current conditions
     let temperatureC:              Double

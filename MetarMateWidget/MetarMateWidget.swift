@@ -167,9 +167,16 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             snapshot = WidgetDataManager.mostRecent()
         }
 
-        let entry = MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: requestedICAO)
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: .now)!
-        return Timeline(entries: [entry], policy: .after(nextUpdate))
+        // One entry now, plus one at each future instant the report's age state or text changes
+        // (late at obs+65, no current METAR at obs+75, then the "last report" age), so the
+        // widget goes late/stale on time even when WidgetKit denies the next reload.
+        let now = Date.now
+        let futureDates = snapshot?.ageChangeDates(after: now) ?? []
+        let entries = ([now] + futureDates).map {
+            MetarMateEntry(date: $0, snapshot: snapshot, requestedICAO: requestedICAO)
+        }
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+        return Timeline(entries: entries, policy: .after(nextUpdate))
     }
 
     private func resolveICAO(for configuration: SelectAirportIntent) -> String? {
