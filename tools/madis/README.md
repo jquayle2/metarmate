@@ -80,6 +80,20 @@ time to `logs/freshness_<UTC>.csv`. Forces IPv4.
 cd tools/madis && nohup caffeinate -i .venv/bin/python freshness_poll.py --minutes 62 > logs/freshness_run.out 2>&1 &
 ```
 
+**fetch_omo_archive.py**: downloads every final hourly file in the public hfmetar directory
+(hour at least 3 h old) into `data/hfmetar/archive/`, one at a time with a 2 s pause. Forces IPv4.
+
+```
+tools/madis/.venv/bin/python tools/madis/fetch_omo_archive.py
+```
+
+**fetch_metar_history.py**: METAR history from aviationweather.gov for every station in an OMO
+file, one station per request (AWC caps a response at 400), paced 1.2 s apart. Resumable.
+
+```
+tools/madis/.venv/bin/python tools/madis/fetch_metar_history.py tools/madis/data/hfmetar/20261019_2200.gz --hours 124
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
