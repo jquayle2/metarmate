@@ -1,0 +1,7 @@
+# Root .gitignore ignores *.py; this spike's scripts are meant to be tracked.
+!*.py
+
+.venv/
+__pycache__/
+data/
+logs/
