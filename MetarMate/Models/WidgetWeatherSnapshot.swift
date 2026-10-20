@@ -99,6 +99,13 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
         return m == 0 ? "\(h) h" : "\(h) h \(m) min"
     }
 
+    // MARK: - Trend availability
+    // A snapshot built by the widget's own fetch has no trend analysis (only the app computes one)
+    // and carries this headline as the marker. Views omit the trend row for it.
+    static let widgetRefreshHeadline = "Widget Refresh"
+
+    var hasTrend: Bool { trendHeadline != Self.widgetRefreshHeadline }
+
     // MARK: - Wind display (replicates Wind.displayString for widget use)
     var windDisplayString: String {
         if windReported == false { return "—" }
@@ -223,7 +230,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             dewpoint: raw.dewp.map { Int($0.rounded()) },
             altimeter: raw.altim.map { $0 * 0.02953 },
             trendDirection: .unknown,
-            trendHeadline: "Widget Refresh",
+            trendHeadline: Self.widgetRefreshHeadline,
             tafAccuracyPct: nil,
             forecastWindDivergenceKt: nil,
             forecastCeilingDivergenceFt: nil,
@@ -231,6 +238,46 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             isAdvisory: false,
             observationTime: metar.observationTime,
             snapshotTime: Date()
+        )
+    }
+}
+
+// MARK: - Widget-refresh merge
+extension WidgetWeatherSnapshot {
+    /// Combine a widget-fetched snapshot with the app-written one for the same airport. Current
+    /// conditions always come from `live`. Trend, TAF accuracy and forecast deviation are
+    /// computed by the app for one specific METAR, so they're reused only when the cached
+    /// snapshot describes the same observation. Otherwise they're omitted, never shown beside a
+    /// newer report.
+    nonisolated static func merge(live: WidgetWeatherSnapshot, cached: WidgetWeatherSnapshot?) -> WidgetWeatherSnapshot {
+        guard let cached else { return live }
+        let sameObservation = cached.observationTime == live.observationTime
+        return WidgetWeatherSnapshot(
+            icao: live.icao,
+            iata: cached.iata ?? live.iata,
+            airportName: cached.airportName.count > live.airportName.count ? cached.airportName : live.airportName,
+            flightCategory: live.flightCategory,
+            windDirection: live.windDirection,
+            windSpeed: live.windSpeed,
+            windGust: live.windGust,
+            windIsVariable: live.windIsVariable,
+            windReported: live.windReported,
+            visibility: live.visibility,
+            visibilityReported: live.visibilityReported,
+            visibilityIsGreaterThan: live.visibilityIsGreaterThan,
+            ceilingFeet: live.ceilingFeet,
+            temperature: live.temperature,
+            dewpoint: live.dewpoint,
+            altimeter: live.altimeter,
+            trendDirection: sameObservation ? cached.trendDirection : live.trendDirection,
+            trendHeadline: sameObservation ? cached.trendHeadline : live.trendHeadline,
+            tafAccuracyPct: sameObservation ? cached.tafAccuracyPct : nil,
+            forecastWindDivergenceKt: sameObservation ? cached.forecastWindDivergenceKt : nil,
+            forecastCeilingDivergenceFt: sameObservation ? cached.forecastCeilingDivergenceFt : nil,
+            forecastVisibilityDivergenceSM: sameObservation ? cached.forecastVisibilityDivergenceSM : nil,
+            isAdvisory: live.isAdvisory,
+            observationTime: live.observationTime,
+            snapshotTime: live.snapshotTime
         )
     }
 }

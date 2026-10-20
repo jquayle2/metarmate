@@ -171,3 +171,67 @@ struct WidgetReportAgeTests {
         #expect(WidgetWeatherSnapshot.ageText(minutes: 720) == "12+ h")
     }
 }
+
+// Widget-refresh merge (launch-hardening A1): the app's trend, TAF accuracy and forecast
+// deviation are reused only for the same observation; otherwise they're omitted.
+struct WidgetRefreshMergeTests {
+
+    private func live() throws -> WidgetWeatherSnapshot {
+        let raw = try JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":1760046780,"icaoId":"KTST","rawOb":"METAR KTST 092153Z 27008KT 10SM CLR 20/10 A2992","visib":"10+","wdir":270,"wspd":8,"fltCat":"VFR"}"#.utf8))
+        return try #require(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KTST"))
+    }
+
+    /// An app-written snapshot for `observationTime`, with trend/TAF/deviation filled in.
+    private func appSnapshot(_ s: WidgetWeatherSnapshot, observationTime: Date) -> WidgetWeatherSnapshot {
+        WidgetWeatherSnapshot(
+            icao: s.icao, iata: "TST", airportName: "Test Field", flightCategory: s.flightCategory,
+            windDirection: s.windDirection, windSpeed: s.windSpeed, windGust: s.windGust,
+            windIsVariable: s.windIsVariable, windReported: s.windReported,
+            visibility: s.visibility, visibilityReported: s.visibilityReported,
+            visibilityIsGreaterThan: s.visibilityIsGreaterThan, ceilingFeet: s.ceilingFeet,
+            temperature: s.temperature, dewpoint: s.dewpoint, altimeter: s.altimeter,
+            trendDirection: .deteriorating, trendHeadline: "Ceiling Falling",
+            tafAccuracyPct: 82, forecastWindDivergenceKt: 7, forecastCeilingDivergenceFt: -500,
+            forecastVisibilityDivergenceSM: -1.5, isAdvisory: false,
+            observationTime: observationTime, snapshotTime: observationTime
+        )
+    }
+
+    @Test func liveFetchHasNoTrend() throws {
+        #expect(try live().hasTrend == false)
+    }
+
+    @Test func sameObservationKeepsAppAnalysis() throws {
+        let l = try live()
+        let merged = WidgetWeatherSnapshot.merge(live: l, cached: appSnapshot(l, observationTime: l.observationTime))
+        #expect(merged.hasTrend)
+        #expect(merged.trendHeadline == "Ceiling Falling")
+        #expect(merged.trendDirection == .deteriorating)
+        #expect(merged.tafAccuracyPct == 82)
+        #expect(merged.forecastWindDivergenceKt == 7)
+        #expect(merged.forecastCeilingDivergenceFt == -500)
+        #expect(merged.forecastVisibilityDivergenceSM == -1.5)
+        #expect(merged.airportName == "Test Field")
+    }
+
+    @Test func olderObservationOmitsAppAnalysis() throws {
+        let l = try live()
+        let older = l.observationTime.addingTimeInterval(-3600)
+        let merged = WidgetWeatherSnapshot.merge(live: l, cached: appSnapshot(l, observationTime: older))
+        #expect(merged.hasTrend == false)
+        #expect(merged.trendDirection == .unknown)
+        #expect(merged.tafAccuracyPct == nil)
+        #expect(merged.forecastWindDivergenceKt == nil)
+        #expect(merged.forecastCeilingDivergenceFt == nil)
+        #expect(merged.forecastVisibilityDivergenceSM == nil)
+        #expect(merged.observationTime == l.observationTime)
+        #expect(merged.airportName == "Test Field")   // identity still comes from the cache
+    }
+
+    @Test func noCacheIsLive() throws {
+        let l = try live()
+        let merged = WidgetWeatherSnapshot.merge(live: l, cached: nil)
+        #expect(merged.hasTrend == false)
+        #expect(merged.observationTime == l.observationTime)
+    }
+}

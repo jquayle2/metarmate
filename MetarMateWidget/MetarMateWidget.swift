@@ -172,7 +172,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         if let icao {
             let cached = WidgetDataManager.load(icao: icao)
             if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
-                let merged = mergeWithCached(live: live, cached: cached)
+                let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
                 WidgetDataManager.save(snapshot: merged, reload: false)
                 return MetarMateEntry(date: .now, snapshot: merged, requestedICAO: nil)
             }
@@ -190,7 +190,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         if let icao {
             let cached = WidgetDataManager.load(icao: icao)
             if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
-                let merged = mergeWithCached(live: live, cached: cached)
+                let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
                 WidgetDataManager.save(snapshot: merged, reload: false)
                 snapshot = merged
             } else {
@@ -216,37 +216,6 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     private func resolveICAO(for configuration: SelectAirportIntent) -> String? {
         guard let code = configuration.airportCode, !code.isEmpty else { return nil }
         return code.uppercased().trimmingCharacters(in: .whitespaces)
-    }
-
-    private func mergeWithCached(live: WidgetWeatherSnapshot, cached: WidgetWeatherSnapshot?) -> WidgetWeatherSnapshot {
-        guard let cached else { return live }
-        return WidgetWeatherSnapshot(
-            icao: live.icao,
-            iata: cached.iata ?? live.iata,
-            airportName: cached.airportName.count > live.airportName.count ? cached.airportName : live.airportName,
-            flightCategory: live.flightCategory,
-            windDirection: live.windDirection,
-            windSpeed: live.windSpeed,
-            windGust: live.windGust,
-            windIsVariable: live.windIsVariable,
-            windReported: live.windReported,
-            visibility: live.visibility,
-            visibilityReported: live.visibilityReported,
-            visibilityIsGreaterThan: live.visibilityIsGreaterThan,
-            ceilingFeet: live.ceilingFeet,
-            temperature: live.temperature,
-            dewpoint: live.dewpoint,
-            altimeter: live.altimeter,
-            trendDirection: live.trendDirection != .unknown ? live.trendDirection : cached.trendDirection,
-            trendHeadline: live.trendHeadline != "Widget Refresh" ? live.trendHeadline : cached.trendHeadline,
-            tafAccuracyPct: cached.tafAccuracyPct,
-            forecastWindDivergenceKt: cached.forecastWindDivergenceKt,
-            forecastCeilingDivergenceFt: cached.forecastCeilingDivergenceFt,
-            forecastVisibilityDivergenceSM: cached.forecastVisibilityDivergenceSM,
-            isAdvisory: live.isAdvisory,
-            observationTime: live.observationTime,
-            snapshotTime: live.snapshotTime
-        )
     }
 }
 
@@ -366,9 +335,11 @@ struct LockScreenRectangularView: View {
                         HStack(spacing: 4) {
                             Text(snap.windDisplayString)
                                 .font(.system(.caption, design: .monospaced))
-                            Image(systemName: snap.trendDirection.systemImage)
-                                .font(.caption2)
-                                .foregroundStyle(trendColor(snap.trendDirection))
+                            if snap.hasTrend {
+                                Image(systemName: snap.trendDirection.systemImage)
+                                    .font(.caption2)
+                                    .foregroundStyle(trendColor(snap.trendDirection))
+                            }
                             Spacer()
                         }
                     }
@@ -546,15 +517,17 @@ struct HomeScreenSmallView: View {
 
         Spacer(minLength: 0)
 
-        // Trend (full width)
-        HStack(spacing: 3) {
-            Image(systemName: snap.trendDirection.systemImage)
-                .font(.caption2)
-                .foregroundStyle(trendColor(snap.trendDirection))
-            Text(shortTrendLabel(snap.trendHeadline))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        // Trend (full width); omitted when the app hasn't analysed this observation
+        if snap.hasTrend {
+            HStack(spacing: 3) {
+                Image(systemName: snap.trendDirection.systemImage)
+                    .font(.caption2)
+                    .foregroundStyle(trendColor(snap.trendDirection))
+                Text(shortTrendLabel(snap.trendHeadline))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
     }
 }
@@ -764,17 +737,19 @@ struct HomeScreenMediumView: View {
 
     private func trendColumn(_ snap: WidgetWeatherSnapshot) -> some View {
         VStack(alignment: .trailing, spacing: 5) {
-            // Trend headline
-            HStack(spacing: 3) {
-                Image(systemName: snap.trendDirection.systemImage)
-                    .font(.caption)
-                    .foregroundStyle(trendColor(snap.trendDirection))
-                Text(snap.trendHeadline)
-                    .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(trendColor(snap.trendDirection))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.trailing)
-                    .fixedSize(horizontal: false, vertical: true)
+            // Trend headline; omitted when the app hasn't analysed this observation
+            if snap.hasTrend {
+                HStack(spacing: 3) {
+                    Image(systemName: snap.trendDirection.systemImage)
+                        .font(.caption)
+                        .foregroundStyle(trendColor(snap.trendDirection))
+                    Text(snap.trendHeadline)
+                        .font(.system(.caption, weight: .medium))
+                        .foregroundStyle(trendColor(snap.trendDirection))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             // Forecast deviation lines
