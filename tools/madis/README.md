@@ -50,6 +50,20 @@ Records timestamp, status, bytes and attempts in `logs/access_probe_<UTC>.csv`. 
 tools/madis/.venv/bin/python tools/madis/access_probe.py
 ```
 
+**omo_dump.py**: MADIS 1-minute ASOS (OMO, "HF-METAR") hourly netCDF to per-station JSON
+(`data/omo_dump.json`): converted units, QC (DD) flags, sensor status, raw OMO message. Prints
+per-station cadence and field fill. Files come from the public, anonymously browseable
+`https://madis-data.ncep.noaa.gov/madisPublic1/data/LDAD/hfmetar/netCDF/` (`YYYYMMDD_HHMM.gz`).
+Download one at a time with a timeout, for example:
+
+```
+curl -4 --max-time 20 --retry 2 -A "MetarMate-research (jquayle2 on GitHub)" -o tools/madis/data/hfmetar/20261019_2200.gz https://madis-data.ncep.noaa.gov/madisPublic1/data/LDAD/hfmetar/netCDF/20261019_2200.gz
+```
+
+```
+tools/madis/.venv/bin/python tools/madis/omo_dump.py tools/madis/data/hfmetar/20261019_2200.gz
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
