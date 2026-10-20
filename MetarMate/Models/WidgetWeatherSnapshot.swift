@@ -56,15 +56,6 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     let observationTime: Date       // when the METAR was observed (advisory: its valid time)
     let snapshotTime: Date          // when the app wrote this snapshot
 
-    // MARK: - Staleness
-    var isStale: Bool {
-        Date().timeIntervalSince(snapshotTime) > 3600   // older than 1 hour
-    }
-
-    var age: TimeInterval {
-        Date().timeIntervalSince(observationTime)
-    }
-
     // MARK: - Report age (DECISIONS_2026-10 #4)
     // Age comes from observationTime, never from when the snapshot was fetched or written. It is
     // evaluated at a supplied date (the timeline entry's), not Date(), so entries scheduled for

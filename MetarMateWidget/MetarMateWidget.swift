@@ -77,6 +77,40 @@ private enum ObsTimeFormat {
     }
 }
 
+// MARK: - Report age presentation (DECISIONS_2026-10 #4)
+// Shared by every family so the states can't drift. Late: conditions stay, with a warning.
+// No current report: no category, no conditions, only the age. Text names the source (METAR or
+// Advisory) so a stale advisory is never shown as, or without, its age.
+
+private let noCurrentGrey = Color.gray
+
+private extension WidgetWeatherSnapshot {
+    var sourceNoun: String { isAdvisory ? "Advisory" : "METAR" }
+
+    /// "METAR late: 68 min old"
+    func lateText(minutes: Int) -> String { "\(sourceNoun) late: \(minutes) min old" }
+
+    /// "No current METAR" / "No current advisory"
+    var noCurrentText: String { isAdvisory ? "No current advisory" : "No current METAR" }
+
+    /// "Last report 2 h 10 min ago"
+    func lastReportText(minutes: Int) -> String {
+        "Last report \(WidgetWeatherSnapshot.ageText(minutes: minutes)) ago"
+    }
+
+    /// Category colour, or grey once there's no current report.
+    func categoryColor(_ age: ReportAge) -> Color {
+        if case .noCurrent = age { return noCurrentGrey }
+        return flightCategory.swiftUIColor
+    }
+
+    /// Category label, or "—" once there's no current report.
+    func categoryLabel(_ age: ReportAge) -> String {
+        if case .noCurrent = age { return "—" }
+        return flightCategory.rawValue
+    }
+}
+
 /// Deep link opened by MetarMateApp.onOpenURL to jump straight to this airport's detail page —
 /// a tap outside the widget's interactive buttons follows this instead of just opening the app
 /// to wherever it was last left.
@@ -241,18 +275,28 @@ private struct ProRequiredView: View {
 struct LockScreenCircularView: View {
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?
+    let date: Date
 
     var body: some View {
         if let snap = snapshot {
+            let age = snap.reportAge(at: date)
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
-                    Text(snap.flightCategory.rawValue)
+                    Text(snap.categoryLabel(age))
                         .font(.system(.title3, design: .rounded, weight: .bold))
-                        .foregroundStyle(snap.flightCategory.swiftUIColor)
+                        .foregroundStyle(snap.categoryColor(age))
                     Text(snap.icao)
                         .font(.system(.caption2, design: .monospaced, weight: .medium))
                         .foregroundStyle(.secondary)
+                }
+            }
+            // Late: too small for text, so a "!" marks it.
+            .overlay(alignment: .topTrailing) {
+                if case .late = age {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
                 }
             }
         } else {
@@ -272,39 +316,61 @@ struct LockScreenCircularView: View {
 struct LockScreenRectangularView: View {
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?
+    let date: Date
 
     var body: some View {
         if let snap = snapshot {
+            let age = snap.reportAge(at: date)
             HStack(spacing: 6) {
                 // Left: category color strip
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(snap.flightCategory.swiftUIColor)
+                    .fill(snap.categoryColor(age))
                     .frame(width: 4)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    // Top row: ICAO + category
-                    HStack(spacing: 4) {
+                if case .noCurrent(let minutes) = age {
+                    // No current report: the age replaces the conditions.
+                    VStack(alignment: .leading, spacing: 1) {
                         Text(snap.icao)
                             .font(.system(.headline, design: .monospaced, weight: .bold))
-                        Text(snap.flightCategory.rawValue)
-                            .font(.system(.caption, design: .rounded, weight: .semibold))
-                            .foregroundStyle(snap.flightCategory.swiftUIColor)
-                        Spacer()
-                        if let pct = snap.tafAccuracyPct {
-                            Text("TAF \(pct)%")
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    // Bottom row: wind + trend
-                    HStack(spacing: 4) {
-                        Text(snap.windDisplayString)
-                            .font(.system(.caption, design: .monospaced))
-                        Image(systemName: snap.trendDirection.systemImage)
+                        Text(snap.noCurrentText)
+                            .font(.system(.caption, weight: .semibold))
+                        Text(snap.lastReportText(minutes: minutes))
                             .font(.caption2)
-                            .foregroundStyle(trendColor(snap.trendDirection))
-                        Spacer()
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    Spacer(minLength: 0)
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        // Top row: ICAO + category
+                        HStack(spacing: 4) {
+                            Text(snap.icao)
+                                .font(.system(.headline, design: .monospaced, weight: .bold))
+                            Text(snap.flightCategory.rawValue)
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(snap.flightCategory.swiftUIColor)
+                            Spacer()
+                            if case .late(let minutes) = age {
+                                Text("LATE \(minutes)m")
+                                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.orange)
+                            } else if let pct = snap.tafAccuracyPct {
+                                Text("TAF \(pct)%")
+                                    .font(.system(.caption2, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Bottom row: wind + trend
+                        HStack(spacing: 4) {
+                            Text(snap.windDisplayString)
+                                .font(.system(.caption, design: .monospaced))
+                            Image(systemName: snap.trendDirection.systemImage)
+                                .font(.caption2)
+                                .foregroundStyle(trendColor(snap.trendDirection))
+                            Spacer()
+                        }
                     }
                 }
             }
@@ -326,11 +392,19 @@ struct LockScreenRectangularView: View {
 struct LockScreenInlineView: View {
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?
+    let date: Date
 
     var body: some View {
         if let snap = snapshot {
-            let arrow = trendArrow(snap.trendDirection)
-            Text("\(snap.icao) \(snap.flightCategory.rawValue) \(snap.windDisplayString) \(arrow)")
+            switch snap.reportAge(at: date) {
+            case .current:
+                let arrow = trendArrow(snap.trendDirection)
+                Text("\(snap.icao) \(snap.flightCategory.rawValue) \(snap.windDisplayString) \(arrow)")
+            case .late(let minutes):
+                Text("\(snap.icao) · late \(minutes)m")
+            case .noCurrent:
+                Text("\(snap.icao) · \(snap.isAdvisory ? "no current advisory" : "no current METAR")")
+            }
         } else {
             Text("MetarMate")
         }
@@ -343,15 +417,17 @@ struct LockScreenInlineView: View {
 struct HomeScreenSmallView: View {
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?
+    let date: Date
 
     var body: some View {
         if !WidgetDataManager.loadProStatus() {
             ProRequiredView()
         } else if let snap = snapshot {
+            let age = snap.reportAge(at: date)
             HStack(spacing: 0) {
                 // Left-edge category strip
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(snap.flightCategory.swiftUIColor)
+                    .fill(snap.categoryColor(age))
                     .frame(width: 4)
                     .padding(.trailing, 8)
 
@@ -362,12 +438,12 @@ struct HomeScreenSmallView: View {
                             .font(.system(.subheadline, design: .monospaced, weight: .bold))
                             .minimumScaleFactor(0.7)
                             .lineLimit(1)
-                        Text(snap.flightCategory.rawValue)
+                        Text(snap.categoryLabel(age))
                             .font(.system(.caption2, design: .rounded, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
+                            .background(snap.categoryColor(age), in: RoundedRectangle(cornerRadius: 4))
                         Spacer()
                         Button(intent: RefreshWidgetIntent()) {
                             Image(systemName: "arrow.clockwise")
@@ -377,55 +453,35 @@ struct HomeScreenSmallView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Wind
-                    HStack(spacing: 4) {
-                        Image(systemName: "wind")
+                    if case .noCurrent(let minutes) = age {
+                        // No current report: the age replaces the conditions and trend.
+                        Text(snap.noCurrentText)
+                            .font(.system(.caption, weight: .semibold))
+                        Text(snap.lastReportText(minutes: minutes))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(snap.windDisplayString)
-                            .font(.system(.callout, design: .monospaced))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    } else {
+                        smallConditions(snap)
                     }
 
-                    // Visibility + ceiling
-                    HStack(spacing: 8) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "eye")
-                                .font(.system(size: 9))
-                            Text(snap.visibilityDisplay)
-                                .font(.system(.caption2, weight: .medium))
-                        }
-                        .foregroundStyle(.secondary)
-                        if let ceil = snap.ceilingFeet {
-                            HStack(spacing: 2) {
-                                Image(systemName: "cloud")
-                                    .font(.system(size: 9))
-                                Text(compactCeiling(ceil))
-                                    .font(.system(.caption2, weight: .medium))
-                            }
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    // Trend (full width)
-                    HStack(spacing: 3) {
-                        Image(systemName: snap.trendDirection.systemImage)
-                            .font(.caption2)
-                            .foregroundStyle(trendColor(snap.trendDirection))
-                        Text(shortTrendLabel(snap.trendHeadline))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    // Observation time centered at bottom; replaced by the warning when late.
+                    if case .late(let minutes) = age {
+                        Text("\(snap.sourceNoun) late · \(minutes) min")
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(.orange)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    } else {
+                        Text(ObsTimeFormat.string(snap.observationTime))
+                            .font(.system(size: 9, design: .monospaced))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(.quaternary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
-
-                    // Observation time centered at bottom
-                    Text(ObsTimeFormat.string(snap.observationTime))
-                        .font(.system(size: 9, design: .monospaced))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(.quaternary)
-                        .frame(maxWidth: .infinity, alignment: .center)
 
                     // Advisory indicator
                     if snap.isAdvisory {
@@ -455,6 +511,52 @@ struct HomeScreenSmallView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
+
+    /// Wind, visibility/ceiling and trend: shown while the report is current or late.
+    @ViewBuilder
+    private func smallConditions(_ snap: WidgetWeatherSnapshot) -> some View {
+        // Wind
+        HStack(spacing: 4) {
+            Image(systemName: "wind")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(snap.windDisplayString)
+                .font(.system(.callout, design: .monospaced))
+        }
+
+        // Visibility + ceiling
+        HStack(spacing: 8) {
+            HStack(spacing: 2) {
+                Image(systemName: "eye")
+                    .font(.system(size: 9))
+                Text(snap.visibilityDisplay)
+                    .font(.system(.caption2, weight: .medium))
+            }
+            .foregroundStyle(.secondary)
+            if let ceil = snap.ceilingFeet {
+                HStack(spacing: 2) {
+                    Image(systemName: "cloud")
+                        .font(.system(size: 9))
+                    Text(compactCeiling(ceil))
+                        .font(.system(.caption2, weight: .medium))
+                }
+                .foregroundStyle(.secondary)
+            }
+        }
+
+        Spacer(minLength: 0)
+
+        // Trend (full width)
+        HStack(spacing: 3) {
+            Image(systemName: snap.trendDirection.systemImage)
+                .font(.caption2)
+                .foregroundStyle(trendColor(snap.trendDirection))
+            Text(shortTrendLabel(snap.trendHeadline))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
 }
 
 // MARK: - Widget Configurations
@@ -464,7 +566,7 @@ struct MetarMateLockScreenCircular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenCircularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
+            LockScreenCircularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Flight Category")
@@ -478,7 +580,7 @@ struct MetarMateLockScreenRectangular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenRectangularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
+            LockScreenRectangularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
@@ -492,7 +594,7 @@ struct MetarMateLockScreenInline: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenInlineView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
+            LockScreenInlineView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Weather Inline")
@@ -506,7 +608,7 @@ struct MetarMateHomeSmall: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
+            HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
                 .containerBackground(.fill.tertiary, for: .widget)
                 .widgetURL(detailURL(for: entry.snapshot))
         }
@@ -522,15 +624,17 @@ struct MetarMateHomeSmall: Widget {
 struct HomeScreenMediumView: View {
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?
+    let date: Date
 
     var body: some View {
         if !WidgetDataManager.loadProStatus() {
             ProRequiredView()
         } else if let snap = snapshot {
+            let age = snap.reportAge(at: date)
             HStack(spacing: 0) {
                 // Left-edge category strip
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(snap.flightCategory.swiftUIColor)
+                    .fill(snap.categoryColor(age))
                     .frame(width: 4)
                     .padding(.trailing, 10)
 
@@ -540,52 +644,42 @@ struct HomeScreenMediumView: View {
                     HStack(spacing: 6) {
                         Text(snap.icao)
                             .font(.system(.title2, design: .monospaced, weight: .bold))
-                        Text(snap.flightCategory.rawValue)
+                        Text(snap.categoryLabel(age))
                             .font(.system(.caption, design: .rounded, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(snap.flightCategory.swiftUIColor, in: RoundedRectangle(cornerRadius: 4))
+                            .background(snap.categoryColor(age), in: RoundedRectangle(cornerRadius: 4))
                     }
 
-                    // Wind
-                    HStack(spacing: 4) {
-                        Image(systemName: "wind")
+                    if case .noCurrent(let minutes) = age {
+                        // No current report: the age replaces the conditions.
+                        Text(snap.noCurrentText)
+                            .font(.system(.callout, weight: .semibold))
+                        Text(snap.lastReportText(minutes: minutes))
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(snap.windDisplayString)
-                            .font(.system(.callout, design: .monospaced, weight: .medium))
-                    }
-
-                    // Gust spread
-                    if let gust = snap.windGust {
-                        let spread = gust - snap.windSpeed
-                        Text("Gust spread: \(spread) kt")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // Conditions row
-                    HStack(spacing: 10) {
-                        if let ceil = snap.ceilingFeet {
-                            Label("\(ceil.formatted()) ft", systemImage: "cloud")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        Label(snap.visibilityReported == false ? "—" : "\(snap.visibilityDisplay) SM", systemImage: "eye")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    } else {
+                        mediumConditions(snap)
                     }
 
                     Spacer(minLength: 0)
 
-                    // Bottom: observation time + advisory
+                    // Bottom: observation time (the warning when late) + advisory
                     HStack(spacing: 6) {
-                        Text(ObsTimeFormat.string(snap.observationTime))
-                            .font(.system(.caption2, design: .monospaced))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .foregroundStyle(.tertiary)
+                        if case .late(let minutes) = age {
+                            Text(snap.lateText(minutes: minutes))
+                                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .foregroundStyle(.orange)
+                        } else {
+                            Text(ObsTimeFormat.string(snap.observationTime))
+                                .font(.system(.caption2, design: .monospaced))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .foregroundStyle(.tertiary)
+                        }
                         if snap.isAdvisory {
                             Text("~Advisory")
                                 .font(.system(.caption2, design: .rounded))
@@ -596,78 +690,12 @@ struct HomeScreenMediumView: View {
 
                 Spacer(minLength: 8)
 
-                // Right column: trend + forecast deviation + TAF
-                VStack(alignment: .trailing, spacing: 5) {
-                    // Trend headline
-                    HStack(spacing: 3) {
-                        Image(systemName: snap.trendDirection.systemImage)
-                            .font(.caption)
-                            .foregroundStyle(trendColor(snap.trendDirection))
-                        Text(snap.trendHeadline)
-                            .font(.system(.caption, weight: .medium))
-                            .foregroundStyle(trendColor(snap.trendDirection))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.trailing)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    // Forecast deviation lines
-                    let hasDeviations = hasAnyDeviation(snap)
-                    if hasDeviations {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
-                                deviationRow(
-                                    label: "Wind",
-                                    value: "\(windDiv > 0 ? "+" : "")\(windDiv) kt",
-                                    severity: abs(windDiv) > 10 ? .significant : .minor
-                                )
-                            }
-                            if let ceilDiv = snap.forecastCeilingDivergenceFt, abs(ceilDiv) > 300 {
-                                deviationRow(
-                                    label: "Ceil",
-                                    value: "\(ceilDiv > 0 ? "+" : "")\(ceilDiv) ft",
-                                    severity: abs(ceilDiv) > 800 ? .significant : .minor
-                                )
-                            }
-                            if let visDiv = snap.forecastVisibilityDivergenceSM, abs(visDiv) > 0.5 {
-                                deviationRow(
-                                    label: "Vis",
-                                    value: "\(visDiv > 0 ? "+" : "")\(String(format: "%g", visDiv)) SM",
-                                    severity: abs(visDiv) > 2.0 ? .significant : .minor
-                                )
-                            }
-                        }
-                    } else if snap.tafAccuracyPct != nil {
-                        HStack(spacing: 3) {
-                            Image(systemName: "checkmark.circle")
-                                .font(.caption2)
-                                .foregroundStyle(.green)
-                            Text("Fcst on target")
-                                .font(.caption2)
-                                .foregroundStyle(.green)
-                        }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    // TAF accuracy
-                    if let pct = snap.tafAccuracyPct {
-                        HStack(spacing: 3) {
-                            Text("TAF")
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                            Text("\(pct)%")
-                                .font(.system(.caption, design: .rounded, weight: .semibold))
-                                .foregroundStyle(tafColor(pct))
-                        }
-                    }
-
-                    // Staleness
-                    if snap.isStale {
-                        Text("Stale data")
-                            .font(.caption2)
-                            .foregroundStyle(.red.opacity(0.8))
-                    }
+                // Right column: trend + forecast deviation + TAF, only while there's a current
+                // (or late) report to describe.
+                if case .noCurrent = age {
+                    EmptyView()
+                } else {
+                    trendColumn(snap)
                 }
 
                 // Its own fixed-width slot, not an overlay, so it can't sit on top of the trend
@@ -701,6 +729,107 @@ struct HomeScreenMediumView: View {
         }
     }
 
+    /// Wind, gust spread, ceiling and visibility: shown while the report is current or late.
+    @ViewBuilder
+    private func mediumConditions(_ snap: WidgetWeatherSnapshot) -> some View {
+        // Wind
+        HStack(spacing: 4) {
+            Image(systemName: "wind")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(snap.windDisplayString)
+                .font(.system(.callout, design: .monospaced, weight: .medium))
+        }
+
+        // Gust spread
+        if let gust = snap.windGust {
+            let spread = gust - snap.windSpeed
+            Text("Gust spread: \(spread) kt")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+
+        // Conditions row
+        HStack(spacing: 10) {
+            if let ceil = snap.ceilingFeet {
+                Label("\(ceil.formatted()) ft", systemImage: "cloud")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Label(snap.visibilityReported == false ? "—" : "\(snap.visibilityDisplay) SM", systemImage: "eye")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func trendColumn(_ snap: WidgetWeatherSnapshot) -> some View {
+        VStack(alignment: .trailing, spacing: 5) {
+            // Trend headline
+            HStack(spacing: 3) {
+                Image(systemName: snap.trendDirection.systemImage)
+                    .font(.caption)
+                    .foregroundStyle(trendColor(snap.trendDirection))
+                Text(snap.trendHeadline)
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(trendColor(snap.trendDirection))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Forecast deviation lines
+            let hasDeviations = hasAnyDeviation(snap)
+            if hasDeviations {
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
+                        deviationRow(
+                            label: "Wind",
+                            value: "\(windDiv > 0 ? "+" : "")\(windDiv) kt",
+                            severity: abs(windDiv) > 10 ? .significant : .minor
+                        )
+                    }
+                    if let ceilDiv = snap.forecastCeilingDivergenceFt, abs(ceilDiv) > 300 {
+                        deviationRow(
+                            label: "Ceil",
+                            value: "\(ceilDiv > 0 ? "+" : "")\(ceilDiv) ft",
+                            severity: abs(ceilDiv) > 800 ? .significant : .minor
+                        )
+                    }
+                    if let visDiv = snap.forecastVisibilityDivergenceSM, abs(visDiv) > 0.5 {
+                        deviationRow(
+                            label: "Vis",
+                            value: "\(visDiv > 0 ? "+" : "")\(String(format: "%g", visDiv)) SM",
+                            severity: abs(visDiv) > 2.0 ? .significant : .minor
+                        )
+                    }
+                }
+            } else if snap.tafAccuracyPct != nil {
+                HStack(spacing: 3) {
+                    Image(systemName: "checkmark.circle")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                    Text("Fcst on target")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            // TAF accuracy
+            if let pct = snap.tafAccuracyPct {
+                HStack(spacing: 3) {
+                    Text("TAF")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Text("\(pct)%")
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
+                        .foregroundStyle(tafColor(pct))
+                }
+            }
+        }
+    }
+
     private func hasAnyDeviation(_ snap: WidgetWeatherSnapshot) -> Bool {
         if let w = snap.forecastWindDivergenceKt, abs(w) > 5 { return true }
         if let c = snap.forecastCeilingDivergenceFt, abs(c) > 300 { return true }
@@ -727,7 +856,7 @@ struct MetarMateHomeMedium: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO)
+            HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
                 .containerBackground(.fill.tertiary, for: .widget)
                 .widgetURL(detailURL(for: entry.snapshot))
         }
