@@ -1,7 +1,7 @@
 # MADIS / 5-minute ASOS findings
 
 Spike brief: `docs/handoffs/MADIS_spike_handoff.md`. Branch `spike/madis-omo`.
-Status: **Phase 1 in progress.** Sections marked *pending* haven't been measured yet.
+Status: **Phase 1 complete (2026-10-20).** Phase 2 waits on Jeff's MADIS account. The recommendation is at the end.
 
 All times are UTC. Station ASOS/AWOS types come from FAA NASR `AWOS.csv` (28-day subscription effective 2026-06-11).
 
@@ -115,7 +115,7 @@ Access probe, 2026-10-20 03:31–03:33Z (`tools/madis/access_probe.py`; IPv4 for
 
 ### api.weather.gov / aviationweather.gov
 
-Both are anonymous over HTTPS with a descriptive User-Agent. *Pending:* the error and availability rates come from the logger.
+Both are anonymous over HTTPS with a descriptive User-Agent. In the logger run (02:56–06:19Z, 60 s polls, 20 s timeout, ≤2 retries), the error log for both sources is empty: every request got an HTTP response. api.weather.gov's failure was stale data behind HTTP 200 (A2), which the error log can't catch.
 
 ---
 
@@ -134,7 +134,12 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 - At 2026-10-20 03:26Z, the newest obs for **every** station checked was 00:10Z (KSEA 00:05Z). That includes the 9 spike stations plus KJFK, KORD, KMIA and KSEA. All responses were **HTTP 200**. AWC had current 0251–0253Z METARs for the same stations.
 - Before the full stall, there were gaps at every station simultaneously: 18:55→19:40Z and 21:35→22:35Z. METAR-bearing obs (`rawMessage`) stopped after ~17:56Z.
 - A client can't detect this from status codes. It has to compare obs age itself.
-- Stall duration and recovery time: *pending* (logger running to 06:24Z; see Q3).
+- **Stall duration and recovery** (`compare_sources.py`, 02:56–06:19Z, both CSVs merged):
+  - Every logger start (02:56Z and 03:24Z) saw newest obs 00:10Z at all 9 stations.
+  - The first newer obs appeared at **04:19:40Z** (KVGT/KLAS, obs 03:50Z). By **04:24:41Z** all 9 stations were back. So no new data reached a client for **~4 h 10 min** (newest obs 00:10Z → first new obs visible 04:19Z).
+  - After recovery the newest obs ran 03:30Z onward. The 00:15–03:25Z obs never showed up in the `limit=5` window. Whether they were backfilled is unknown.
+  - Latency after recovery (first seen − obs time, new obs seen within 30 min, n=91): median **1,483 s (~25 min)**, min 882 s, max 1,784 s. That's slow even when healthy.
+  - KBVU went stale again after its 03:35Z obs.
 
 ### A3. Altimeter missing at KLAS, KHND, KBVU
 
@@ -183,7 +188,7 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 - **NOT COVERED:** KIFP 2149Z `20004G11KT` (KIFP isn't in the OMO feed).
 - The OMO KIGM records at 22:45/22:50/22:55 are **value-for-value identical** to api.weather.gov's 5-minute obs. That supports the hypothesis that api.weather.gov's 5-minute obs are OMO, and that the missing gust is missing upstream.
 - Positive control: OMO does carry gusts when the sensor reports one. KEED 22:40Z `060/09 G14` (DD `C`). No KEED METAR that hour had a gust.
-- Caveat: hfmetar files store only the 5-minute marks, so a gust at the minute in between (22:51) isn't visible. n=1, calm day. The scale test is pending.
+- Caveat: hfmetar files store only the 5-minute marks, so a gust at the minute in between (22:51) isn't visible. n=1, calm day. **The scale test (S2) confirms the FAIL across 27,560 paired gust METARs.**
 
 ### H4. KSLC sky condition: OMO flattens layers (recorded; Mike's list)
 
@@ -195,15 +200,130 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 - Every KSLC OMO record from 21:45 to 22:55 has **one layer, always OVC**, at 11,000–12,000 ft. The METAR's lower FEW layers are missing and BKN becomes OVC. At 2154Z the ceiling is also one 1,000-ft increment lower than the METAR (OMO was OVC120 at 21:50 and OVC110 at 21:55).
 - Flight category is unaffected (VFR either way). OMO doesn't always flatten layers: KPHX (two layers), KIGM and KLAS match their METARs.
 - **Decision (Jeff, 2026-10-20):** recorded as a systematic sky-condition difference and added to Mike's list. Ceiling/coverage agreement becomes a Phase 2 acceptance check alongside gust.
-- Hypothesis under test: OMO is raw sensor output, while METARs at staffed or augmented stations (KSLC) include observer edits, extra FEW layers, coverage changes and layers above the ceilometer's 12,000 ft limit. Prediction: OMO sky agrees with AUTO METARs and diverges from augmented ones. The scale test is pending.
+- Hypothesis under test: OMO is raw sensor output, while METARs at staffed or augmented stations (KSLC) include observer edits, extra FEW layers, coverage changes and layers above the ceilometer's 12,000 ft limit. Prediction: OMO sky agrees with AUTO METARs and diverges from augmented ones. **Confirmed for layers, not for category (S1).**
 
-### H5. Parsing rule: the CLR / 12,500 ft sentinel
+### H5. Parsing rules: sentinels that are never real values
 
-OMO reports a clear sky as cover `CLR` with layer base **12,500 ft** (3,810 m). It means "no layers detected below 12,000 ft", the ceilometer limit, and is **never a real layer**. A consumer must not show it as a cloud layer or use it as a ceiling or layer height. `omo_dump.py` implements this: the sentinel is dropped from `sky` and reported as `sky_clear_below_12k: true`. api.weather.gov passes the same sentinel through (`cloudLayers: [{"amount": "CLR", "base": 3810 m}]`).
+1. **Sky: CLR / 12,500 ft.** OMO reports a clear sky as cover `CLR` with layer base **12,500 ft** (3,810 m). It means "no layers detected below 12,000 ft", the ceilometer limit, and is **never a real layer**. A consumer must not show it as a cloud layer or use it as a ceiling or layer height. `omo_dump.py` implements this: the sentinel is dropped from `sky` and reported as `sky_clear_below_12k: true`. api.weather.gov passes the same sentinel through (`cloudLayers: [{"amount": "CLR", "base": 3810 m}]`).
+2. **Gust: 254/255 kt with QC flag `X`.** Some stations report a gust of 254 or 255 kt (`255` in the raw OMO message), with `windGustDD = "X"` (failed QC). Across the 120-file archive this happened in **5,559 records**, mostly from a few stations (KFFT 1,440, KTMB 1,440, KRKD 767, KLGA 312). `X` appears on exactly those values and on no other gust: 0 of 126,874 other gust values carry it. Visibility, wind speed and altimeter had no `X`-flagged values. It means "no valid gust" and **must be read as missing, never as a gust**. Read raw, it shows up as a +230 kt gust. Implemented in `omo_dump.py` (`4f56473`) and `scale_compare.py`.
 
-### H6. Question for MADIS support
+### H6. Questions for MADIS support
 
-The OMO page says "MADIS started processing and handling all 1 minute observations in November 2017", but the public hfmetar files hold only the **5-minute marks** (12 records per station-hour). **Is a full 1-minute feed, or a lower-latency feed than the hourly files rewritten every ~5 min, available with an account (FTP/LDM/OPeNDAP/Text-XML)?** This matters for gusts (H3): a METAR gust at :51 is invisible in 5-minute snapshots.
+1. The OMO page says "MADIS started processing and handling all 1 minute observations in November 2017", but the public hfmetar files hold only the **5-minute marks** (12 records per station-hour). **Is a full 1-minute feed, or a lower-latency feed than the hourly files rewritten every ~5 min, available with an account (FTP/LDM/OPeNDAP/Text-XML)?**
+2. **With an account, is true 1-minute data available, including each minute's peak 5-second gust?** That would let a consumer build a METAR-equivalent 10-minute peak gust, which the 5-minute marks can't (S2).
+3. Licensing for display in a paid app behind our proxy (H1).
+
+---
+
+## OMO vs METAR at scale (5-day hfmetar archive)
+
+Tools: `fetch_omo_archive.py`, `fetch_metar_history.py`, `scale_compare.py` (at `fad910b`). Trimmed results: `docs/research/excerpts/scale_results_20261020T1223Z_excerpt.json`. Full JSON and inputs are not committed.
+
+### S0. What was compared
+
+- **OMO archive:** 120 contiguous hourly files, `20261015_1000.gz` to `20261020_0900.gz`, downloaded 2026-10-20 12:16Z. All HTTP 200, 1.13–1.35 MB each, and all decompress cleanly. The archive rolls (the first file was `20261015_0100` at 03:36Z), so the start depends on download time.
+- **METAR history:** aviationweather.gov, one request per station for all 1,023 stations in an OMO file, `hours=124`, fetched 03:48–04:20Z. All HTTP 200, none truncated at 400 results, none empty: 153,570 METARs.
+- **Overlap actually analysed:** **2026-10-15 10:00Z → 2026-10-20 04:18Z, 114.3 h.**
+  - 140,073 METARs from 1,023 stations.
+  - Station-hours with a METAR: **75,243 AUTO, 40,382 augmented.**
+  - METARs with a gust: **17,589 AUTO, 10,040 augmented.**
+- **Pairing:** each METAR to the nearest OMO record for the same station within ±5 min. "AUTO" means the METAR text has the AUTO modifier. "Augmented" means it doesn't (observer involved).
+- **Sky test sample:** 50 always-AUTO stations and 50 never-AUTO stations, CONUS `K` identifiers only, seed 20261020. In the overlap, 459 stations were always AUTO, 98 never AUTO and 356 mixed.
+- **Rules applied:**
+  - CLR/12,500 ft is "nothing below 12,000 ft" (H5.1).
+  - A 254/255 kt `X` gust is missing (H5.2).
+  - OMO records with no sky group at all are excluded, not read as clear: 125 AUTO, 393 augmented.
+
+### S1. Sky / ceiling / flight category: PASS (with caveats)
+
+| Agreement (METAR vs nearest OMO) | AUTO (50 stations) | Augmented (50 stations) |
+|---|---|---|
+| Flight category (FAA: LIFR/IFR/MVFR/VFR) | **98.1%** (6,166 / 6,286) | **98.0%** (5,563 / 5,677) |
+| Ceiling (both none, or within 100 ft below 5,000 / 500 ft at or above) | 96.4% (6,198 / 6,430) | 88.3% (5,106 / 5,784) |
+| Ceiling, both sides limited to layers ≤ 12,000 ft | 96.4% | **95.1%** |
+| Ceiling, only pairs where either side has one | 88.0% (1,702 / 1,934) | 69.0% (1,510 / 2,188) |
+| Layer count / cover sequence | 97.1% / 93.8% | **67.1% / 63.6%** |
+| Layer count / cover sequence, ≤ 12,000 ft | 97.1% / 93.8% | 86.0% / 81.8% |
+
+- **Hypothesis confirmed for layers.** At AUTO stations the METAR's layers essentially *are* the sensor's. At augmented stations, layers diverge. Most of the difference sits above 12,000 ft: observer-added high layers beyond the classic ceilometer range, with nothing in OMO up there. The rest is observer edits below 12,000 ft (coverage changes, added FEW layers, as at KSLC in H4).
+- **The 12,000 ft limit is a caveat, not a rule.** Some ASOS ceilometers report higher. KADF shows 19,000–22,000 ft layers in OMO and its AUTO METAR alike. OMO saying "nothing below 12,000 ft" is not "clear".
+- **Flight category agrees equally in both groups (98%).** The remaining ceiling disagreements are mostly one ceilometer increment or a timing shift (the OMO record is 1–2 min off the METAR). Many fall right after a SPECI.
+- **Direction of the category misses:** AUTO 64 OMO-better / 56 OMO-worse; augmented 64 / 50. Misses of two or more categories: AUTO 11, augmented 16.
+- **METAR IFR/LIFR but OMO VFR (the dangerous direction): 12 pairs.** 11 are SPECIs, issued while conditions were changing fast, with an OMO record 1–3 min away. **The one routine METAR is KMCI:**
+  - METAR `KMCI 151453Z 13003KT 5SM -RA BR BKN003 BKN010 OVC130` → LIFR (BKN003 ceiling).
+  - The OMO record 2 min later has 6 SM, `FEW003 BKN034 OVC045` → VFR.
+  - Same layer height, different amount. The observer's BKN003 makes a 300 ft ceiling; the sensor's FEW003 makes no ceiling below 3,400 ft. A display that trusted OMO here would show VFR under a LIFR METAR. That's the case the product rule below exists to prevent.
+
+### S2. Gust: FAIL as a gust authority (hfmetar 5-minute data)
+
+| Gust METARs (wind group with `G`) | AUTO | Augmented |
+|---|---|---|
+| In overlap / paired with OMO (±5 min) | 17,589 / 17,559 | 10,040 / 10,001 |
+| **Nearest OMO record carries a gust** | **39.5%** (6,944) | **42.1%** (4,213) |
+| Any OMO record from 10 min before to 5 min after carries a gust | 68.3% (11,986) | 73.8% (7,383) |
+| Delta OMO − METAR, nearest record: median / mean / within ±2 kt | −3 / −3.07 / 46.8% | −3 / −3.07 / 44.9% |
+| Delta, largest OMO gust in that window: median / mean / within ±2 kt | −1 / −1.91 / 63.5% | −1 / −1.91 / 63.0% |
+| Delta range (largest in window) | −28 … +12 kt | −16 … +14 kt |
+
+- **Result: FAIL** under the Phase 2 criterion below, which requires every gust METAR to have a gust-bearing OMO record nearby. Most nearest records have no gust. When OMO has a gust it is typically **lower** than the METAR's.
+- **Sampling caveat, measured:** a METAR gust is the peak over the last 10 min, while the hfmetar files keep only the 5-minute marks. Taking the largest gust from every 5-minute mark in the 10-minute window raises coverage to ~70% and cuts the bias to −1 kt. That still leaves **~30% of METAR gusts with no OMO gust at all** and a low bias. Sampling explains part of the gap, not all of it.
+- AUTO and augmented behave the same. The gust comes from the sensor at both, so this is a 5-minute-product issue, not an observer issue.
+- **Hypothesis (untested): Synoptic's HF-ASOS has the same gap.** Per the handoff, Synoptic gets this data from NOAA MADIS. Its HF-ASOS page describes the same product (2-minute average wind, lower precision, ASOS only). If it shares the upstream, it inherits the same gust gap. **Testable only with a Synoptic eval token**, by running the same criterion (`scale_compare.py`'s gust block) on Synoptic data for the same window.
+- Gust from OMO is therefore usable to **warn** (a gust appeared), never to **confirm** there's no gust, and never to lower a METAR gust.
+
+---
+
+## Q3. Freshness
+
+### hfmetar (`freshness_poll.py`, 2026-10-20 03:41–04:41Z, 28 listing polls at 120 s)
+
+- **Path to us:**
+  1. Sensor obs at a 5-minute mark.
+  2. MADIS receives it about **2.3 min** later. In each current-hour download, newest `receivedTime` minus newest `observationTime` was 135–140 s (median per-record lag 139 s in H2).
+  3. It lands in the current-hour file **7.2–11.8 min** after the obs (file `Last-Modified` minus newest obs, 6 file versions).
+  4. We see it **12.0–18.0 min** after the obs (our fetch minus newest obs, measured when a changed file was downloaded: 718, 739, 760, 760, 800 and 1,079 s).
+- **Floor:** with a 2-minute poll, the newest 5-minute value is about **12 min old** when we first have it. Best case for a proxy polling the current-hour file is ~10 min.
+- The hour file rolls at HH:00. The :55 record lands in the *previous* hour's file, which keeps being rewritten until ~HH+2:41. A proxy has to read both files.
+- **CDN inconsistency:**
+  - The listing sometimes advertised a newer mtime than the file served (e.g. listing 04:16, served `Last-Modified` 04:11:15).
+  - Once the listing went *backwards*: 04:21/273K at 04:22:59Z, then 04:16/120K at 04:24:59Z. Edge nodes disagree.
+  - A proxy must key on the newest `observationTime` inside the file, not on the listing or headers.
+- **Availability:** 7 of 28 polls hit a 20 s read timeout (×3 attempts) on the listing or a download, even over IPv4. That's about 1 in 4 polls, so the proxy needs retries, a stale-data check and a fallback to METAR.
+
+### Logger (`compare_sources.py`, 02:56–06:19Z, 60 s polls; rows with `initial=1` excluded)
+
+| Source | New obs | First seen − obs time: median (min–max) | Note |
+|---|---|---|---|
+| aviationweather.gov METAR | 41 | **281 s** (147–641) | AWC `receiptTime − obs` median 200 s |
+| api.weather.gov | 185 (91 seen within 30 min) | **1,483 s** (882–1,784) after recovery | 4 h 10 min stall, see A2 |
+
+---
+
+## App finding: where 5-minute gust and wind feed decisions (read-only, no fixes)
+
+Under-reported gusts (S2) make conditions look **better** than they are. This is the same P1 "unknown or understated shown as good" class as the audit items 4–16 Jeff cited (`docs/AUDIT_metar_taf_findings.md` on `feat/trend-time-spine`).
+
+Exposure: all of this sits behind `isAsosUser`. On build 21 that is off (`FeatureFlags.asosAvailable = false`, P0-4). On `main` / ≤20 it is live for subscribers and during the free window.
+
+Line numbers: `main` / build 21 (`feat/trend-time-spine`).
+
+| # | Site | What the 5-minute gust/wind drives | Failure with an under-reported or missing gust |
+|---|---|---|---|
+| 1 | `AlertPipeline.swift:121-122` / `:128-129` | Alerts use the live ASOS ob **instead of** the METAR whenever the Synoptic fetch succeeds | The METAR gust is dropped entirely for that station |
+| 2 | `AlertConditions.swift:70` / `:71` | `windGust: obs.windGust.map { … }`: nil means "no gust" | Missing is indistinguishable from none |
+| 3 | `GoNoGoEvaluator.swift:70-74` / same | Crosswind factor via `RunwayService.bestRunway(… windGust:)`. `RunwayService.swift:97` uses gust when present, else sustained | XW computed on sustained (or a low gust) can pass the crosswind limit |
+| 4 | `GoNoGoEvaluator.swift:97-98` / `:97` | Gust factor: `windGust ?? windSpeed` | Gust limit tested against sustained wind |
+| 5 | `AlertPipeline.swift:150` / `:157` | Notification body "Back within your minimums" on a NO-GO → GO flip | **The reassuring direction:** a 5-minute ob with no gust can flip a gusty METAR's NO-GO to GO and notify |
+| 6 | `AlertsView.swift:325`, `:355` (`main`) | Alert row wind color and `dddGg` text from `AlertConditions` | Shows no gust, color from sustained only |
+| 7 | `WeatherDetailView.swift:550-552` / `:571-572` | Decoded ASOS wind row: `obs.windGust.map { " gusting …" } ?? ""` | A missing gust renders exactly like no gust |
+| 8 | `WeatherDetailView.swift:719-724` / `:743` | `windConditionColor`: green unless gust, ≥20 kt or 10 kt spread | Missing gust under 20 kt shows **green** |
+| 9 | `WeatherDetailView.swift:329-332`, `:364-366` / `:348-351`, `:383-385` | Wind strip, last 12 obs: bar scale `max(gust ?? speed)`, gust bar only when present | Gusty hour looks steady |
+| 10 | `WeatherDetailView.swift:484-492` / `:505-513` | "Gusts developed: N kt" (METAR had no gust) and "Gusts ±N kt" vs METAR | Warns only if OMO happens to carry a gust. With the −3 kt bias, prints **"Gusts −5 kt"**, which reads as easing |
+| 11 | `WeatherDetailView.swift:475-481` / `:496-502` | "Wind ±N kt" vs METAR | A lower 2-min average prints "Wind −5 kt" (reassuring) |
+| 12 | `WeatherDetailView.swift:495-502` / `:516-523` | "Wind shifted N°" | Direction only; not gust-related, listed for completeness |
+| 13 | `WeatherDetailView.swift:285-307` / `:304-` | `openXWCalc` passes ASOS dir/speed/gust (`&gust=0` when nil) to the external XW app | **No call site on either branch** (dead code). If wired up, a missing gust becomes `gust=0` |
+
+Not ASOS-fed: the detail view's crosswind range and pilot notes (`crosswindDisplays`, `WeatherDetailView.swift:875` on `main`) are called from the METAR and TAF note builders only.
 
 ---
 
@@ -216,6 +336,8 @@ The OMO page says "MADIS started processing and handling all 1 minute observatio
 - **Fail:** any gust METAR with no gust in the nearest OMO record. Report the count and the raw pairs.
 - Apply the same check unchanged to Synoptic if an eval token is obtained.
 - Needs a window with real gusts. A calm day can't pass it, so the result is "not tested" until enough gust METARs have been seen.
+
+**Result on the public hfmetar archive: FAIL** (S2). 27,560 gust METARs were paired. The nearest OMO record carried a gust for 40%, and any record in a 15-minute window for ~70%. Phase 2 reruns the check on account-based data, in case a 1-minute feed exists (H6.2).
 
 ---
 
@@ -235,11 +357,22 @@ Where the current ASOS UI fails this (read-only, line numbers on `feat/trend-tim
 
 This is the same "unknown shown as good" class as audit Findings **6, 7, 8, 12, 13, 15** in `docs/AUDIT_metar_taf_findings.md` (on `feat/trend-time-spine`). Note: the request cited items 9, 10 and 16. In that doc those are the category-color boundary, decoder order dependence and the chip color axis, so I've cited the matching numbers instead. Jeff to confirm.
 
+**Proposed product rule (for Mike to rule on): 5-minute data may warn but never reassure.**
+
+1. A 5-minute value **worse** than the current METAR is shown, labeled as 5-minute ASOS. Worse means higher wind or gust, lower vis or ceiling, or a worse category.
+2. A 5-minute value **better** than the METAR never changes the displayed flight category, go/no-go verdict, alert state or gust. It can appear as a labeled trend, at most. The METAR value stays authoritative until the next METAR/SPECI.
+3. **Displayed gust = max(latest METAR gust while that METAR is current, any 5-minute gust in the last 10 min), labeled by source.** A missing 5-minute gust never lowers or clears it.
+4. Missing is never good (the requirement above).
+
+This rule covers the measured cases: the KMCI LIFR→VFR pair (S1), the −3 kt gust bias and the missing gusts (S2), and app sites 1–11 in the app finding.
+
 **Open questions for Mike:**
 1. Labeling of 5-minute data ("supplemental, not official").
 2. When the 5-minute value and the METAR disagree, which one is shown, and how?
 3. How should "not reported" look for gust, altimeter, vis and ceiling?
-4. **OMO sky condition can differ from the METAR** (H4). OMO can show a single OVC layer where the METAR shows BKN plus lower FEW layers. At augmented stations the METAR may include observer-added layers. Which one should the app show for sky/ceiling, and how is the difference labeled?
+4. **OMO sky condition can differ from the METAR** (H4). OMO can show a single OVC layer where the METAR shows BKN plus lower FEW layers. At augmented stations the METAR may include observer-added layers. Which one should the app show for sky/ceiling, and how is the difference labeled? Scale result (S1): category agrees 98% either way, and layers agree 94% at AUTO stations but 64% at augmented ones.
+5. **Approve or amend the warn-never-reassure rule above**, including the displayed-gust formula and the 10-minute window.
+6. Should 5-minute "worse" signals ever drive alerts/notifications (warn-only), or stay display-only?
 
 ---
 
@@ -249,3 +382,55 @@ This is the same "unknown shown as good" class as audit Findings **6, 7, 8, 12, 
 - `madis_restrictions.shtml` (last updated 24 May 2017): the "notify NOAA before redistributing / web display" rule and the suggested disclaimer apply to **mesonet** providers (Meteorological Surface incl. UrbaNet / National Mesonet), not OMO.
 - `madistosynoptic.shtml` (updated 2026-02-11) lists some state-DOT/university **mesonet** providers that moved to Synoptic. It doesn't mention OMO/ASOS.
 - So far nothing forbids display in a paid app. Labeling ("not METAR") is still a question for Mike.
+
+---
+
+## Q1–Q7 at a glance (Phase 1)
+
+| Q | Answer so far | Where |
+|---|---|---|
+| Q1 Access | hfmetar OMO is anonymous over HTTPS (IPv4 only; ~1 in 4 polls time out). The documented sample dir is 403/503. Text/XML returned 503 at a guessed path, so it's **untested**. FTP timed out. | Q1 |
+| Q2 Content | Every field the app uses from Synoptic is present (wind, gust, vis, sky ≤3 layers, wx, altimeter, T/Td) plus density altitude, RVR and sensor status. Two sentinels to parse (H5). | H1, H2, H5 |
+| Q3 Freshness | hfmetar: 12–18 min from obs to us (floor ~10–12). AWC METAR: ~4.7 min. api.weather.gov: ~25 min when healthy, plus a 4 h stall. | Q3 |
+| Q4 Coverage (100 nm of KVGT) | OMO: KVGT, KLAS, KHND (AWOS-3PT), KIGM, KEED. Not KBVU (AWOS-3), not KIFP (AWOS-3PT). | H2 |
+| Q5 Agreement | Wind, vis, altimeter, T match METAR within rounding/timing. Category 98%. Layers diverge at augmented stations. **Gust fails.** | H2, S1, S2 |
+| Q6 Ops | hfmetar: ~1.1–1.35 MB/h per gz file, ~12,000 records, ~1,030 stations. A proxy polling the current and previous hour every 5 min pulls at most ~29 MB/h (~21 GB/month). The parse and record extraction in `omo_dump.py` is 162 lines of Python, including the CLI. Hosting cost not estimated. Q6 for api.weather.gov/AWC was skipped per Jeff. | H1, Q3 |
+| Q7 Terms | OMO is marked "No restrictions". The file `license` attribute points to the account application. Paid-app proxy display is unconfirmed until MADIS support replies. | H1, Q7 |
+
+---
+
+## Decision matrix
+
+Scores are 1 (poor) to 5 (good), from this spike's measurements. "—" means not measurable in Phase 1.
+
+| Criterion | Synoptic (paid) | MADIS hfmetar netCDF ingest | MADIS Text/XML | api.weather.gov |
+|---|---|---|---|---|
+| Freshness | — (docs: 2–5 min; no token) | 3 (12–18 min to us; ~10 min floor) | — (503, untested) | 1 (~25 min healthy; 4 h stall) |
+| Coverage | — (docs: ASOS only) | 4 (ASOS + some AWOS-3PT; ~1,030 stations) | — | 3 (5 min at ASOS; AWOS stale) |
+| Completeness | — (likely same gust gap; hypothesis) | 3 (all fields; gust fails S2) | — | 1 (gusts, altimeter missing; METARs dropped) |
+| Reliability | — (account expired) | 3 (~25% poll timeouts, CDN inconsistency; retries manage) | 1 (503) | 1 (silent HTTP 200 stall) |
+| Effort | 5 (existing code) | 3 (netCDF ingest + sentinels in a proxy) | — | 4 (JSON) |
+| Cost | 2 ($100/month) | 5 (free; license to confirm) | 5 (free) | 5 (free) |
+
+---
+
+## Recommendation (Phase 1)
+
+**MADIS hfmetar (OMO), ingested by the proxy from the current and previous hourly netCDF files, is viable as the ASOS Updates source** for:
+- wind direction and speed
+- visibility
+- ceiling and flight-category trend
+- altimeter
+- temperature and dewpoint
+
+All of these are subject to the **warn-never-reassure rule** (Product requirement), with **gust taken from the METAR**. A 5-minute gust may raise the displayed gust and never lower or clear it.
+
+- **Primary:** MADIS hfmetar via the proxy. Parse both sentinels (H5). Key freshness on the in-file `observationTime`. Force IPv4, use short timeouts and retries, and treat any value older than ~20 min as stale.
+- **Fallback:** the official METAR from aviationweather.gov, which the app already uses. No second 5-minute source is needed: api.weather.gov is ruled out, and Text/XML is untested.
+- **Synoptic is not justified at this point.** It would cost $100/month for the same upstream (per the handoff). The measured gust gap is in the 5-minute product, and Synoptic probably shares it (S2 hypothesis, testable only with an eval token). Freshness is its one documented advantage (2–5 min vs our measured 12–18 min), and that is worth revisiting only if MADIS support offers no faster or 1-minute feed (H6).
+
+**Conditions before building:**
+1. MADIS support confirms licensing for paid-app display via our proxy (H6.3).
+2. Mike rules on the product rule and open questions 1–6.
+3. Phase 2 (account) reruns gust and freshness against any account feed (H6.1–2).
+4. The app sites in the app finding are fixed to the approved rule before ASOS Updates is re-enabled. `FeatureFlags.asosAvailable` keeps it off until then.

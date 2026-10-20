@@ -1,0 +1,508 @@
+{
+ "omo_files": 120,
+ "omo_span": [
+  "2026-10-15T10:00Z",
+  "2026-10-20T09:55Z"
+ ],
+ "metar_span": [
+  "2026-10-14T23:51Z",
+  "2026-10-20T04:18Z"
+ ],
+ "overlap": [
+  "2026-10-15T10:00Z",
+  "2026-10-20T04:18Z"
+ ],
+ "overlap_hours": 114.3,
+ "omo_stations": 1030,
+ "metar_stations": 1023,
+ "metars_in_overlap": 140073,
+ "station_hours": {
+  "AUTO": 75243,
+  "augmented": 40382
+ },
+ "gust_metar_events": {
+  "AUTO": 17589,
+  "augmented": 10040
+ },
+ "station_classes": {
+  "auto_only": 459,
+  "never_auto": 98,
+  "mixed": 356
+ },
+ "sample": {
+  "AUTO": [
+   "KALI",
+   "KANB",
+   "KAQW",
+   "KATY",
+   "KAUO",
+   "KBDE",
+   "KBHB",
+   "KBLU",
+   "KCAO",
+   "KCDR",
+   "KCEU",
+   "KCWI",
+   "KDAG",
+   "KDCU",
+   "KDDC",
+   "KDFI",
+   "KDSV",
+   "KEEO",
+   "KEKN",
+   "KFDY",
+   "KFHR",
+   "KFIT",
+   "KHIE",
+   "KHSE",
+   "KICR",
+   "KINL",
+   "KIPL",
+   "KJCT",
+   "KKLS",
+   "KLCI",
+   "KLND",
+   "KMAE",
+   "KMTO",
+   "KOKB",
+   "KOVS",
+   "KPIB",
+   "KPTV",
+   "KPYM",
+   "KRKS",
+   "KRMG",
+   "KRSL",
+   "KSGH",
+   "KSGU",
+   "KSHN",
+   "KSLG",
+   "KSNY",
+   "KSOP",
+   "KTHV",
+   "KVCB",
+   "KWLD"
+  ],
+  "augmented": [
+   "KABQ",
+   "KAFW",
+   "KAUS",
+   "KBDL",
+   "KBNA",
+   "KBOS",
+   "KBUF",
+   "KCAE",
+   "KCAK",
+   "KCHS",
+   "KCID",
+   "KCLT",
+   "KCMH",
+   "KCOS",
+   "KCRW",
+   "KCVO",
+   "KDAL",
+   "KDAY",
+   "KDCA",
+   "KDEN",
+   "KFAT",
+   "KFTY",
+   "KIAD",
+   "KIAH",
+   "KJAN",
+   "KJAX",
+   "KLAS",
+   "KLIT",
+   "KMCI",
+   "KMEM",
+   "KMIA",
+   "KMSY",
+   "KOAK",
+   "KOKC",
+   "KOMA",
+   "KONT",
+   "KORD",
+   "KPDX",
+   "KPHL",
+   "KPHX",
+   "KPIA",
+   "KRFD",
+   "KSEA",
+   "KSMF",
+   "KSYR",
+   "KTPA",
+   "KTRI",
+   "KTUL",
+   "KTYS",
+   "KYNG"
+  ]
+ },
+ "_note": "Trimmed from tools/madis/logs/scale_results_20261020T1223Z.json (scale_compare.py at fad910b). Full results and inputs are not committed.",
+ "sky": {
+  "AUTO": {
+   "counts": {
+    "pairs": 6555,
+    "sky_pairs": 6430,
+    "cat_pairs": 6286,
+    "cat_agree": 6166,
+    "ceil_agree": 6198,
+    "ceil_agree_12k": 6198,
+    "count_agree": 6242,
+    "cover_agree": 6030,
+    "count_agree_12k": 6242,
+    "cover_agree_12k": 6030,
+    "ceil_any": 1934,
+    "ceil_any_agree": 1702,
+    "no_omo": 10,
+    "omo_sky_missing": 125
+   },
+   "category_pairs": {
+    "VFR->VFR": 4894,
+    "MVFR->MVFR": 702,
+    "IFR->IFR": 324,
+    "LIFR->LIFR": 246,
+    "MVFR->VFR": 34,
+    "MVFR->IFR": 20,
+    "IFR->LIFR": 18,
+    "IFR->MVFR": 16,
+    "VFR->MVFR": 15,
+    "IFR->VFR": 7,
+    "LIFR->IFR": 6,
+    "MVFR->LIFR": 2,
+    "VFR->IFR": 1,
+    "LIFR->VFR": 1
+   },
+   "ceiling_disagree_examples": [
+    {
+     "station": "KALI",
+     "metar": "METAR KALI 161853Z AUTO 36020G31KT 10SM OVC033 22/14 A3024 RMK AO2 PK WND 34033/1827 SLP237 T02170144",
+     "omo_dt_s": 120,
+     "omo_layers": [
+      [
+       "OVC",
+       3500
+      ]
+     ],
+     "metar_ceiling": 3300,
+     "omo_ceiling": 3500
+    },
+    {
+     "station": "KANB",
+     "metar": "METAR KANB 161753Z AUTO 27008G18KT 10SM SCT070 29/17 A3001 RMK AO2 SLP154 T02890172 10289 20150 58021 $",
+     "omo_dt_s": 120,
+     "omo_layers": [
+      [
+       "BKN",
+       7500
+      ]
+     ],
+     "metar_ceiling": null,
+     "omo_ceiling": 7500
+    },
+    {
+     "station": "KANB",
+     "metar": "SPECI KANB 160721Z AUTO 00000KT 3/4SM BR CLR 16/16 A3009 RMK AO2 T01610161",
+     "omo_dt_s": -60,
+     "omo_layers": [
+      [
+       "VV",
+       200
+      ]
+     ],
+     "metar_ceiling": null,
+     "omo_ceiling": 200
+    }
+   ]
+  },
+  "augmented": {
+   "counts": {
+    "pairs": 6177,
+    "sky_pairs": 5784,
+    "cat_pairs": 5677,
+    "cat_agree": 5563,
+    "ceil_agree": 5106,
+    "ceil_any": 2188,
+    "ceil_any_agree": 1510,
+    "ceil_agree_12k": 5500,
+    "count_agree": 3882,
+    "cover_agree": 3679,
+    "count_agree_12k": 4976,
+    "cover_agree_12k": 4733,
+    "omo_sky_missing": 393,
+    "no_omo": 64
+   },
+   "category_pairs": {
+    "VFR->VFR": 4615,
+    "MVFR->MVFR": 637,
+    "IFR->IFR": 175,
+    "LIFR->LIFR": 136,
+    "MVFR->VFR": 45,
+    "VFR->MVFR": 18,
+    "IFR->MVFR": 13,
+    "IFR->LIFR": 11,
+    "MVFR->IFR": 10,
+    "VFR->IFR": 7,
+    "VFR->LIFR": 3,
+    "LIFR->VFR": 2,
+    "IFR->VFR": 2,
+    "LIFR->MVFR": 1,
+    "MVFR->LIFR": 1,
+    "LIFR->IFR": 1
+   },
+   "ceiling_disagree_examples": [
+    {
+     "station": "KABQ",
+     "metar": "METAR KABQ 192252Z 20012G17KT 10SM FEW060 SCT120 BKN180 21/07 A3017 RMK SLPNO",
+     "omo_dt_s": -120,
+     "omo_layers": [
+      [
+       "BKN",
+       12000
+      ]
+     ],
+     "metar_ceiling": 18000,
+     "omo_ceiling": 12000
+    },
+    {
+     "station": "KABQ",
+     "metar": "SPECI KABQ 192152Z COR 19010KT 10SM FEW040 BKN090 BKN140 21/07 A3017 RMK SLPNO MTN TOP OBSC SE",
+     "omo_dt_s": -120,
+     "omo_layers": [],
+     "metar_ceiling": 9000,
+     "omo_ceiling": null
+    },
+    {
+     "station": "KAFW",
+     "metar": "METAR KAFW 161453Z 36023G32KT 10SM FEW020 SCT060 BKN110 BKN250 15/07 A3047 RMK AO2 PK WND 36034/1429 SLP312 60000 T01500067 51033 $",
+     "omo_dt_s": 120,
+     "omo_layers": [
+      [
+       "FEW",
+       3500
+      ]
+     ],
+     "metar_ceiling": 11000,
+     "omo_ceiling": null
+    }
+   ]
+  }
+ },
+ "gust": {
+  "AUTO": {
+   "counts": {
+    "gust_metars": 17589,
+    "paired": 17559,
+    "omo_gust_10min": 11986,
+    "omo_no_gust": 10615,
+    "omo_gust": 6944,
+    "not_covered": 30
+   },
+   "share_paired_with_gust": 0.395,
+   "share_paired_with_gust_10min": 0.683,
+   "delta_kt": {
+    "n": 6944,
+    "median": -3.0,
+    "mean": -3.07,
+    "abs_le_2": 0.468,
+    "hist": {
+     "-31": 1,
+     "-28": 1,
+     "-27": 1,
+     "-23": 1,
+     "-22": 1,
+     "-21": 4,
+     "-20": 1,
+     "-19": 2,
+     "-18": 5,
+     "-17": 11,
+     "-16": 8,
+     "-15": 8,
+     "-14": 11,
+     "-13": 18,
+     "-12": 37,
+     "-11": 46,
+     "-10": 84,
+     "-9": 125,
+     "-8": 202,
+     "-7": 300,
+     "-6": 446,
+     "-5": 620,
+     "-4": 747,
+     "-3": 911,
+     "-2": 930,
+     "-1": 960,
+     "0": 1060,
+     "1": 208,
+     "2": 90,
+     "3": 46,
+     "4": 32,
+     "5": 13,
+     "6": 4,
+     "7": 8,
+     "8": 1,
+     "12": 1
+    }
+   },
+   "delta_kt_10min_max": {
+    "n": 11986,
+    "median": -1.0,
+    "mean": -1.91,
+    "abs_le_2": 0.635,
+    "hist": {
+     "-28": 1,
+     "-22": 1,
+     "-21": 2,
+     "-20": 1,
+     "-19": 2,
+     "-18": 2,
+     "-17": 6,
+     "-16": 4,
+     "-15": 5,
+     "-14": 3,
+     "-13": 7,
+     "-12": 15,
+     "-11": 22,
+     "-10": 43,
+     "-9": 51,
+     "-8": 106,
+     "-7": 231,
+     "-6": 373,
+     "-5": 674,
+     "-4": 1027,
+     "-3": 1517,
+     "-2": 1819,
+     "-1": 2686,
+     "0": 2513,
+     "1": 391,
+     "2": 206,
+     "3": 116,
+     "4": 74,
+     "5": 48,
+     "6": 14,
+     "7": 17,
+     "8": 4,
+     "10": 3,
+     "11": 1,
+     "12": 1
+    }
+   },
+   "examples_no_gust": [
+    {
+     "metar": "METAR KPGA 192353Z AUTO 20007G18KT 10SM SCT046 BKN065 OVC080 18/07 A3009 RMK AO2 SLP149 T01780072 10200 20167 55007 $",
+     "omo_dt_s": 120
+    },
+    {
+     "metar": "METAR KPGA 161953Z AUTO 05013G21KT 10SM CLR 18/01 A3054 RMK AO2 SLP305 T01830006",
+     "omo_dt_s": 120
+    },
+    {
+     "metar": "METAR KPGA 161853Z AUTO 05013G19KT 10SM CLR 18/M01 A3056 RMK AO2 SLP314 T01781006",
+     "omo_dt_s": 120
+    }
+   ]
+  },
+  "augmented": {
+   "counts": {
+    "gust_metars": 10040,
+    "paired": 10001,
+    "omo_no_gust": 5788,
+    "omo_gust_10min": 7383,
+    "omo_gust": 4213,
+    "not_covered": 39
+   },
+   "share_paired_with_gust": 0.421,
+   "share_paired_with_gust_10min": 0.738,
+   "delta_kt": {
+    "n": 4213,
+    "median": -3.0,
+    "mean": -3.07,
+    "abs_le_2": 0.449,
+    "hist": {
+     "-21": 1,
+     "-20": 1,
+     "-19": 2,
+     "-18": 3,
+     "-17": 4,
+     "-16": 6,
+     "-15": 5,
+     "-14": 3,
+     "-13": 9,
+     "-12": 16,
+     "-11": 30,
+     "-10": 52,
+     "-9": 86,
+     "-8": 137,
+     "-7": 215,
+     "-6": 297,
+     "-5": 351,
+     "-4": 464,
+     "-3": 543,
+     "-2": 569,
+     "-1": 591,
+     "0": 497,
+     "1": 153,
+     "2": 80,
+     "3": 45,
+     "4": 23,
+     "5": 9,
+     "6": 8,
+     "7": 2,
+     "8": 6,
+     "9": 1,
+     "10": 1,
+     "13": 2,
+     "14": 1
+    }
+   },
+   "delta_kt_10min_max": {
+    "n": 7383,
+    "median": -1.0,
+    "mean": -1.91,
+    "abs_le_2": 0.63,
+    "hist": {
+     "-16": 1,
+     "-15": 3,
+     "-14": 3,
+     "-13": 5,
+     "-12": 4,
+     "-11": 16,
+     "-10": 25,
+     "-9": 57,
+     "-8": 73,
+     "-7": 132,
+     "-6": 227,
+     "-5": 427,
+     "-4": 647,
+     "-3": 914,
+     "-2": 1153,
+     "-1": 1724,
+     "0": 1401,
+     "1": 239,
+     "2": 132,
+     "3": 89,
+     "4": 42,
+     "5": 25,
+     "6": 14,
+     "7": 8,
+     "8": 11,
+     "9": 3,
+     "10": 3,
+     "13": 4,
+     "14": 1
+    }
+   },
+   "examples_no_gust": [
+    {
+     "metar": "METAR KJAX 191956Z 05009G18KT 10SM FEW025 21/12 A3020 RMK AO2 SLP226 T02060117 $",
+     "omo_dt_s": -60
+    },
+    {
+     "metar": "METAR KJAX 191756Z 03009G17KT 10SM FEW025 21/12 A3023 RMK AO2 SLP237 T02110122 10211 20122 58019 $",
+     "omo_dt_s": -60
+    },
+    {
+     "metar": "METAR KJAX 191656Z 04010G17KT 10SM FEW025 21/12 A3026 RMK AO2 SLP247 T02110122 $",
+     "omo_dt_s": -60
+    }
+   ]
+  }
+ }
+}
