@@ -43,6 +43,13 @@ Prints mismatches. Run `nws_cadence.py` first.
 tools/madis/.venv/bin/python tools/madis/check_nws_units.py
 ```
 
+**access_probe.py**: one anonymous pass over a fixed list of MADIS URLs plus anonymous FTP.
+Records timestamp, status, bytes and attempts in `logs/access_probe_<UTC>.csv`. Forces IPv4.
+
+```
+tools/madis/.venv/bin/python tools/madis/access_probe.py
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
