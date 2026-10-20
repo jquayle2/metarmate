@@ -64,6 +64,14 @@ curl -4 --max-time 20 --retry 2 -A "MetarMate-research (jquayle2 on GitHub)" -o 
 tools/madis/.venv/bin/python tools/madis/omo_dump.py tools/madis/data/hfmetar/20261019_2200.gz
 ```
 
+**gust_acceptance.py**: gust-completeness acceptance test. For each gust METAR in the last
+N hours, checks the nearest OMO record (±5 min) in the given files for a gust. Reports
+PASS / FAIL / NOT COVERED. Supply the hourly files that cover the gust METARs.
+
+```
+tools/madis/.venv/bin/python tools/madis/gust_acceptance.py tools/madis/data/hfmetar/20261019_2100.gz tools/madis/data/hfmetar/20261019_2200.gz
+```
+
 **compare_sources.py**: live logger, api.weather.gov vs aviationweather.gov METAR, one CSV row
 per newly seen observation (`logs/compare_<UTC>.csv`, errors in `..._errors.csv`).
 
