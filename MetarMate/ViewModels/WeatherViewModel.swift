@@ -244,7 +244,7 @@ class WeatherViewModel: ObservableObject {
 
     // MARK: - ASOS (auto-fetch for Pro users)
     /// Fetch ASOS data in the background. Called automatically on load for Pro users.
-    func fetchASOS(icao: String) async {
+    private func fetchASOS(icao: String) async {
         isSynopticLoading = true
         synopticError = nil
 

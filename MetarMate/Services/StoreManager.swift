@@ -14,19 +14,6 @@ class StoreManager: ObservableObject {
     static let asosAnnualID       = "com.jeffquayle.MetarMate.asosupdates.annual"
     private static let allIDs: Set<String> = [proID, asosMonthlyID, asosAnnualID]
 
-    // MARK: - First launch tracking (60-day free ASOS window)
-    private static let firstLaunchKey = "metarmate_first_launch_date"
-    static let asosFreeDays: Double = 60
-
-    static var firstLaunchDate: Date {
-        if let stored = UserDefaults.standard.object(forKey: firstLaunchKey) as? Date {
-            return stored
-        }
-        let now = Date()
-        UserDefaults.standard.set(now, forKey: firstLaunchKey)
-        return now
-    }
-
     // MARK: - Published state
     @Published private(set) var products: [Product] = []
     @Published private(set) var isProUser = false
@@ -34,24 +21,11 @@ class StoreManager: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
 
-    // True if within the 60-day free ASOS launch window
-    var isAsosInFreePeriod: Bool {
-        let elapsed = Date().timeIntervalSince(Self.firstLaunchDate)
-        return elapsed < Self.asosFreeDays * 86400
-    }
-
-    // True if ASOS data should be shown (subscribed OR in free period). Gated on the feature
-    // flag: every Synoptic fetch (detail load, auto-refresh, background alerts) keys off this,
-    // so with ASOS off no build may call Synoptic — free period or not.
+    // True if ASOS data should be shown. Gated on the feature flag: every Synoptic fetch keys
+    // off this, so with ASOS off no build may call Synoptic. There is no first-launch free
+    // period; a StoreKit introductory offer replaces it later (DECISIONS_2026-10 #21).
     var isAsosUser: Bool {
-        FeatureFlags.asosAvailable && (isAsosSubscriber || isAsosInFreePeriod)
-    }
-
-    // Days remaining in free period (0 if expired)
-    var asosFreeDaysRemaining: Int {
-        let elapsed = Date().timeIntervalSince(Self.firstLaunchDate)
-        let remaining = Self.asosFreeDays * 86400 - elapsed
-        return max(0, Int(remaining / 86400))
+        FeatureFlags.asosAvailable && isAsosSubscriber
     }
 
     private var updateTask: Task<Void, Never>?

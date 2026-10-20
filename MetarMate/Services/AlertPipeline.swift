@@ -14,9 +14,8 @@ enum AlertPipeline {
     }
 
     // Load enabled watches → resolve the active profile → batch-fetch conditions for the
-    // distinct ICAOs (live ASOS for eligible subscribers, else METAR) → run each through the
-    // GoNoGoEvaluator → fire a notification on a verdict transition vs lastSide → persist the
-    // new side + evaluation time.
+    // distinct ICAOs (METAR only) → run each through the GoNoGoEvaluator → fire a notification
+    // on a verdict transition vs lastSide → persist the new side + evaluation time.
     @discardableResult
     static func runChecks(in context: ModelContext) async -> Outcome {
         let watches = (try? context.fetch(
@@ -90,16 +89,13 @@ enum AlertPipeline {
         return result
     }
 
-    // MARK: - Source ladder
-    // Live ASOS only when the app's existing ASOS eligibility holds (StoreManager.isAsosUser —
-    // the single source of truth, not re-invented here) AND the user has alerts opted into live
-    // ASOS. Per station, a successful Synoptic fetch IS the "station has ASOS" check; any
-    // failure falls back to the batch METAR for that station.
+    // MARK: - Conditions source
+    // METAR only. 5-minute ASOS data never sets or changes a verdict, whatever the feature flag
+    // or subscription says (DECISIONS_2026-10 #1).
     private static func fetchConditions(for icaos: [String], force: Bool = false) async -> [String: AlertConditions] {
         // Read-through the shared cache for METARs: keep fresh cached values, and only fetch the
         // misses. Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K) for the fetch,
         // then map back to the watch's own id so numeric-LID stations are actually evaluated.
-        // (The live-ASOS branch below is never cached — it stays as-is.)
         var metars: [String: Metar] = [:]
         var noaaToOriginal: [String: String] = [:]
         var noaaIds: [String] = []
@@ -120,25 +116,13 @@ enum AlertPipeline {
             for (k, m) in fetched { metars[k] = m }
         }
 
-        let useLiveAsos = StoreManager.shared.isAsosUser && useLiveAsosForAlerts
-
         var result: [String: AlertConditions] = [:]
         for icao in icaos {
-            let stationId = WeatherService.noaaCandidate(for: icao) ?? icao
-            if useLiveAsos, let obs = try? await SynopticService.shared.fetchLatest(for: stationId) {
-                result[icao] = AlertConditions(from: obs)        // live ASOS
-            } else if let metar = metars[icao] {
-                result[icao] = AlertConditions(from: metar)      // METAR fallback
+            if let metar = metars[icao] {
+                result[icao] = AlertConditions(from: metar)
             }
         }
         return result
-    }
-
-    // Per-alerts opt-in (default on). isAsosUser already gates the subscription; this lets a
-    // subscriber keep alerts on METAR if they prefer (e.g. to limit background API use). Step 5
-    // surfaces the toggle; until then it reads its default.
-    private static var useLiveAsosForAlerts: Bool {
-        UserDefaults.standard.object(forKey: "useLiveAsosForAlerts") as? Bool ?? true
     }
 
     // MARK: - Notification text

@@ -112,13 +112,6 @@ struct ProUpgradeView: View {
     private var footerSection: some View {
         Group {
             if mode == .asos {
-                if store.isAsosInFreePeriod {
-                    Text("You have \(store.asosFreeDaysRemaining) days remaining in your free ASOS period.")
-                        .font(.caption)
-                        .foregroundColor(.cyan)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
                 Text("Annual plan includes a 7-day free trial. Subscriptions renew automatically. Cancel anytime in Settings → Subscriptions.")
                     .font(.caption2)
                     .foregroundColor(.secondary.opacity(0.7))
