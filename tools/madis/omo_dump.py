@@ -11,6 +11,8 @@ Format notes (from the files themselves):
   - Missing: _FillValue 3.4028235e+38 and missing_value -9999; netCDF4 masks both.
     In rawMessage, missing is -999.
   - rawMessage is the original comma-separated OMO message in kt / SM / inHg / ft.
+  - Sky: CLR with base 12,500 ft is a sentinel for "nothing below 12,000 ft", not a layer.
+    It is never emitted as a layer; see parse_sky.
 
 Usage: omo_dump.py FILE [FILE ...] [--stations KVGT,KLAS] [--out data/omo_dump.json]
 """
@@ -31,7 +33,7 @@ DD_VARS = ["temperatureDD", "dewpointDD", "altimeterDD", "windDirDD", "windSpeed
 STATUS_VARS = ["siteStatus", "windDirStatus", "windSpeedStatus", "temperatureStatus",
                "dewpointStatus", "pressureStatus", "skyCovLayerBaseStatus", "visibilityStatus",
                "precipOccurTypeStatus", "freezingRainStatus", "runwayVRStatus"]
-FILL_FIELDS = ["wdir", "wspd_kt", "wgst_kt", "vis_sm", "sky", "pres_wx", "altim_inhg",
+FILL_FIELDS = ["wdir", "wspd_kt", "wgst_kt", "vis_sm", "sky", "sky_clear_below_12k", "pres_wx", "altim_inhg",
                "temp_c", "dewp_c", "density_alt_ft", "rvr_ft"]
 
 
@@ -59,16 +61,34 @@ def utc(seconds):
     return datetime.fromtimestamp(float(seconds), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+CLEAR_COVERS = {"CLR", "SKC"}
+
+
+def parse_sky(covers, bases):
+    """Return (layers, clear_below_12k).
+
+    Parsing rule (findings H5): OMO reports a clear sky as cover CLR with base 12,500 ft
+    (3,810 m). That means "no layers detected below 12,000 ft" (ceilometer limit) and is
+    never a real layer, so it is dropped from layers and reported as the flag instead.
+    """
+    layers, clear = [], False
+    for cover, base in zip(nc.chartostring(covers), bases):
+        cover = str(cover).strip()
+        if not cover:
+            continue
+        if cover in CLEAR_COVERS:
+            clear = True
+            continue
+        layers.append([cover, num(base, m_to_ft, 0)])
+    return layers, clear
+
+
 def records(ds, stations):
     sid = nc.chartostring(ds["stationId"][:])
     want = np.where(np.isin(sid, list(stations)))[0]
     v = {name: ds[name] for name in ds.variables}
     for i in want:
-        sky = []
-        for cover, base in zip(nc.chartostring(v["skyCvr"][i]), v["skyCovLayerBase"][i]):
-            cover = str(cover).strip()
-            if cover:
-                sky.append([cover, num(base, m_to_ft, 0)])
+        sky, sky_clear = parse_sky(v["skyCvr"][i], v["skyCovLayerBase"][i])
         obs, rcv = float(v["observationTime"][i]), float(v["receivedTime"][i])
         yield {
             "icao": str(sid[i]),
@@ -80,6 +100,7 @@ def records(ds, stations):
             "wgst_kt": num(v["windGust"][i], ms_to_kt, 1),
             "vis_sm": num(v["visibility"][i], m_to_sm, 2),
             "sky": sky,
+            "sky_clear_below_12k": sky_clear,
             "pres_wx": text(v["presWx"][i]),
             "altim_inhg": num(v["altimeter"][i], pa_to_inhg, 3),
             "temp_c": num(v["temperature"][i], k_to_c, 1),
@@ -94,7 +115,7 @@ def records(ds, stations):
 
 def populated(rec, field):
     val = rec[field]
-    return bool(val) if isinstance(val, (list, str)) else val is not None
+    return bool(val) if isinstance(val, (list, str, bool)) else val is not None
 
 
 def main():

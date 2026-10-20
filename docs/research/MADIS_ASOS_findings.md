@@ -170,7 +170,7 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 
 - KVGT, KLAS, KHND, KIGM, KEED, KPHX and KSLC each have **12 records/hour, one per 5-minute mark**. Median receive lag at MADIS (`receivedTime − observationTime`) is **139 s**.
 - **KBVU and KIFP are not in the feed.** AWOS coverage isn't uniform: KHND and KSGU are AWOS-3PT in NASR and *are* present, while KIFP (AWOS-3PT) is not.
-- Field fill in the 22Z hour: wind 10–12/12, vis 12/12, sky 12/12, altimeter 12/12 (including KLAS, KHND and KIGM, where api.weather.gov had none or almost none), T/Td 12/12, density altitude 12/12, present weather 0/12 (clear day), RVR at KPHX and KSLC only, gust 0/12 except KEED 1/12.
+- Field fill in the 22Z hour: wind 10–12/12, vis 12/12, sky condition 12/12 (real layers, or the CLR sentinel in H5; at KVGT all 12 were the sentinel), altimeter 12/12 (including KLAS, KHND and KIGM, where api.weather.gov had none or almost none), T/Td 12/12, density altitude 12/12, present weather 0/12 (clear day), RVR at KPHX and KSLC only, gust 0/12 except KEED 1/12.
 - **Conversions:** 168 of 168 station records (7 stations × 2 h) match their own raw OMO message on direction, speed, gust, vis, altimeter, T/Td, density altitude and layer-1 base. The raw field positions are inferred from the format, but every value matched independently.
 - **vs METAR** (nearest OMO record within ±5 min, 21Z–22Z): wind, vis, altimeter and temperature agree within timing and rounding. OMO temperature is whole °C, while METAR T-groups are 0.1 °C. Two exceptions:
   - the KIGM gust (H3)
@@ -199,7 +199,7 @@ Three independent defects, each measured. **Decision (Jeff, 2026-10-20): these r
 
 ### H5. Parsing rule: the CLR / 12,500 ft sentinel
 
-OMO reports a clear sky as cover `CLR` with layer base **12,500 ft** (3,810 m). It means "no layers detected below 12,000 ft", the ceilometer limit, and is **never a real layer**. A consumer must not show it as a cloud layer or use it as a ceiling or layer height. api.weather.gov passes the same sentinel through (`cloudLayers: [{"amount": "CLR", "base": 3810 m}]`).
+OMO reports a clear sky as cover `CLR` with layer base **12,500 ft** (3,810 m). It means "no layers detected below 12,000 ft", the ceilometer limit, and is **never a real layer**. A consumer must not show it as a cloud layer or use it as a ceiling or layer height. `omo_dump.py` implements this: the sentinel is dropped from `sky` and reported as `sky_clear_below_12k: true`. api.weather.gov passes the same sentinel through (`cloudLayers: [{"amount": "CLR", "base": 3810 m}]`).
 
 ### H6. Question for MADIS support
 
