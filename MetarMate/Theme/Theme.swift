@@ -284,6 +284,19 @@ extension View {
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .stroke(border, lineWidth: 1))
     }
+
+    /// Advisory treatment — "not this field's official data": orange wash + dashed orange border.
+    /// One look everywhere it applies (advisory weather banner, a borrowed TAF).
+    func advisoryStyle(radius: CGFloat = 8) -> some View {
+        self
+            .background(Color.orange.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundColor(Color.orange.opacity(0.5))
+            )
+    }
 }
 
 /// Tracked uppercase caps label ("DECODED METAR", "TREND", kickers).

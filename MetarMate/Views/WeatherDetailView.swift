@@ -2654,13 +2654,7 @@ struct WeatherDetailView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.orange.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .foregroundColor(Color.orange.opacity(0.5))
-            )
+            .advisoryStyle()
 
             if airport.elevation != 0 {
                 Text("Elev \(airport.elevation.formatted()) ft MSL")
