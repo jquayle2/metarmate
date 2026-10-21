@@ -145,6 +145,8 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [ ] Accessibility: airport rows show category by color rail only, no text, no age
 - [ ] Performance: `DateFormatter` in view bodies; `pilotNotes()` and density altitude computed twice per render
 - [x] UI test target: template tests removed (`16f53c0`); full suite runs clean with `-parallel-testing-enabled NO` (parallel clones were refused launch); simulator `iPhone 17` re-created on iOS 26.1 after it went missing
+- [ ] Nearby-TAF bbox near the 180° meridian is clamped, not wrapped (western Aleutians search a narrower box)
+- [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
 - [ ] Misc: search race, layout prefs wiped on unknown `SectionID`, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache, `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, two DA formulas, PROB defaults
 
 ## 6. ASOS Updates — Synoptic (launch-blocking only if section 0 says so)
