@@ -81,6 +81,7 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
 - **Siri** says the borrowed-TAF sentence only when it voices forecast content.
 - **TSRA OMTNS** is kept (never dropped) and shown as "TS over mountains", not at the station.
 - **Borrowed-TAF hero never says "now"** (Oct 21, from the KBCE/KCDC screenshot: badge IFR, hero "KCDC: VFR now" in green). It states what the TAF site forecasts ("KCDC forecasts VFR, but…"). When this field's METAR is worse than the TAF's current period, the hero leads with that ("KBCE is IFR now. KCDC (45 nm W) forecasts VFR…").
+- **No blended summaries with a borrowed TAF** (Oct 21, KBCE trend card "deteriorating but are expected to stabilize"): this field's observed trend and the TAF site's forecast are separate statements, and the forecast one names the station ("Conditions here have been deteriorating. KCDC's forecast is steady."). Period rows in the borrowed card tag the current period "current", not "now".
 
 ## Data source for ASOS Updates
 
