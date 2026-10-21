@@ -12,7 +12,11 @@ class StoreManager: ObservableObject {
     static let proID              = "com.jeffquayle.MetarMate.pro"
     static let asosMonthlyID      = "com.jeffquayle.MetarMate.asosupdates.monthly"
     static let asosAnnualID       = "com.jeffquayle.MetarMate.asosupdates.annual"
-    private static let allIDs: Set<String> = [proID, asosMonthlyID, asosAnnualID]
+    // Only products that can be sold: the ASOS subscriptions are requested only once ASOS is
+    // switched on, so a build with ASOS off never shows or offers them (audit #24).
+    private static var requestedIDs: Set<String> {
+        FeatureFlags.asosAvailable ? [proID, asosMonthlyID, asosAnnualID] : [proID]
+    }
 
     // MARK: - Published state
     @Published private(set) var products: [Product] = []
@@ -41,7 +45,7 @@ class StoreManager: ObservableObject {
     func loadProducts() async {
         isLoading = true
         do {
-            let fetched = try await Product.products(for: Self.allIDs)
+            let fetched = try await Product.products(for: Self.requestedIDs)
             products = fetched.sorted { $0.price < $1.price }
         } catch {
             // failed to load products
