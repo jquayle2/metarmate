@@ -16,30 +16,30 @@ enum TafHeroBrief {
     /// Pure derivation of the hero one-liner as colored segments (display order). The View
     /// concatenates the segments. Narrates from the prevailing period covering `now` onward; periods
     /// and change groups that have already ended are not part of the story.
-    /// `stationLabel` names a borrowed TAF's station ("KHND: VFR now, …").
+    /// `stationLabel` marks a borrowed TAF: the story is told as what that site forecasts ("KCDC
+    /// forecasts VFR, but …") and never says "now", which would read as this field's conditions.
     static func build(_ taf: Taf, now: Date = Date(), stationLabel: String? = nil) -> [HeroSegment] {
-        let story = brief(taf, now: now)
-        guard let stationLabel else { return story }
-        return [HeroSegment(text: "\(stationLabel): ", color: Brand.slate)] + story
-    }
-
-    private static func brief(_ taf: Taf, now: Date) -> [HeroSegment] {
+        let label = stationLabel.map { "\($0): " } ?? ""
         if now >= taf.validTo {
-            return [HeroSegment(text: "This TAF has expired.", color: Brand.slate)]
+            return [HeroSegment(text: label + "This TAF has expired.", color: Brand.slate)]
         }
         let bases = taf.remainingTimeline(at: now)
         guard let first = bases.first else {
-            return [HeroSegment(text: "No forecast data.", color: Brand.slate)]
+            return [HeroSegment(text: label + "No forecast data.", color: Brand.slate)]
         }
         // If the CURRENT period's category is undetermined (an axis isn't forecast and the other
         // can't settle it), there is no honest baseline to narrate a trend from. Say so, rather than
         // dressing "unknown" up as a category ("UNKN the entire forecast period") or an improvement.
         if first.flightCategory == .unknown {
             let missing = first.unforecastAxis ?? "visibility or ceiling"
-            return [HeroSegment(text: "Forecast incomplete — the current period doesn't specify \(missing).",
+            return [HeroSegment(text: (stationLabel.map { "\($0) forecast incomplete" } ?? "Forecast incomplete")
+                                    + " — the current period doesn't specify \(missing).",
                                 color: Brand.slate)]
         }
-        let story = narrate(taf, bases: bases, first: first, now: now)
+        var story = narrate(taf, bases: bases, first: first, now: now, borrowed: stationLabel != nil)
+        if let stationLabel {
+            story.insert(HeroSegment(text: "\(stationLabel) forecasts ", color: Brand.slate), at: 0)
+        }
         // A current category resting on one forecast axis says which one is missing
         // ("IFR · visibility not forecast"), unless the story already did.
         if let axis = first.unforecastAxis, !story.contains(where: { $0.text.contains("not forecast") }) {
@@ -48,7 +48,12 @@ enum TafHeroBrief {
         return story
     }
 
-    private static func narrate(_ taf: Taf, bases: [TafForecast], first: TafForecast, now: Date) -> [HeroSegment] {
+    /// `borrowed`: the story follows "<station> forecasts ", so it starts lowercase and the current
+    /// period is named without "now".
+    private static func narrate(_ taf: Taf, bases: [TafForecast], first: TafForecast, now: Date,
+                                borrowed: Bool) -> [HeroSegment] {
+        let capitalize = !borrowed
+        let nowWord = borrowed ? "" : " now"
         // A LATER period we couldn't determine (.unknown) must likewise never read as a worst-case
         // OR as an improvement — excluding it prevents "IFR now, improving to UNKN by 09:00."
         let known = bases.filter { $0.flightCategory != .unknown }
@@ -110,15 +115,16 @@ enum TafHeroBrief {
                 // Both hazards, earliest first: "PROB30 IFR 3–6 PM, then MVFR by 9 PM. Ceiling …"
                 // or "MVFR by 9 PM. Ceiling … Plus temporary thunderstorms with rain 10–11 PM."
                 if overlay.fromTime < w.fromTime {
-                    return [HeroSegment(text: phrase.prefix(1).uppercased() + phrase.dropFirst() + ",", color: color),
+                    let lead = capitalize ? phrase.prefix(1).uppercased() + phrase.dropFirst() : phrase
+                    return [HeroSegment(text: lead + ",", color: color),
                             HeroSegment(text: " then ", color: Brand.slate)]
                         + worstBaseStory(w, leading: false)
                 }
-                return worstBaseStory(w) + [HeroSegment(text: " Plus", color: Brand.slate), overlayClause]
+                return worstBaseStory(w, leading: capitalize) + [HeroSegment(text: " Plus", color: Brand.slate), overlayClause]
             }
             // Benign/steady base, or the worst change is already under way — contrast the current
             // category with the overlay.
-            return [HeroSegment(text: "\(categoryText(first)) now,", color: ColorRules.flightCategoryColor(first.flightCategory)),
+            return [HeroSegment(text: "\(categoryText(first, capitalized: capitalize))\(nowWord),", color: ColorRules.flightCategoryColor(first.flightCategory)),
                     HeroSegment(text: " but", color: Brand.slate),
                     overlayClause]
         }
@@ -134,7 +140,7 @@ enum TafHeroBrief {
                 // CFII ruling (Mike): drop the destination-category suffix — say "improving" without
                 // naming the better category (a TAF improvement is not a guarantee to plan against).
                 // The segment color still carries the improved category; only the words change.
-                return [HeroSegment(text: "\(categoryText(first)) now, ",
+                return [HeroSegment(text: "\(categoryText(first, capitalized: capitalize))\(nowWord), ",
                                     color: ColorRules.flightCategoryColor(first.flightCategory)),
                         HeroSegment(text: "improving by \(TafFormat.timeLabel(firstBetter.fromTime)).",
                                     color: ColorRules.flightCategoryColor(firstBetter.flightCategory))]
@@ -144,15 +150,15 @@ enum TafHeroBrief {
             // claim "no significant changes" while the Pilot Notes card flags gusts (amber axis).
             let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
             if let gusty = firstGusty {
-                return [HeroSegment(text: "\(categoryText(first)) throughout, ", color: Brand.cloud),
+                return [HeroSegment(text: "\(categoryText(first, capitalized: capitalize)) throughout, ", color: Brand.cloud),
                         HeroSegment(text: "but gusty periods \(TafFormat.coarseWhen(gusty.fromTime)).", color: Brand.cautionOrange)]
             }
-            return [HeroSegment(text: "\(categoryText(first)) the entire forecast period. ", color: Brand.cloud),
+            return [HeroSegment(text: "\(categoryText(first, capitalized: capitalize)) the entire forecast period. ", color: Brand.cloud),
                     HeroSegment(text: "No significant changes expected.", color: Brand.slate)]
         }
 
         // Bases worsen with no significant overlay — the full worst-base story (lead + limiting tail).
-        return worstBaseStory(worst)
+        return worstBaseStory(worst, leading: capitalize)
     }
 
     /// "IFR", or "At least IFR" when the category rests on the one axis that was forecast (the other

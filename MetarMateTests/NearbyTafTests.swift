@@ -251,8 +251,46 @@ struct NearbyTafTests {
     @Test func heroNamesABorrowedStation() throws {
         let khnd = try #require(only(["KHND"], try live()).first).taf
         let segs = TafHeroBrief.build(khnd, now: now, stationLabel: "KHND")
-        #expect(segs.first == HeroSegment(text: "KHND: ", color: Brand.slate))
+        #expect(segs.first == HeroSegment(text: "KHND forecasts ", color: Brand.slate))
         #expect(TafHeroBrief.build(khnd, now: now).first?.text.hasPrefix("KHND") == false)
+    }
+
+    // A borrowed TAF's hero says what the site forecasts and never "now": "VFR now" in green under
+    // an IFR badge reads as this field's conditions (KBCE IFR, KCDC forecast VFR, Oct 21).
+    @Test func borrowedHeroNeverSaysNow() throws {
+        let t0 = 1792605600   // Oct 21, 2026 18Z
+        func e(_ h: Double) -> Int { t0 + Int(h * 3600) }
+        let at = Date(timeIntervalSince1970: TimeInterval(t0) + 1800)
+        func taf(_ fcsts: String) throws -> Taf {
+            let json = #"{"icaoId":"KCDC","issueTime":"2026-10-21T17:20:00.000Z","validTimeFrom":\#(e(0)),"validTimeTo":\#(e(24)),"rawTAF":"synthetic","fcsts":[\#(fcsts)]}"#
+            return try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        }
+        let vfr = #"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":320,"wspd":6,"visib":"6+","clouds":[{"cover":"BKN","base":6000}]}"#
+        // KCDC 211720Z shape: VFR base + PROB30 -TSRA OVC060CB.
+        let kcdc = try taf(vfr + "," + #"{"timeFrom":\#(e(1)),"timeTo":\#(e(6)),"fcstChange":"PROB","probability":30,"wdir":"VRB","wspd":15,"wgst":30,"visib":6,"wxString":"-TSRA","clouds":[{"cover":"OVC","base":6000,"type":"CB"}]}"#)
+        let hero = TafHeroBrief.build(kcdc, now: at, stationLabel: "KCDC").map(\.text).joined()
+        #expect(hero.hasPrefix("KCDC forecasts VFR, but PROB30 thunderstorms with light rain "))
+
+        // Every hero shape, borrowed: told as the site's forecast, no "now".
+        let ifr = #"{"timeFrom":\#(e(0)),"timeTo":\#(e(6)),"wdir":200,"wspd":6,"visib":2,"clouds":[{"cover":"OVC","base":800}]}"#
+        let shapes: [Taf] = [
+            kcdc,
+            try taf(vfr),                                                                         // steady
+            try taf(ifr + "," + #"{"timeFrom":\#(e(6)),"timeTo":\#(e(24)),"fcstChange":"FM","wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#),   // improving
+            try taf(#"{"timeFrom":\#(e(0)),"timeTo":\#(e(6)),"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]},"# + #"{"timeFrom":\#(e(6)),"timeTo":\#(e(24)),"fcstChange":"FM","wdir":200,"wspd":6,"visib":2,"clouds":[{"cover":"OVC","base":800}]}"#),   // worsening
+            try taf(#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":15,"wgst":25,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#),   // gusty
+            try taf(#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":700}]}"#),   // lower bound
+        ]
+        for t in shapes {
+            let text = TafHeroBrief.build(t, now: at, stationLabel: "KCDC").map(\.text).joined()
+            #expect(text.hasPrefix("KCDC forecasts "), "\(text)")
+            #expect(!text.contains(" now"), "\(text)")
+            #expect(!text.contains("KCDC forecasts At"), "\(text)")   // "at least", lowercase after "forecasts"
+        }
+        #expect(TafHeroBrief.build(shapes[5], now: at, stationLabel: "KCDC").map(\.text).joined()
+                .hasPrefix("KCDC forecasts at least IFR the entire forecast period."))
+        // The field's own TAF keeps "now".
+        #expect(TafHeroBrief.build(kcdc, now: at).map(\.text).joined().hasPrefix("VFR now, but PROB30"))
     }
 
     // MARK: - Units and geometry
