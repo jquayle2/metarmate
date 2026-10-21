@@ -7,7 +7,7 @@ How this list is maintained:
 - Claude (chat) or Claude Code updates it at the end of any session that changes status, in the same commit as the work where possible.
 - Check an item only when it's verified (built, tested, or confirmed by the named person). Not just "code written".
 - Refs: `#n` = `claude/AUDIT_2026-10-12_full_codebase.md`, `D#n` = `docs/DECISIONS_2026-10.md`.
-- Owner tags: **[Jeff]**, **[Mike]**, **[Code]** (Claude Code), **[Claude]** (chat).
+- Owner tags: **[Jeff]**, **[Code]** (Claude Code), **[Claude]** (chat).
 
 ---
 
@@ -21,17 +21,17 @@ How this list is maintained:
 - [ ] **P3 triage:** which items in section 5 are launch-required.
 - [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other.
 
-## 1. Mike sign-off [Mike]
+## 1. Product rulings [Jeff]
 
-Send the confirmation list at the bottom of `docs/DECISIONS_2026-10.md` as one packet.
-- [ ] Packet sent [Jeff]
-- [ ] D#2 CHECK for unevaluated minimums, no "back within minimums" alert
-- [ ] D#3 VRB worst-case crosswind; CHECK when it decides the outcome
-- [ ] D#4 Staleness: late 65 min, no verdict over 75 min
-- [ ] D#5–7 Warn-never-reassure (never NO-GO→GO), displayed-gust rule, label "ASOS 5-min · supplemental"
-- [ ] D#8 ½ gust factor, with the stated wording
-- [ ] D#9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards, PROB TSRA in headline
-- [ ] D#13–17 Nearby-TAF: 50 nm cap, substitution headline + advisory styling, 10/25/50 nm wording tiers, elevation caution (design agreed Oct 21; launch scope still open)
+Oct 21: Jeff confirmed all rulings in `docs/DECISIONS_2026-10.md` himself; the Mike packet is dropped.
+
+- [x] D#2 CHECK for unevaluated minimums, no "back within minimums" alert
+- [x] D#3 VRB worst-case crosswind; CHECK when it decides the outcome
+- [x] D#4 Staleness: late 65 min, no verdict over 75 min
+- [x] D#5–7 Warn-never-reassure (never NO-GO→GO), displayed-gust rule, label "ASOS 5-min · supplemental"
+- [x] D#8 ½ gust factor, with the stated wording
+- [x] D#9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards, PROB TSRA in headline
+- [x] D#13–17 Nearby-TAF: 50 nm cap, substitution headline + advisory styling, 10/25/50 nm wording tiers, elevation caution (design agreed Oct 21; launch scope still open)
 
 ## 2. A1 — launch hardening P0s (`fix/launch-hardening-a1`)
 
@@ -165,3 +165,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 
 ## Log
 - **Oct 21, 2026:** List created. Widget "not refreshing" root-caused to an unconfigured widget (no airport set → cache only); configured to KVGT, unconfigured-fetch fix added to section 2. Synoptic chosen as ASOS source.
+- **Oct 21, 2026:** Jeff confirmed all product rulings himself (no Mike packet); Synoptic as ASOS source; nearby-TAF headline/tier design agreed. A2 is unblocked.

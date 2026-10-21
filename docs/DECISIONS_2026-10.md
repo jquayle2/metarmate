@@ -1,6 +1,6 @@
 # MetarMate — Product decisions, October 2026
 
-Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items marked **Mike: confirm** go to Mike as yes/no confirmations, not open questions. Audit numbers refer to the Oct 12, 2026 full-codebase audit.
+Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: Jeff confirmed every item, including the ones previously marked for Mike; no Mike sign-off is required for launch. Audit numbers refer to the Oct 12, 2026 full-codebase audit.
 
 ## Go/no-go and verdicts
 
@@ -22,11 +22,11 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
 
 5. **Warn, never reassure.** 5-minute values worse than the latest METAR (lower ceiling, lower vis, more wind) may be shown as a warning. Better values never change category, verdict or gust.
 6. **Displayed gust** = the higher of the current METAR's gust and any 5-minute gust in the last 10 minutes, labeled by source. Display only: the verdict always uses the METAR gust (#1). A 5-minute ob with no gust means "gust not reported", never "no gust".
-7. 5-minute data is labeled supplemental, not official: **"ASOS 5-min · supplemental"**, always with its observation time. Source: Synoptic (see Data source below). **Mike: confirm label wording.**
+7. 5-minute data is labeled supplemental, not official: **"ASOS 5-min · supplemental"**, always with its observation time. Source: Synoptic (see Data source below).
 
 ## Pilot Notes
 
-8. **Gust approach-speed additive (#20).** Half the gust factor (gust minus sustained), rounded up, from the METAR gust. Source: FAA Airplane Flying Handbook, FAA-H-8083-3C, Ch. 9 (turbulent air approach). One shared function for Pilot Notes and the crosswind calculator. Wording: "Gusty: consider +5 kt (½ gust factor, or per your POH)". The current "half the gust" formula is wrong (15G25 gives +12 instead of +5). **Mike: confirm.**
+8. **Gust approach-speed additive (#20).** Half the gust factor (gust minus sustained), rounded up, from the METAR gust. Source: FAA Airplane Flying Handbook, FAA-H-8083-3C, Ch. 9 (turbulent air approach). One shared function for Pilot Notes and the crosswind calculator. Wording: "Gusty: consider +5 kt (½ gust factor, or per your POH)". The current "half the gust" formula is wrong (15G25 gives +12 instead of +5).
 9. **Crosswind note floor.** Keep 5 kt. Below that, no Pilot Note; the runway display still shows the component.
 10. **CFII item 6.** Missing-field notes are symmetric. Any missing safety-relevant field gets the same neutral "not reported" note.
 11. **F17.** Observation-history lines show hazardous present weather: at minimum TS, SQ, FC (including +FC), GR, and freezing precipitation.
@@ -68,12 +68,12 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
 23. **Synoptic, paid plan** (decided Oct 21). Synoptic is issuing a ~7-day trial first; validation and build happen during it. MADIS is not being used.
 24. The Synoptic token lives only on our proxy, never in the app. The proxy verifies the StoreKit purchase, caches each station ~5 min, and enforces quotas. Details and status: `docs/LAUNCH_CHECKLIST.md` section 6.
 
-## Mike: confirmation list
+## Confirmation list (confirmed by Jeff, Oct 21, 2026)
 
-- [ ] #2 CHECK for unevaluated minimums, with no "back within minimums" alert
-- [ ] #3 VRB worst-case crosswind; CHECK when it decides the outcome
-- [ ] #4 Staleness: late at 65 min, no verdict over 75 min
-- [ ] #5–7 Warn-never-reassure (5-min data never turns NO-GO into GO), the displayed-gust rule, the label "ASOS 5-min · supplemental"
-- [ ] #8 ½ gust factor, with the stated wording
-- [ ] #9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards in history, PROB TSRA in the headline
-- [ ] #13–17 Nearby-TAF: 50 nm cap (ForeFlight uses ~50 nm), substitution as the headline with advisory styling, 10/25/50 nm wording tiers, elevation caution
+- [x] #2 CHECK for unevaluated minimums, with no "back within minimums" alert
+- [x] #3 VRB worst-case crosswind; CHECK when it decides the outcome
+- [x] #4 Staleness: late at 65 min, no verdict over 75 min
+- [x] #5–7 Warn-never-reassure (5-min data never turns NO-GO into GO), the displayed-gust rule, the label "ASOS 5-min · supplemental"
+- [x] #8 ½ gust factor, with the stated wording
+- [x] #9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards in history, PROB TSRA in the headline
+- [x] #13–17 Nearby-TAF: 50 nm cap (ForeFlight uses ~50 nm), substitution as the headline with advisory styling, 10/25/50 nm wording tiers, elevation caution
