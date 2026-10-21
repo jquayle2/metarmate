@@ -1215,35 +1215,33 @@ struct WeatherDetailView: View {
                     .foregroundColor(.secondary)
             }
 
-            // A borrowed TAF isn't compared with this field's METAR (no deviation strip or forecast
-            // trend) until verification against the TAF station's own METARs lands (D#15).
-            if !vm.tafStatus.isBorrowed {
+            Divider()
+
+            // Forecast Deviation Strip (Point 3) — TAF vs actual
+            if let verification = verification, let strip = forecastDeviationStrip(verification) {
+                strip
                 Divider()
+            }
 
-                // Forecast Deviation Strip (Point 3) — TAF vs actual
-                if let verification = verification, let strip = forecastDeviationStrip(verification) {
-                    strip
-                    Divider()
-                }
+            // FORECAST — a borrowed TAF against its own station's current METAR (D#13 rulings)
+            Text(borrowedStation.map { "FORECAST · \($0) TAF vs \($0) NOW" } ?? "FORECAST")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
 
-                // FORECAST
-                Text("FORECAST")
-                    .font(.caption2.bold())
+            if trend.forecast.overall == .unknown {
+                Text(vm.tafStatus.isNoneWithin50nm ? "No TAF within 50 nm."
+                     : borrowedStation.map { "No current \($0) report to compare its forecast with." }
+                     ?? "No TAF available for this station.")
+                    .font(.caption)
                     .foregroundColor(.secondary)
-                    .tracking(0.5)
-
-                if trend.forecast.overall == .unknown {
-                    Text(vm.tafStatus.isNoneWithin50nm ? "No TAF within 50 nm." : "No TAF available for this station.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                } else {
-                    TrendIndicator(direction: trend.forecast.wind, label: "Wind")
-                    TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
-                    TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
-                    Text(trend.forecast.summaryText)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+            } else {
+                TrendIndicator(direction: trend.forecast.wind, label: "Wind")
+                TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
+                TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
+                Text(trend.forecast.summaryText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
         .padding()
@@ -1267,7 +1265,8 @@ struct WeatherDetailView: View {
             TrendArrowView(up: style.up, color: style.color)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(trend.headline)
+                Text(borrowedStation.map { trend.headline.hasSuffix("Forecast") ? "\(trend.headline) · \($0) TAF" : trend.headline }
+                     ?? trend.headline)
                     .font(.avenir(15, .heavy))
                     .foregroundColor(headlineColor)
 
@@ -1901,6 +1900,12 @@ struct WeatherDetailView: View {
     }
 
     // MARK: - Borrowed TAF (D#14, D#17)
+
+    /// The borrowed TAF's station, for labels ("KHND forecast vs KHND actual"); nil for the field's own.
+    private var borrowedStation: String? {
+        if case .borrowed(let source, _) = vm.tafStatus { return source.stationId }
+        return nil
+    }
     // Every borrowed TAF looks the same as other "not this field's data": the advisory treatment
     // (orange wash, dashed border) around the whole forecast card. Distance is wording, never color.
     @ViewBuilder
@@ -2441,7 +2446,7 @@ struct WeatherDetailView: View {
         guard !items.isEmpty else { return nil }
 
         return AnyView(VStack(alignment: .leading, spacing: 6) {
-            Text("TAF vs ACTUAL  ·  most recent period")
+            Text(borrowedStation.map { "\($0) FORECAST vs \($0) ACTUAL  ·  most recent period" } ?? "TAF vs ACTUAL  ·  most recent period")
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
                 .tracking(0.5)
@@ -2534,6 +2539,11 @@ struct WeatherDetailView: View {
                             .font(.caption.bold())
                             .foregroundColor(.secondary)
                             .tracking(1)
+                        if let station = borrowedStation {
+                            Text("\(station) forecast vs \(station) actual")
+                                .font(.caption)
+                                .foregroundColor(Brand.cautionOrange)
+                        }
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text("\(verification.categoryAccuracyPct)%")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))

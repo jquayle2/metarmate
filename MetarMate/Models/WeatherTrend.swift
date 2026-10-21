@@ -365,10 +365,12 @@ struct WeatherTrend: Codable {
     var headline: String        // short, specific — surfaces the most important thing
     var summaryText: String     // supporting detail
 
-    static func derive(metars: [Metar], taf: Taf?) -> WeatherTrend {
+    /// `forecastMetar`: the METAR the TAF is compared with for the forecast trend — this field's
+    /// current one by default; a borrowed TAF's own station's (D#13 rulings, Oct 21).
+    static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil) -> WeatherTrend {
         let currentMetar = metars.first ?? metars[0]
         let observed = ObservedTrend.derive(from: metars)
-        let forecast = ForecastTrend.derive(metar: currentMetar, taf: taf)
+        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf)
 
         let overall: TrendDirection
         if observed.overall == forecast.overall {

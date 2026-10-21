@@ -110,6 +110,35 @@ enum NearbyTaf {
         }
     }
 
+    // MARK: What's derived from the TAF (D#15)
+
+    struct Derived {
+        let trend: WeatherTrend
+        let verification: TafVerification?
+        // For the widget snapshot: no borrowed-TAF forecast or accuracy until the widget names the
+        // station (nearby-TAF widget step).
+        let snapshotTrend: WeatherTrend
+        let snapshotVerification: TafVerification?
+    }
+
+    /// Trend and TAF accuracy for the screen. The field's own TAF is compared with this field's
+    /// METARs; a borrowed TAF only ever with its own station's (`stationHistory`, newest first) —
+    /// forecast trend from the station's current METAR, accuracy and deviation from its history.
+    /// Without station METARs a borrowed TAF gets neither; it never falls back to this field's.
+    /// `fieldHistory` must not be empty.
+    static func derive(fieldHistory: [Metar], taf: Taf?, status: TafStatus, stationHistory: [Metar]) -> Derived {
+        guard status.isBorrowed, let taf else {
+            let trend = WeatherTrend.derive(metars: fieldHistory, taf: taf)
+            let verification = taf.flatMap { TafVerification.derive(metars: fieldHistory, taf: $0) }
+            return Derived(trend: trend, verification: verification, snapshotTrend: trend, snapshotVerification: verification)
+        }
+        let stationNow = stationHistory.first
+        let trend = WeatherTrend.derive(metars: fieldHistory, taf: stationNow == nil ? nil : taf, forecastMetar: stationNow)
+        let verification = stationHistory.isEmpty ? nil : TafVerification.derive(metars: stationHistory, taf: taf)
+        return Derived(trend: trend, verification: verification,
+                       snapshotTrend: WeatherTrend.derive(metars: fieldHistory, taf: nil), snapshotVerification: nil)
+    }
+
     // MARK: Wording (D#14, D#17)
 
     /// "No TAF for KBVU · using KHND (13 nm W)" — the forecast card's first line (also widget, Siri).

@@ -293,6 +293,62 @@ struct NearbyTafTests {
         #expect(TafHeroBrief.build(kcdc, now: at).map(\.text).joined().hasPrefix("VFR now, but PROB30"))
     }
 
+    // MARK: - Verification and trend against the TAF station's own METARs (D#15)
+
+    // KHND TAF from 18Z: VFR until 21Z, then FM IFR (OVC008). KHND reports VFR (no ceiling); KBVU
+    // reports IFR (OVC008) — so comparing with the wrong field's METAR gives different answers.
+    private let t18 = 1792605600
+    private func khndTaf() throws -> Taf {
+        let json = #"{"icaoId":"KHND","issueTime":"2026-10-21T17:20:00.000Z","validTimeFrom":\#(t18),"validTimeTo":\#(t18 + 86400),"rawTAF":"synthetic","fcsts":[{"timeFrom":\#(t18),"timeTo":\#(t18 + 10800),"wdir":150,"wspd":11,"visib":"6+","clouds":[{"cover":"FEW","base":8000}]},{"timeFrom":\#(t18 + 10800),"timeTo":\#(t18 + 86400),"fcstChange":"FM","wdir":160,"wspd":16,"visib":2,"clouds":[{"cover":"OVC","base":800}]}]}"#
+        return try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+    }
+    private func metar(_ id: String, minutesBeforeNow: Int, ifr: Bool) throws -> Metar {
+        let obs = 1792609200 - minutesBeforeNow * 60
+        let wx = ifr ? #""visib":2,"clouds":[{"cover":"OVC","base":800}],"fltCat":"IFR""# : #""visib":10,"clouds":[{"cover":"FEW","base":8000}],"fltCat":"VFR""#
+        let json = #"{"icaoId":"\#(id)","obsTime":\#(obs),"temp":20,"dewp":5,"wdir":150,"wspd":10,"altim":1013,"rawOb":"METAR \#(id) synthetic",\#(wx)}"#
+        return try MetarParser.parse(raw: JSONDecoder().decode(RawMetar.self, from: Data(json.utf8)))
+    }
+    private var borrowedKhnd: TafStatus {
+        .borrowed(TafSource(stationId: "KHND", name: nil, distanceNm: 13, bearing: "W", elevationDifferenceFt: 282, isBorrowed: true), ownExpired: false)
+    }
+
+    @Test func borrowedTafIsVerifiedAgainstItsOwnStation() throws {
+        let field = [try metar("KBVU", minutesBeforeNow: 0, ifr: true), try metar("KBVU", minutesBeforeNow: 30, ifr: true)]
+        let station = [try metar("KHND", minutesBeforeNow: 0, ifr: false), try metar("KHND", minutesBeforeNow: 30, ifr: false)]
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: station)
+
+        // Accuracy/deviation: KHND forecast vs KHND actual (VFR vs VFR), not KBVU's IFR.
+        let v = try #require(d.verification)
+        #expect(v.points.map(\.actualCategory) == [.vfr])
+        #expect(v.categoryAccuracyPct == 100)
+
+        // Forecast trend: KHND now (no ceiling) vs the FM OVC008 → ceiling deteriorating. Against
+        // KBVU's OVC008 it would read steady.
+        #expect(d.trend.forecast.ceiling == .deteriorating)
+        #expect(d.trend.forecast.forecastCategory == .ifr)
+        // The observed half stays this field's.
+        #expect(d.trend.observed.metarCount == 2)
+
+        // Widget snapshot: nothing from the borrowed TAF until the widget names the station.
+        #expect(d.snapshotTrend.forecast.overall == .unknown)
+        #expect(d.snapshotVerification == nil)
+    }
+
+    @Test func borrowedTafWithoutStationReportsNeverUsesThisField() throws {
+        let field = [try metar("KBVU", minutesBeforeNow: 0, ifr: true), try metar("KBVU", minutesBeforeNow: 30, ifr: true)]
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: [])
+        #expect(d.verification == nil)
+        #expect(d.trend.forecast.overall == .unknown)
+    }
+
+    @Test func ownTafIsVerifiedAgainstThisField() throws {
+        let field = [try metar("KHND", minutesBeforeNow: 0, ifr: true), try metar("KHND", minutesBeforeNow: 30, ifr: true)]
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: .own, stationHistory: [])
+        #expect(d.verification?.points.map(\.actualCategory) == [.ifr])
+        #expect(d.trend.forecast.ceiling == .steady)            // field OVC008 vs FM OVC008
+        #expect(d.snapshotVerification?.categoryAccuracyPct == d.verification?.categoryAccuracyPct)
+    }
+
     // MARK: - Units and geometry
 
     @Test func elevationMetersToFeet() {

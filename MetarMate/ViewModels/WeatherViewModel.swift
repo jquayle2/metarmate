@@ -18,6 +18,10 @@ class WeatherViewModel: ObservableObject {
     @Published var metarHistory: [Metar] = []
     @Published var taf: Taf?
     @Published var tafStatus: TafStatus = .own   // own, borrowed from a nearby station, or none
+    @Published var tafStationHistory: [Metar] = []   // a borrowed TAF's station's METARs, newest first
+    // What the widget snapshot gets (no borrowed-TAF forecast/accuracy until the widget names the station).
+    private var snapshotTrend: WeatherTrend?
+    private var snapshotVerification: TafVerification?
     @Published var trend: WeatherTrend?
     @Published var tafVerification: TafVerification?
     @Published var isLoading = false
@@ -127,6 +131,7 @@ class WeatherViewModel: ObservableObject {
         metar = injection.metars.first
         taf = injection.taf
         tafStatus = .own
+        tafStationHistory = []
         trend = WeatherTrend.derive(metars: injection.metars, taf: injection.taf)
         if let taf = injection.taf {
             tafVerification = TafVerification.derive(metars: injection.metars, taf: taf)
@@ -158,7 +163,7 @@ class WeatherViewModel: ObservableObject {
                         metar = retryHistory.first
                         let (retryTaf, retryStatus) = await resolveTaf(await weatherService.tafResult(for: kIcao),
                                                                        fetchIcao: kIcao, field: field)
-                        applyTaf(retryTaf, status: retryStatus, history: retryHistory)
+                        await applyTaf(retryTaf, status: retryStatus, history: retryHistory)
                         lastUpdated = Date()
                         if let currentMetar = metar {
                             let snapshot = WidgetWeatherSnapshot.from(
@@ -167,8 +172,8 @@ class WeatherViewModel: ObservableObject {
                                     latitude: 0, longitude: 0, elevation: 0
                                 ),
                                 metar: currentMetar,
-                                trend: trend,
-                                tafVerification: tafVerification
+                                trend: snapshotTrend,
+                                tafVerification: snapshotVerification
                             )
                             WidgetDataManager.save(snapshot: snapshot)
                         }
@@ -180,6 +185,7 @@ class WeatherViewModel: ObservableObject {
                 metarHistory = []
                 taf = nil
                 tafStatus = .own
+                tafStationHistory = []
                 trend = nil
                 tafVerification = nil
                 await loadNearbyReporting(icao: icao)
@@ -187,7 +193,7 @@ class WeatherViewModel: ObservableObject {
                 metarHistory = fetchedHistory
                 metar = fetchedHistory.first
                 let (resolvedTaf, status) = await resolveTaf(ownTafResult, fetchIcao: icao, field: field)
-                applyTaf(resolvedTaf, status: status, history: fetchedHistory)
+                await applyTaf(resolvedTaf, status: status, history: fetchedHistory)
             }
 
             lastUpdated = Date()
@@ -200,8 +206,8 @@ class WeatherViewModel: ObservableObject {
                         latitude: 0, longitude: 0, elevation: 0
                     ),
                     metar: currentMetar,
-                    trend: trend,
-                    tafVerification: tafVerification
+                    trend: snapshotTrend,
+                    tafVerification: snapshotVerification
                 )
                 WidgetDataManager.save(snapshot: snapshot)
             }
@@ -243,15 +249,21 @@ class WeatherViewModel: ObservableObject {
         return resolved
     }
 
-    /// Publish the TAF and what's derived from it. Until verification against the TAF station's own
-    /// METARs lands (D#15, nearby-TAF Steps 5–6), a borrowed TAF is never compared with this field's
-    /// METAR: no forecast trend, TAF accuracy or Forecast Deviation Strip for it.
-    private func applyTaf(_ resolvedTaf: Taf?, status: TafStatus, history: [Metar]) {
+    /// Publish the TAF and what's derived from it. A borrowed TAF is compared only with its own
+    /// station's METARs (D#15), fetched here; never with this field's.
+    private func applyTaf(_ resolvedTaf: Taf?, status: TafStatus, history: [Metar]) async {
+        var stationHistory: [Metar] = []
+        if case .borrowed(let source, _) = status {
+            stationHistory = (try? await weatherService.fetchMetarHistory(for: source.stationId, hours: 6)) ?? []
+        }
         taf = resolvedTaf
         tafStatus = status
-        let tafForThisField = status.isBorrowed ? nil : resolvedTaf
-        trend = WeatherTrend.derive(metars: history, taf: tafForThisField)
-        tafVerification = tafForThisField.map { TafVerification.derive(metars: history, taf: $0) } ?? nil
+        tafStationHistory = stationHistory
+        let derived = NearbyTaf.derive(fieldHistory: history, taf: resolvedTaf, status: status, stationHistory: stationHistory)
+        trend = derived.trend
+        tafVerification = derived.verification
+        snapshotTrend = derived.snapshotTrend
+        snapshotVerification = derived.snapshotVerification
     }
 
     // MARK: - Advisory weather path (Open-Meteo, for non-METAR airports)
