@@ -199,6 +199,9 @@ struct WeatherDecoder {
     static func decode(_ code: String) -> String {
         let upper = code.uppercased()
 
+        // Military "over the mountains" qualifier, kept on TAF weather by TafParser ("TSRA OMTNS").
+        if upper.hasSuffix(" OMTNS") { return decode(String(code.dropLast(6))) + " over mountains" }
+
         // Check for exact match first
         if let exact = descriptions[upper] { return exact }
 

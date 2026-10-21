@@ -162,6 +162,7 @@ enum TafHeroBrief {
     }
 
     private static func plainWeather(_ code: String) -> String {
+        if code.uppercased().hasSuffix(" OMTNS") { return plainWeather(String(code.dropLast(6))) + " over mountains" }
         var c = code.uppercased()
         var intensity = ""
         var nearby = ""

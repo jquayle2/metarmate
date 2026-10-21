@@ -317,21 +317,24 @@ enum MetarInjectionFixtures {
                 airport: airport("KT05", name: "T5 military BECMG (SIM)"),
                 make: {
                     // Live KINS TAF AMD 211620Z (Oct 21, 2026), times shifted so the second BECMG is
-                    // under way now. Scaffold matches the base period (VFR); no phenomena.
+                    // under way now. One period per raw group, as NOAA decodes it (it carries the bare
+                    // TSRA into later BECMGs), so OMTNS lines up. Scaffold matches the base (VFR).
                     let scaffold = [
                         ob("KT05", minAgo: 0,   wind: #""wdir":110,"wspd":10"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":10000}]"#, temp: 24, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 11010KT 10SM SCT100 24/02 A2992 (SIM SCAFFOLD)"),
                         ob("KT05", minAgo: 60,  wind: #""wdir":110,"wspd":8"#,  visib: #""10+""#, clouds: #"[{"cover":"SCT","base":10000}]"#, temp: 23, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 11008KT 10SM SCT100 23/02 A2992 (SIM SCAFFOLD)"),
                         ob("KT05", minAgo: 120, wind: #""wdir":100,"wspd":6"#,  visib: #""10+""#, clouds: #"[{"cover":"FEW","base":12000}]"#, temp: 21, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 10006KT 10SM FEW120 21/02 A2992 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT05","validTimeFrom":\#(epoch(-2)),"validTimeTo":\#(epoch(25)),"rawTAF":"TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS (SIMULATED, times shifted)","fcsts":[
+                    [{"icaoId":"KT05","validTimeFrom":\#(epoch(-2)),"validTimeTo":\#(epoch(25)),"rawTAF":"TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS TEMPO 2201/2204 12012G21KT 510009 BECMG 2210/2211 25009KT 9999 SCT080 QNH2980INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS TX26/2122Z TN18/2116Z (SIMULATED, times shifted)","fcsts":[
                       {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(25)),"wdir":"VRB","wspd":6,"visib":"6+","clouds":[{"cover":"FEW","base":12000}]},
                       {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(-0.5)),"timeBec":\#(epoch(-1)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
                       {"timeFrom":\#(epoch(-0.5)),"timeTo":\#(epoch(2)),"timeBec":\#(epoch(0.5)),"fcstChange":"BECMG","wdir":110,"wspd":12,"wgst":21,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
                       {"timeFrom":\#(epoch(0.5)),"timeTo":\#(epoch(2.5)),"fcstChange":"TEMPO","wdir":120,"wspd":16,"wgst":28,"visib":"","clouds":[]},
                       {"timeFrom":\#(epoch(2)),"timeTo":\#(epoch(11)),"timeBec":\#(epoch(3)),"fcstChange":"BECMG","wdir":120,"wspd":16,"wgst":28,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000}]},
                       {"timeFrom":\#(epoch(3)),"timeTo":\#(epoch(7)),"fcstChange":"TEMPO","wdir":130,"wspd":18,"wgst":31,"visib":"","wxString":"VCSH","clouds":[]},
-                      {"timeFrom":\#(epoch(11)),"timeTo":\#(epoch(21)),"timeBec":\#(epoch(12)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"SCT","base":8000}]},
+                      {"timeFrom":\#(epoch(11)),"timeTo":\#(epoch(18)),"timeBec":\#(epoch(12)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"SCT","base":8000}]},
+                      {"timeFrom":\#(epoch(12)),"timeTo":\#(epoch(15)),"fcstChange":"TEMPO","wdir":120,"wspd":12,"wgst":21,"visib":"","clouds":[]},
+                      {"timeFrom":\#(epoch(18)),"timeTo":\#(epoch(21)),"timeBec":\#(epoch(19)),"fcstChange":"BECMG","wdir":250,"wspd":9,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"SCT","base":8000}]},
                       {"timeFrom":\#(epoch(21)),"timeTo":\#(epoch(25)),"timeBec":\#(epoch(22)),"fcstChange":"BECMG","wdir":250,"wspd":10,"wgst":15,"visib":"6+","wxString":"SHRA","clouds":[{"cover":"BKN","base":5000}]}
                     ]}]
                     """#

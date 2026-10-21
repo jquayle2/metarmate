@@ -16,7 +16,7 @@ struct TafParser {
         let validFrom = raw.validTimeFrom.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? issueTime
         let validTo = raw.validTimeTo.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? issueTime.addingTimeInterval(86400)
 
-        let forecasts = parseForecastPeriods(raw.fcsts ?? [])
+        let forecasts = parseForecastPeriods(raw.fcsts ?? [], rawText: rawText)
 
         return Taf(
             rawText: rawText,
@@ -29,14 +29,18 @@ struct TafParser {
     }
 
     // MARK: - Parse forecast periods
-    nonisolated private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]]) -> [TafForecast] {
+    nonisolated private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]], rawText: String) -> [TafForecast] {
         var result: [TafForecast] = []
+        // Raw change groups, used only when they line up one-to-one with NOAA's periods (see OMTNS).
+        let groups = rawChangeGroups(rawText)
+        let aligned = groups.count == fcsts.count
+        var carriedOMTNS: Set<String> = []
         // The prevailing visibility and sky, carried forward into change groups that omit them.
         var prevailingVis: Visibility = .unknown
         var prevailingClouds: [CloudLayer] = []
         var prevailingWind: Wind?
 
-        for dict in fcsts {
+        for (index, dict) in fcsts.enumerated() {
             guard let fromEpoch = dict["timeFrom"]?.value as? Int,
                   let toEpoch = dict["timeTo"]?.value as? Int else { continue }
 
@@ -90,8 +94,17 @@ struct TafParser {
             // Calculate flight category from visibility and ceiling
             let cat = calculateFlightCategory(visibility: vis, clouds: clouds)
 
-            // Weather phenomena
-            let wx = (dict["wxString"]?.value as? String)?.components(separatedBy: " ").filter { !$0.isEmpty } ?? []
+            // Weather phenomena. NSW ("no significant weather") ends the weather; it isn't one.
+            var wx = (dict["wxString"]?.value as? String)?.components(separatedBy: " ").filter { !$0.isEmpty && $0 != "NSW" } ?? []
+            if aligned {
+                let tokens = groups[index]
+                let stated = wx.contains { tokens.contains($0) }   // else NOAA carried it from an earlier group
+                let omtns: Set<String> = stated
+                    ? Set(tokens.indices.dropFirst().filter { tokens[$0] == "OMTNS" }.map { tokens[$0 - 1] })
+                    : (persists ? carriedOMTNS : [])
+                if persists { carriedOMTNS = wx.isEmpty ? [] : omtns }
+                wx = wx.map { omtns.contains($0) ? "\($0) OMTNS" : $0 }
+            }
 
             result.append(TafForecast(
                 type: type,
@@ -180,6 +193,28 @@ struct TafParser {
             let typeStr = cloud["type"] as? String ?? ""
             return CloudLayer(coverage: coverage, altitude: altitudeHundreds, isCumulonimbus: typeStr == "CB")
         }
+    }
+
+    // MARK: - Weather over the mountains (OMTNS)
+    // US military TAFs qualify weather with OMTNS: "TSRA OMTNS" is thunderstorms over the mountains,
+    // not at the station. NOAA's decode drops the qualifier (it lands in `notDecoded` on the NEXT
+    // period) and carries the bare TSRA into later groups. So the raw TAF is split into change
+    // groups, and only when those line up one-to-one with NOAA's periods is a weather code followed
+    // by OMTNS kept as "<code> OMTNS" (decoded "… over mountains"), including where NOAA carries it.
+    // Otherwise NOAA's decode stands, which reads it at the station (the cautious side).
+    nonisolated static func rawChangeGroups(_ raw: String) -> [[String]] {
+        var groups: [[String]] = [[]]
+        var previous = ""
+        for token in raw.split(whereSeparator: \.isWhitespace).map(String.init) {
+            let isFM = token.hasPrefix("FM") && token.count == 8 && token.dropFirst(2).allSatisfy(\.isNumber)
+            // "PROB30 TEMPO" is one group; the TEMPO doesn't start another.
+            let startsGroup = token == "BECMG" || token.hasPrefix("PROB") || isFM
+                || (token == "TEMPO" && !previous.hasPrefix("PROB"))
+            if startsGroup { groups.append([]) }
+            groups[groups.count - 1].append(token)
+            previous = token
+        }
+        return groups
     }
 
     nonisolated private static func parseDate(_ str: String) -> Date? {

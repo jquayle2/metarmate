@@ -1,0 +1,699 @@
+[
+ {
+  "icaoId": "KINS",
+  "dbPopTime": "2026-10-21T16:24:18.765Z",
+  "bulletinTime": "2026-10-21T16:21:00.000Z",
+  "issueTime": "2026-10-21T16:20:00.000Z",
+  "validTimeFrom": 1792598400,
+  "validTimeTo": 1792695600,
+  "rawTAF": "TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS TEMPO 2201/2204 12012G21KT 510009 BECMG 2210/2211 25009KT 9999 SCT080 QNH2980INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS TX26/2122Z TN18/2116Z",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 36.586,
+  "lon": -115.69,
+  "elev": 954,
+  "prior": 6,
+  "name": "Indian Springs/Creech AFB",
+  "fcsts": [
+   {
+    "timeFrom": 1792598400,
+    "timeTo": 1792695600,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 6,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1013,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 12000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792598400,
+    "timeTo": 1792602000,
+    "timeBec": 1792602000,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 110,
+    "wspd": 10,
+    "wgst": 15,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1013,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 10000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792602000,
+    "timeTo": 1792609200,
+    "timeBec": 1792605600,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 110,
+    "wspd": 12,
+    "wgst": 21,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1011,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 10000,
+      "type": null
+     }
+    ],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 1,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792605600,
+    "timeTo": 1792612800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": null,
+    "wdir": 120,
+    "wspd": 16,
+    "wgst": 28,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 2,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792609200,
+    "timeTo": 1792627200,
+    "timeBec": 1792612800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 120,
+    "wspd": 16,
+    "wgst": 28,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1008,
+    "vertVis": null,
+    "wxString": "TSRA",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 8000,
+      "type": null
+     }
+    ],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 2,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792612800,
+    "timeTo": 1792627200,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 18,
+    "wgst": 31,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": "VCSH",
+    "notDecoded": "OMTNS ",
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792627200,
+    "timeTo": 1792663200,
+    "timeBec": 1792630800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 110,
+    "wspd": 10,
+    "wgst": 15,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1009,
+    "vertVis": null,
+    "wxString": "TSRA",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 8000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792630800,
+    "timeTo": 1792641600,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": null,
+    "wdir": 120,
+    "wspd": 12,
+    "wgst": 21,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 1,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792663200,
+    "timeTo": 1792677600,
+    "timeBec": 1792666800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 250,
+    "wspd": 9,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1009,
+    "vertVis": null,
+    "wxString": "TSRA",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 8000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792677600,
+    "timeTo": 1792695600,
+    "timeBec": 1792681200,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 250,
+    "wspd": 10,
+    "wgst": 15,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1010,
+    "vertVis": null,
+    "wxString": "SHRA",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 5000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": [
+     {
+      "validTime": 1792620000,
+      "surfaceTemp": 26,
+      "maxOrMin": "MAX"
+     },
+     {
+      "validTime": 1792598400,
+      "surfaceTemp": 18,
+      "maxOrMin": "MIN"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "icaoId": "KLSV",
+  "dbPopTime": "2026-10-21T15:24:09.673Z",
+  "bulletinTime": "2026-10-21T15:21:00.000Z",
+  "issueTime": "2026-10-21T15:00:00.000Z",
+  "validTimeFrom": 1792594800,
+  "validTimeTo": 1792702800,
+  "rawTAF": "TAF KLSV 211500Z 2115/2221 09012KT 9999 FEW080 SCT150 QNH2989INS BECMG 2119/2120 09010G20KT 9999 SCT080 BKN150 510009 QNH2976INS TEMPO 2122/2202 09015G25KT 520009 BECMG 2207/2208 06008KT 9999 SCT100 BKN150 QNH2982INS BECMG 2213/2214 21012KT 9000 -SHRA BKN080 QNH2976INS TX29/2123Z TN17/2214Z",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 36.236,
+  "lon": -115.034,
+  "elev": 563,
+  "prior": 6,
+  "name": "Nellis AFB",
+  "fcsts": [
+   {
+    "timeFrom": 1792594800,
+    "timeTo": 1792609200,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 90,
+    "wspd": 12,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1012,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 8000,
+      "type": null
+     },
+     {
+      "cover": "SCT",
+      "base": 15000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792609200,
+    "timeTo": 1792652400,
+    "timeBec": 1792612800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 90,
+    "wspd": 10,
+    "wgst": 20,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1008,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 8000,
+      "type": null
+     },
+     {
+      "cover": "BKN",
+      "base": 15000,
+      "type": null
+     }
+    ],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 1,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792620000,
+    "timeTo": 1792634400,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": null,
+    "wdir": 90,
+    "wspd": 15,
+    "wgst": 25,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [
+     {
+      "impactVar": "TURB",
+      "intensity": 2,
+      "minAlt": null,
+      "maxAlt": 9000
+     }
+    ],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792652400,
+    "timeTo": 1792674000,
+    "timeBec": 1792656000,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 60,
+    "wspd": 8,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1010,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 10000,
+      "type": null
+     },
+     {
+      "cover": "BKN",
+      "base": 15000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792674000,
+    "timeTo": 1792702800,
+    "timeBec": 1792677600,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 210,
+    "wspd": 12,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 5.59,
+    "altim": 1008,
+    "vertVis": null,
+    "wxString": "-SHRA",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 8000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": [
+     {
+      "validTime": 1792623600,
+      "surfaceTemp": 29,
+      "maxOrMin": "MAX"
+     },
+     {
+      "validTime": 1792677600,
+      "surfaceTemp": 17,
+      "maxOrMin": "MIN"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "icaoId": "KNKX",
+  "dbPopTime": "2026-10-21T16:33:20.000Z",
+  "bulletinTime": "2026-10-21T16:31:00.000Z",
+  "issueTime": "2026-10-21T16:00:00.000Z",
+  "validTimeFrom": 1792598400,
+  "validTimeTo": 1792706400,
+  "rawTAF": "TAF KNKX 211600Z 2116/2222 VRB06KT 9999 SCT016 SCT070 QNH2986INS FM211930 19010G20KT 9999 SCT030 QNH2983INS FM220100 18008KT 9999 BKN030 OVC070 QNH2984INS TEMPO 2205/2209 18006KT 9000 -RA BR OVC012 BECMG 2211/2213 VRB04KT 9999 NSW BKN030 QNH2989INS FM221800 18006G16KT 9999 BKN030 QNH2991INS TX27/2119Z TN17/2214Z",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 32.865,
+  "lon": -117.137,
+  "elev": 138,
+  "prior": 5,
+  "name": "Miramar ",
+  "fcsts": [
+   {
+    "timeFrom": 1792598400,
+    "timeTo": 1792611000,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 6,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1011,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 1600,
+      "type": null
+     },
+     {
+      "cover": "SCT",
+      "base": 7000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792611000,
+    "timeTo": 1792630800,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 190,
+    "wspd": 10,
+    "wgst": 20,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1010,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 3000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792630800,
+    "timeTo": 1792666800,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 180,
+    "wspd": 8,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1011,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 3000,
+      "type": null
+     },
+     {
+      "cover": "OVC",
+      "base": 7000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792645200,
+    "timeTo": 1792659600,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": null,
+    "wdir": 180,
+    "wspd": 6,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 5.59,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "-RA BR",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "OVC",
+      "base": 1200,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792666800,
+    "timeTo": 1792692000,
+    "timeBec": 1792674000,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 4,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1012,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 3000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1792692000,
+    "timeTo": 1792706400,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 180,
+    "wspd": 6,
+    "wgst": 16,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": 1013,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 3000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": [
+     {
+      "validTime": 1792609200,
+      "surfaceTemp": 27,
+      "maxOrMin": "MAX"
+     },
+     {
+      "validTime": 1792677600,
+      "surfaceTemp": 17,
+      "maxOrMin": "MIN"
+     }
+    ]
+   }
+  ]
+ }
+]
