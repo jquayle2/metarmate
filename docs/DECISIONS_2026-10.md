@@ -49,18 +49,25 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
     - Elevation difference of 1,000 ft or more: "TAF site is N ft lower/higher", on top of any tier.
     - Mockup reviewed and approved Oct 20, 2026.
 
-## Business model (launch)
+## Business model (launch) (revised Oct 21)
 
-18. Free app at launch, with no IAP in the first submission. Small Business Program: enrolled.
+18. **Pro ships at launch**, in the first submission (reverses the Oct 20 "no IAP at launch"). Beta testers have had everything free since September; gating features after launch would read as taking them away. Small Business Program: enrolled. TestFlight testers get Pro via offer codes.
 19. **Free forever:**
-    - METAR/TAF decode, flight category, nearest, search, favorites.
+    - METAR/TAF decode, flight category, nearest, search, unlimited favorites.
     - Trend card, Forecast Deviation Strip, Pilot Notes (including the crosswind warning), density altitude, advisory weather.
+    - **Crosswind calculator** (moved from Pro Oct 21: XW Calc is the free funnel for the same tool).
+    - **Go/no-go verdict on the detail screen against the built-in starter profiles** (a couple of starters; no custom profile in the free tier). Starter verdicts are labeled with the profile, e.g. "GO vs VFR day starter", so they're never mistaken for the pilot's own minimums.
     - Safety-relevant information is never paywalled.
-20. **Pro, one-time (~$2.99):**
-    - Decided: crosswind calculator, widgets (including lock screen).
-    - Proposed, Jeff to confirm: Siri/Shortcuts, personal minimums and go/no-go alerts, layout customization, future Watch.
-    - TestFlight testers get Pro via offer codes.
-21. **ASOS Updates:** a subscription added after launch. It includes Pro. It uses a StoreKit introductory offer; the old 60-day first-launch free period is removed.
+20. **Pro, one-time, $5.99, Family Sharing on:**
+    - Home-screen and lock-screen widgets (including the verdict on widgets).
+    - **Unlimited custom minimums profiles** (create, clone, edit).
+    - Minimums alerts (airport watches, background checks, notifications).
+    - Siri / Shortcuts.
+    - Layout customization.
+    - Apple Watch (when it ships).
+    - Paywall copy shows what Pro adds, never what's withheld; the free app must feel complete.
+    - Price check Oct 21 against aviation weather apps: AeroWeather Pro ~$4–5 one-time plus small subscriptions; AviatorWatch $9.99 up front; several competitors cap free airports at 1–3 (we don't).
+21. **ASOS Updates:** a subscription that includes Pro, with a StoreKit introductory offer; the old 60-day first-launch free period is removed. **Price not yet set:** decide against the Synoptic cost and category norms (weather-app subscriptions run ~$5–9/yr; 5-minute data is unique, so a premium may be justified).
 22. **XW Calc** becomes a free funnel into MetarMate. Its development is frozen.
 
 ## Data source for ASOS Updates

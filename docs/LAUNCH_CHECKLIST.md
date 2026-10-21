@@ -14,8 +14,9 @@ How this list is maintained:
 ## 0. Decisions needed before scope is final [Jeff]
 
 - [ ] **ASOS Updates at launch or after?** D#18 says no IAP in the first submission; the Synoptic paid plan may change that. If "at launch", section 6 moves onto the critical path.
-- [ ] **Pro at launch or after?** D#18 (no IAP at launch) conflicts with D#20 (widgets and crosswind calculator are Pro). Pick one; it decides whether section 4's Pro gating items are launch blockers.
-- [ ] **Pro scope:** confirm Siri/Shortcuts, personal minimums + go/no-go alerts, layout customization (D#20, proposed).
+- [x] **Pro at launch or after?** At launch (D#18, Oct 21). Section 4's Pro gating is launch-blocking.
+- [x] **Pro scope** (D#19–20, Oct 21): Pro = widgets, unlimited custom minimums profiles, alerts, Siri, layout, Watch; $5.99 one-time, Family Sharing. Free = starter-profile verdicts, crosswind calculator, favorites.
+- [ ] **ASOS Updates subscription price** (D#21): set against Synoptic cost and category norms.
 - [ ] **Nearby-TAF fallback (D#13–17): launch or 1.3?** Design agreed Oct 21 (headline substitution, advisory styling, 10/25/50 nm tiers); not built.
 - [ ] **Siri staleness rule:** apply late/no-current (65/75 min) to Siri answers? Yes/no, then into DECISIONS.
 - [ ] **P3 triage:** which items in section 5 are launch-required.
@@ -70,6 +71,7 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [ ] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category)
 - [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts
 - [ ] #20 Gust approach speed = ½ gust factor, one shared function (D#8)
+- [ ] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19)
 - [ ] D#10 symmetric missing-field notes; D#11 F17 hazards in history; D#12 PROB TSRA in headline
 - [ ] F16 present-weather chip off the category red; F18 "Clear" with only FEW/SCT
 - [ ] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases)
@@ -84,12 +86,19 @@ App Review blockers (required regardless of section 0):
 - [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
 - [ ] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration
 
-Pro gating (blocker only if Pro ships at launch, section 0):
+Pro gating (launch-blocking; scope in D#19–20):
 - [ ] #24 Siri waits for entitlements before reading `isProUser`
 - [ ] #24 Lock-screen widgets gated
 - [ ] #24 StoreKit listener started in `App.init`
 - [ ] #24 Stop requesting ASOS product IDs until ASOS ships
-- [ ] Flip `FeatureFlags.favoritesRequirePro` / `WidgetDataManager.widgetsRequirePro` per the final Pro scope
+- [ ] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro`
+- [ ] Widgets Pro: `WidgetDataManager.widgetsRequirePro = true` (home and lock screen)
+- [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only
+- [ ] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message
+- [ ] Crosswind calculator free: remove any Pro gate on it
+- [ ] Layout customization Pro
+- [ ] Paywall screen: lists what Pro adds; restore purchases; $5.99 shown from StoreKit (never hard-coded)
+- [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
 - [ ] TestFlight testers get Pro via offer codes (D#20)
 
 Siri (#25):
@@ -142,6 +151,7 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 ## 7. App Store Connect and submission [Jeff]
 
 - [ ] Version/build bumped (app + widget, Debug + Release)
+- [ ] Pro IAP (non-consumable) at $5.99 in App Store Connect, Family Sharing on, review screenshot + notes
 - [ ] App name, subtitle, keywords, description
 - [ ] Screenshots: 6.9" and 6.5" iPhone, 13" iPad (iPad is supported)
 - [ ] App Privacy ("nutrition label") matches what the app collects (location, purchases)
@@ -166,3 +176,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 ## Log
 - **Oct 21, 2026:** List created. Widget "not refreshing" root-caused to an unconfigured widget (no airport set → cache only); configured to KVGT, unconfigured-fetch fix added to section 2. Synoptic chosen as ASOS source.
 - **Oct 21, 2026:** Jeff confirmed all product rulings himself (no Mike packet); Synoptic as ASOS source; nearby-TAF headline/tier design agreed. A2 is unblocked.
+- **Oct 21, 2026:** Pro decided: ships at launch, $5.99 one-time, Family Sharing. Free gets starter-profile verdicts and the crosswind calculator; Pro gets unlimited custom profiles, alerts, widgets, Siri, layout, Watch. ASOS subscription price still open.
