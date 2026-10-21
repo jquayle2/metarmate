@@ -168,45 +168,22 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
-        let icao = resolveICAO(for: configuration)
-        if let icao {
-            let cached = WidgetDataManager.load(icao: icao)
-            if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
-                let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
-                WidgetDataManager.save(snapshot: merged, reload: false)
-                return MetarMateEntry(date: .now, snapshot: merged, requestedICAO: nil)
-            }
-            return MetarMateEntry(date: .now, snapshot: cached, requestedICAO: cached == nil ? icao : nil)
-        }
-        let cached = WidgetDataManager.mostRecent()
-        return MetarMateEntry(date: .now, snapshot: cached, requestedICAO: nil)
+        let (snapshot, requestedICAO) = await loadSnapshot(for: configuration)
+        return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: requestedICAO)
     }
 
     func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
-        let icao = resolveICAO(for: configuration)
-        var snapshot: WidgetWeatherSnapshot?
-        var requestedICAO: String?
-
-        if let icao {
-            let cached = WidgetDataManager.load(icao: icao)
-            if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
-                let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
-                WidgetDataManager.save(snapshot: merged, reload: false)
-                snapshot = merged
-            } else {
-                snapshot = cached
-                if snapshot == nil { requestedICAO = icao }
-            }
-        } else {
-            snapshot = WidgetDataManager.mostRecent()
-        }
+        let loaded = await loadSnapshot(for: configuration)
+        let requestedICAO = loaded.requestedICAO
 
         // One entry now, plus one at each future instant the report's age state or text changes
         // (late at obs+65, no current METAR at obs+75, then the "last report" age), so the
         // widget goes late/stale on time even when WidgetKit denies the next reload.
         let now = Date.now
         #if DEBUG
-        snapshot = debugForcedAge(snapshot, now: now)
+        let snapshot = debugForcedAge(loaded.snapshot, now: now)
+        #else
+        let snapshot = loaded.snapshot
         #endif
         let futureDates = snapshot?.ageChangeDates(after: now) ?? []
         let entries = ([now] + futureDates).map {
@@ -225,6 +202,24 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         return snapshot.withObservationTime(now.addingTimeInterval(-TimeInterval(minutes * 60)))
     }
     #endif
+
+    /// The airport to show and fetch: the configured one, or (unconfigured widget) the airport
+    /// most recently written to the App Group, i.e. the last one viewed in the app. Either way the
+    /// widget fetches live; an unconfigured widget used to replay the cache and never refreshed.
+    private func loadSnapshot(for configuration: SelectAirportIntent) async -> (snapshot: WidgetWeatherSnapshot?, requestedICAO: String?) {
+        let configured = resolveICAO(for: configuration)
+        guard let icao = configured ?? WidgetDataManager.mostRecent()?.icao else {
+            return (nil, nil)
+        }
+        let cached = WidgetDataManager.load(icao: icao)
+        if let live = await WidgetFetcher.fetchSnapshot(icao: icao) {
+            let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
+            WidgetDataManager.save(snapshot: merged, reload: false)
+            return (merged, nil)
+        }
+        // "Waiting for data" only for an airport the user chose; the fallback always has a cache.
+        return (cached, cached == nil && configured != nil ? icao : nil)
+    }
 
     private func resolveICAO(for configuration: SelectAirportIntent) -> String? {
         guard let code = configuration.airportCode, !code.isEmpty else { return nil }
