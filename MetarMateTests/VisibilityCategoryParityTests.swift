@@ -10,10 +10,11 @@ import Foundation
 // (empty visib, no ceiling) — that assertion is new, not a changed one.
 struct VisibilityCategoryParityTests {
 
-    // Parse a single-period TAF with the given raw `visib` JSON literal and NO ceiling, so the
-    // visibility axis alone drives the flight category. Returns the computed category.
+    // Parse a single-period TAF with the given raw `visib` JSON literal and NO ceiling (a stated
+    // clear sky, SKC — how NOAA sends one), so the visibility axis alone drives the flight category.
+    // Returns the computed category. (An empty cloud list means "sky not forecast", audit #14.)
     private func category(visibJSON: String) throws -> FlightCategory {
-        let json = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"vis parity probe","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":\#(visibJSON),"clouds":[]}]}"#
+        let json = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"vis parity probe","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":\#(visibJSON),"clouds":[{"cover":"SKC","base":null}]}]}"#
         let raw = try JSONDecoder().decode(RawTaf.self, from: Data(json.utf8))
         let taf = try TafParser.parse(raw: raw)
         return try #require(taf.forecasts.first).flightCategory

@@ -68,8 +68,8 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [ ] #10 Missing wind direction/speed not reported as 000° / 0 kt
 - [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
 - [ ] #12 Missing cloud base not 0 ft
-- [ ] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
-- [ ] #14 TAF category with one axis unknown; clouds into overlays
+- [x] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
+- [x] #14 TAF category with one axis unknown; clouds into overlays
 - [ ] #15 Missing `obsTime` not `Date()`
 - [ ] #16 Unknown shown as good (green rail, "Clear", "Fcst on target", wind-only "Steady")
 - [ ] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category)
@@ -133,7 +133,7 @@ Other:
 
 Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 
-- [ ] Step 1: TAF time logic, audit #13/#14 ("period covering time t" helper; no expired periods/TAFs, overlays kept separate, BECMG applied, unknown axis not VFR). Also closes those two A2 items.
+- [x] Step 1: TAF time logic, audit #13/#14 ("period covering time t" helper; no expired periods/TAFs, overlays kept separate, BECMG applied, unknown axis not VFR). Also closes those two A2 items.
 - [ ] When the field's TAF request returns 204, one `taf?bbox=` request around the airport; pick the nearest TAF within 50 nm
 - [ ] Forecast card headline is the substitution: "No TAF for KVGT · using KLAS (9 nm SW)"; advisory styling (dashed border, orange accent); no green/yellow/red for distance
 - [ ] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF

@@ -13,22 +13,35 @@ struct HeroSegment: Equatable {
 
 enum TafHeroBrief {
 
-    /// Pure derivation of the hero one-liner as colored segments (display order). A faithful move of
-    /// the former `WeatherDetailView.tafHeroBrief` — every `Text(x).foregroundColor(c)` is now a
-    /// `HeroSegment(x, c)`; strings and colors are identical. The View concatenates the segments.
-    static func build(_ taf: Taf) -> [HeroSegment] {
-        let bases = taf.baseForecasts
+    /// Pure derivation of the hero one-liner as colored segments (display order). The View
+    /// concatenates the segments. Narrates from the prevailing period covering `now` onward; periods
+    /// and change groups that have already ended are not part of the story.
+    static func build(_ taf: Taf, now: Date = Date()) -> [HeroSegment] {
+        if now >= taf.validTo {
+            return [HeroSegment(text: "This TAF has expired.", color: Brand.slate)]
+        }
+        let bases = taf.remainingTimeline(at: now)
         guard let first = bases.first else {
             return [HeroSegment(text: "No forecast data.", color: Brand.slate)]
         }
-        // If the CURRENT period's category is undetermined (no visibility AND no ceiling in the
-        // forecast — now reachable since visibility no longer defaults to 10 SM), there is no
-        // honest baseline to narrate a trend from. Say so, rather than dressing "unknown" up as a
-        // category ("UNKN the entire forecast period") or an improvement.
+        // If the CURRENT period's category is undetermined (an axis isn't forecast and the other
+        // can't settle it), there is no honest baseline to narrate a trend from. Say so, rather than
+        // dressing "unknown" up as a category ("UNKN the entire forecast period") or an improvement.
         if first.flightCategory == .unknown {
-            return [HeroSegment(text: "Forecast incomplete — the current period doesn't specify visibility or ceiling.",
+            let missing = first.unforecastAxis ?? "visibility or ceiling"
+            return [HeroSegment(text: "Forecast incomplete — the current period doesn't specify \(missing).",
                                 color: Brand.slate)]
         }
+        let story = narrate(taf, bases: bases, first: first, now: now)
+        // A current category resting on one forecast axis says which one is missing
+        // ("IFR · visibility not forecast"), unless the story already did.
+        if let axis = first.unforecastAxis, !story.contains(where: { $0.text.contains("not forecast") }) {
+            return story + [HeroSegment(text: " Current period: \(axis) not forecast.", color: Brand.slate)]
+        }
+        return story
+    }
+
+    private static func narrate(_ taf: Taf, bases: [TafForecast], first: TafForecast, now: Date) -> [HeroSegment] {
         // A LATER period we couldn't determine (.unknown) must likewise never read as a worst-case
         // OR as an improvement — excluding it prevents "IFR now, improving to UNKN by 09:00."
         let known = bases.filter { $0.flightCategory != .unknown }
@@ -45,6 +58,7 @@ enum TafHeroBrief {
             if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
             if let v = w.visibility.lowerBoundSM, v < 5 { tailParts.append("visibility \(TafFormat.visText(w.visibility))") }
             if !w.weatherPhenomena.isEmpty { tailParts.append(WeatherDecoder.decodeAll(w.weatherPhenomena).lowercased()) }
+            if let axis = w.unforecastAxis { tailParts.append("\(axis) not forecast") }
             let tailText: String
             if tailParts.isEmpty {
                 tailText = "Watch the trend through the period."
@@ -59,8 +73,8 @@ enum TafHeroBrief {
         // REGARDLESS of what the bases do — a PROB30 thunderstorm is not covered by an "MVFR by
         // 09:00" base story. Lead with it when it's convective/heavy (always), or when it is IFR/LIFR
         // AND more severe than the worst base. Hoisted above the worsening guard on purpose. (PROB
-        // reaches overlayForecasts via the F2 fix.)
-        if let overlay = taf.overlayForecasts.first(where: {
+        // reaches overlayForecasts via the F2 fix.) Change groups that have ended don't count.
+        if let overlay = taf.remainingOverlays(at: now).first(where: {
             TafFormat.hasConvectiveOrHeavy($0)
                 || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
                     && TafFormat.categorySeverity($0.flightCategory) > worstBaseSeverity)

@@ -119,7 +119,9 @@ struct TafVerification: Codable {
         var points: [TafVerificationPoint] = []
 
         for metar in historical {
-            guard let period = taf.forecasts.last(where: { $0.fromTime <= metar.observationTime }) else { continue }
+            // Score against what prevailed at the observation time — never a TEMPO/PROB overlay or an
+            // expired period. Observations outside the TAF's validity aren't scored.
+            guard let period = taf.forecast(at: metar.observationTime)?.prevailing else { continue }
 
             let forecastCeiling = period.clouds
                 .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })

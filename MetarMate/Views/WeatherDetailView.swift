@@ -655,7 +655,7 @@ struct WeatherDetailView: View {
             if altFt < 1000 { return Brand.valueRed }
             if altFt < 3000 { return Brand.mvfrBlue }
             return Brand.vfrGreen
-        case .clear, .skyClear:
+        case .clear, .skyClear, .noSignificantCloud:
             return Brand.vfrGreen
         }
     }
@@ -820,7 +820,7 @@ struct WeatherDetailView: View {
             if altFt < 1000 { return Brand.valueRed }        // IFR
             if altFt < 3000 { return Brand.mvfrBlue }        // MVFR
             return Brand.vfrGreen                            // VFR
-        case .clear, .skyClear:
+        case .clear, .skyClear, .noSignificantCloud:
             return Brand.vfrGreen
         }
     }
@@ -1796,6 +1796,9 @@ struct WeatherDetailView: View {
     private func tafSection(_ taf: Taf, showRaw: Bool = true) -> some View {
         let tafIsUpcoming = taf.validFrom > Date()
         let validHours = max(1, Int(taf.validTo.timeIntervalSince(taf.validFrom) / 3600))
+        // Prevailing periods (base/FM and completed BECMG changes), so "now" matches currentForecast.
+        let periods = taf.prevailingTimeline
+        let currentID = taf.currentForecast?.id
 
         return VStack(alignment: .leading, spacing: 8) {
 
@@ -1822,14 +1825,14 @@ struct WeatherDetailView: View {
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if !taf.baseForecasts.isEmpty {
+                if !periods.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 2) {
-                            ForEach(taf.baseForecasts) { period in
+                            ForEach(periods) { period in
                                 ForecastStripColumn(
                                     timeLabel: tafStripTimeLabel(period.fromTime),
                                     factor: ForecastRules.limitingFactor(for: period),
-                                    isHighlighted: period.id == taf.currentForecast?.id
+                                    isHighlighted: period.id == currentID
                                 )
                             }
                         }
@@ -1837,14 +1840,14 @@ struct WeatherDetailView: View {
                         .padding(.vertical, 2)
                     }
 
-                    CategoryRibbon(segments: taf.baseForecasts.map { period in
+                    CategoryRibbon(segments: periods.map { period in
                         let duration = max(period.toTime.timeIntervalSince(period.fromTime), 60)
                         // Ribbon collapses to 3 colors (green/blue/red) — LIFR folds into IFR red.
                         let ribbonCategory: FlightCategory = period.flightCategory == .lifr ? .ifr : period.flightCategory
                         return CategoryRibbon.Segment(
                             color: ColorRules.flightCategoryColor(ribbonCategory),
                             weight: duration,
-                            isCurrent: period.id == taf.currentForecast?.id
+                            isCurrent: period.id == currentID
                         )
                     })
                     .padding(.top, 4)
@@ -1856,12 +1859,12 @@ struct WeatherDetailView: View {
 
             // Delta cards — one per period, treatment keyed by category (Decision 4).
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(taf.baseForecasts.enumerated()), id: \.element.id) { idx, period in
+                ForEach(Array(periods.enumerated()), id: \.element.id) { idx, period in
                     tafDeltaCard(
                         period,
-                        previous: idx > 0 ? taf.baseForecasts[idx - 1] : nil,
+                        previous: idx > 0 ? periods[idx - 1] : nil,
                         tag: tafRelativeTag(period,
-                                            isCurrent: period.id == taf.currentForecast?.id,
+                                            isCurrent: period.id == currentID,
                                             tafIsUpcoming: tafIsUpcoming)
                     )
                 }
@@ -1992,7 +1995,8 @@ struct WeatherDetailView: View {
                         }
                     }
                     Spacer()
-                    Text("\(tafCompactWind(period.wind)) · \(period.flightCategory.rawValue)")
+                    Text(([tafCompactWind(period.wind), period.flightCategory.rawValue]
+                          + (period.unforecastAxis.map { ["\($0) not forecast"] } ?? [])).joined(separator: " · "))
                         .font(.brandMono(12.5, weight: .semibold))
                         .foregroundColor(Brand.slate)
                 }
@@ -2094,6 +2098,11 @@ struct WeatherDetailView: View {
             parts.append(WeatherDecoder.decodeAll(period.weatherPhenomena).lowercased())
         }
 
+        // "IFR · visibility not forecast": the category rests on the one axis that was forecast.
+        if let axis = period.unforecastAxis {
+            parts.append("\(axis) not forecast")
+        }
+
         guard !parts.isEmpty else { return "— vis / sky unchanged" }
         let joined = parts.joined(separator: " · ")
         return joined.prefix(1).uppercased() + joined.dropFirst()
@@ -2162,7 +2171,10 @@ struct WeatherDetailView: View {
     private func tafPilotNotes(for taf: Taf) -> [TafPilotNote] {
         var notes: [TafPilotNote] = []
         let amber = Self.tafAmber
-        let bases = taf.baseForecasts
+        // Only what's still ahead: the prevailing period covering now onward, and change groups
+        // that haven't ended.
+        let now = Date()
+        let bases = taf.remainingTimeline(at: now)
 
         // 1. IFR/LIFR onset in any base/fm period — flag each transition INTO low conditions.
         for (i, p) in bases.enumerated() {
@@ -2182,8 +2194,9 @@ struct WeatherDetailView: View {
         }
 
         // 2. TEMPO/BECMG overlays — surfaced here, not in the period blocks.
-        for p in taf.overlayForecasts {
+        for p in taf.remainingOverlays(at: now) {
             let label = p.type == .becmg ? "Becoming" : (p.type == .tempo ? "Temporary" : p.type.rawValue)
+            let windowEnd = p.type == .becmg ? (p.becomingTime ?? p.toTime) : p.toTime   // BECMG: its change window
             let low = p.flightCategory == .ifr || p.flightCategory == .lifr
             let severe = low || tafHasConvectiveOrHeavy(p)
 
@@ -2195,7 +2208,7 @@ struct WeatherDetailView: View {
 
             notes.append(.init(
                 icon: severe ? "exclamationmark.triangle.fill" : "cloud.sun.fill",
-                text: "\(label) \(tafWindowLabel(from: p.fromTime, to: p.toTime)) — watch for \(worst); plan margins for this window",
+                text: "\(label) \(tafWindowLabel(from: p.fromTime, to: windowEnd)) — watch for \(worst); plan margins for this window",
                 color: severe ? .red : amber,
                 rank: severe ? 0 : 2, time: p.fromTime))
         }
@@ -3470,7 +3483,7 @@ struct WeatherDetailView: View {
     }
 
     private func cloudLayerText(_ layer: CloudLayer) -> String {
-        if layer.coverage == .clear || layer.coverage == .skyClear || layer.altitude == 0 {
+        if layer.coverage == .clear || layer.coverage == .skyClear || layer.coverage == .noSignificantCloud || layer.altitude == 0 {
             return layer.coverage.rawValue
         }
         return "\(layer.coverage.rawValue) \((layer.altitude * 100).formatted())"

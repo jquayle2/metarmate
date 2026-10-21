@@ -42,6 +42,7 @@ enum CloudCoverage: String, Codable {
     case overcast = "OVC"
     case clear = "CLR"
     case skyClear = "SKC"
+    case noSignificantCloud = "NSC"   // also how NOAA decodes CAVOK
     case verticalVisibility = "VV"
 }
 

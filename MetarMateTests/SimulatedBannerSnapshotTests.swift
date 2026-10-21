@@ -66,13 +66,14 @@ final class SimulatedBannerSnapshotTests: XCTestCase {
         XCTAssertTrue(hero.contains("IFR"), "hero (Taf-only input) should read IFR; got: \(hero)")
 
         // Proof 2 — the category TRACKS THE CEILING (it is computed, not fixed): the same TAF shape
-        // with the ceiling raised to 5000 ft — vis still unknown — computes VFR instead of IFR.
+        // with the ceiling raised to 5000 ft — vis still unknown — is no longer IFR. A VFR ceiling
+        // can't vouch for the unforecast visibility, so it computes unknown, not VFR (audit #14).
         let e0 = Int(Date().addingTimeInterval(-3600).timeIntervalSince1970)
         let e1 = Int(Date().addingTimeInterval(24 * 3600).timeIntervalSince1970)
         let highCeil = #"[{"icaoId":"KT04H","validTimeFrom":\#(e0),"validTimeTo":\#(e1),"rawTAF":"control 5000 ceiling","fcsts":[{"timeFrom":\#(e0),"timeTo":\#(e1),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":5000}]}]}]"#
         let control = try SimulatedDecode.parseTaf(json: highCeil)
-        XCTAssertEqual(control.forecasts.first?.flightCategory, .vfr,
-                       "same TAF shape with a 5000 ft ceiling must compute VFR — the category is ceiling-driven, not fixed")
+        XCTAssertEqual(control.forecasts.first?.flightCategory, .unknown,
+                       "same TAF shape with a 5000 ft ceiling must not compute IFR (ceiling-driven), nor VFR with visibility unforecast")
 
         // The scaffold now agrees (IFR) — which is precisely why the inequality proof is retired.
         XCTAssertEqual(scaffold.flightCategory, .ifr)

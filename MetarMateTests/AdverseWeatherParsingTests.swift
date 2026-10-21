@@ -70,6 +70,10 @@ struct AdverseWeatherParsingTests {
         // the live corpus never hits — KDUJ/EFHK/NZDN all carry base). VV003 -> 300 ft ceiling.
         static let ovxVertVisOnly = #"{"icaoId":"KDUJ","obsTime":1783633980,"temp":5,"dewp":5,"wdir":0,"wspd":0,"visib":0.5,"vertVis":3,"altim":1015,"rawOb":"METAR KDUJ 092153Z 00000KT 1/2SM FG VV003 05/05 A2997","clouds":[{"cover":"OVX"}],"wxString":"FG","fltCat":"LIFR"}"#
 
+        // The synthetic TAFs below are valid from 1783634400 (2026-07-09 22:00Z); the hero narrates
+        // from the period covering `now`, so hero tests evaluate at the start of that validity.
+        static let fixtureNow = Date(timeIntervalSince1970: 1783634400)
+
         // F7 — TAF whose CURRENT (first) period specifies neither visibility nor ceiling -> .unknown.
         static let tafFirstUnknown = #"{"icaoId":"KZZZ","issueTime":"2026-07-09T22:00:00.000Z","validTimeFrom":1783634400,"validTimeTo":1783728000,"rawTAF":"synthetic first-period unknown","fcsts":[{"timeFrom":1783634400,"timeTo":1783648800,"wdir":200,"wspd":6,"visib":"","clouds":[]}]}"#
 
@@ -268,7 +272,7 @@ struct AdverseWeatherParsingTests {
     // MARK: - Finding 7 (audit): hero short-circuits when the current period is undetermined (FIXED)
 
     @Test func heroShortCircuitsOnUnknownCurrentPeriod() throws {
-        let segs = TafHeroBrief.build(try taf(Obs.tafFirstUnknown))
+        let segs = TafHeroBrief.build(try taf(Obs.tafFirstUnknown), now: Obs.fixtureNow)
         #expect(segs.count == 1)                                          // short-circuit — one segment
         #expect(segs.first?.text.contains("Forecast incomplete") == true)
         #expect(segs.first?.color == Brand.slate)                         // neutral, not a category color
@@ -281,7 +285,7 @@ struct AdverseWeatherParsingTests {
     // (per design: the category axis and the caution axis must never be collapsed).
     @Test func heroSurfacesTempoOverlayOnCautionAxis() throws {
         // Benign (VFR) base: "VFR now, but TEMPO … " — TEMPO clause on the caution axis.
-        let benign = TafHeroBrief.build(try taf(Obs.tafBenignBaseTempoTS))
+        let benign = TafHeroBrief.build(try taf(Obs.tafBenignBaseTempoTS), now: Obs.fixtureNow)
         let benignTempo = try #require(benign.first { $0.text.contains("TEMPO") })
         #expect(benignTempo.color == Brand.cautionOrange)   // amber caution axis…
         #expect(benignTempo.color != Brand.vfrGreen)        // …not the VFR category color
@@ -289,7 +293,7 @@ struct AdverseWeatherParsingTests {
         #expect(benign.contains { $0.text.contains("now,") })   // the base contrast is preserved
 
         // Worsening base (VFR -> IFR): worst-base IFR lead (category axis) + overlay (caution axis).
-        let worsening = TafHeroBrief.build(try taf(Obs.tafWorseningBaseTempoTS))
+        let worsening = TafHeroBrief.build(try taf(Obs.tafWorseningBaseTempoTS), now: Obs.fixtureNow)
         #expect(worsening.contains { $0.text.contains("IFR by") && $0.color == Brand.valueRed })
         let worseTempo = try #require(worsening.first { $0.text.contains("TEMPO") })
         #expect(worseTempo.color == Brand.cautionOrange)

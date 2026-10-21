@@ -296,8 +296,8 @@ struct ForecastTrend: Codable {
     var forecastCategory: FlightCategory?
     var summaryText: String
 
-    static func derive(metar: Metar, taf: Taf?) -> ForecastTrend {
-        guard let taf = taf, let current = taf.currentForecast else {
+    static func derive(metar: Metar, taf: Taf?, now: Date = Date()) -> ForecastTrend {
+        guard let taf = taf, let current = taf.currentForecast(at: now) else {
             return ForecastTrend(
                 visibility: .unknown, ceiling: .unknown,
                 wind: .unknown, overall: .unknown,
@@ -306,9 +306,9 @@ struct ForecastTrend: Codable {
             )
         }
 
-        // Try to find the next period after current for forward-looking trend
-        // If no next period, compare current METAR against the current TAF period
-        let compareBlock = taf.forecasts.first(where: { $0.fromTime > current.fromTime }) ?? current
+        // Compare against the next PREVAILING period (TEMPO/PROB never stand in for it). If there's
+        // no next period, compare the current METAR against the current TAF period.
+        let compareBlock = taf.prevailingTimeline.first(where: { $0.fromTime > current.fromTime }) ?? current
         let isForwardLooking = compareBlock.fromTime > current.fromTime
 
         // Only compare visibility when BOTH the METAR and the compared period report an EXACT

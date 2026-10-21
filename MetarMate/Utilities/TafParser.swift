@@ -31,8 +31,10 @@ struct TafParser {
     // MARK: - Parse forecast periods
     nonisolated private static func parseForecastPeriods(_ fcsts: [[String: AnyCodable]]) -> [TafForecast] {
         var result: [TafForecast] = []
-        // The prevailing (base/FM) visibility, carried forward into change groups that omit it.
+        // The prevailing visibility and sky, carried forward into change groups that omit them.
         var prevailingVis: Visibility = .unknown
+        var prevailingClouds: [CloudLayer] = []
+        var prevailingWind: Wind?
 
         for dict in fcsts {
             guard let fromEpoch = dict["timeFrom"]?.value as? Int,
@@ -45,10 +47,11 @@ struct TafParser {
             // with the percentage in a separate `probability` field — NOT "PROB30"/"PROB40", so a
             // rawValue match fails and the period would silently become .base (a 30-40% window
             // injected into the firm hero/currentForecast timeline). Map it explicitly.
+            // A "PROB30 TEMPO" arrives as fcstChange "TEMPO" with a probability — keep the probability.
             let typeStr = dict["fcstChange"]?.value as? String
+            let prob = dict["probability"]?.value as? Int
             let type: TafForecast.ForecastType
-            if typeStr == "PROB" {
-                let prob = dict["probability"]?.value as? Int
+            if typeStr == "PROB" || (typeStr == "TEMPO" && prob != nil) {
                 type = (prob == 40) ? .prob40 : .prob30
             } else if let typeStr, let parsed = TafForecast.ForecastType(rawValue: typeStr) {
                 type = parsed
@@ -56,21 +59,30 @@ struct TafParser {
                 type = .base
             }
 
+            // BECMG: when the gradual change is complete (it becomes prevailing then).
+            let becomingTime = (dict["timeBec"]?.value as? Int).map { Date(timeIntervalSince1970: TimeInterval($0)) }
+
+            // A change group states only what changes; whatever it omits (visibility, sky, and for
+            // a BECMG the wind) is the prevailing condition, not 10 SM VFR or a clear sky. Base/FM
+            // periods and BECMG (which becomes the persistent state) update the prevailing values;
+            // TEMPO/PROB are transient overlays and must not.
+            let persists = type == .base || type == .fm || type == .becmg
+
             // Wind — wdir can be Int or String ("VRB")
-            let wind = parseWind(dict)
+            var wind = parseWind(dict)
+            if wind == nil, type == .becmg { wind = prevailingWind }
+            if persists, let wind { prevailingWind = wind }
 
-            // Clouds — API returns full cloud data in TAF forecasts
-            let clouds = parseClouds(dict)
+            // Clouds — API returns full cloud data in TAF forecasts; empty = omitted
+            var clouds = parseClouds(dict)
+            if clouds.isEmpty { clouds = prevailingClouds }   // may itself be empty (sky not forecast)
+            if persists { prevailingClouds = clouds }
 
-            // Visibility — a change group states only what changes; a period that omits visibility
-            // inherits the prevailing conditions rather than defaulting to 10 SM VFR. Only base/FM
-            // periods (the persistent state) update the prevailing value; TEMPO/BECMG/PROB are
-            // transient overlays and must not.
             let ownVis = parseVisibility(dict)   // .unknown when the period omits visibility
             let vis: Visibility
             if ownVis.isKnown {
                 vis = ownVis
-                if type == .base || type == .fm { prevailingVis = ownVis }
+                if persists { prevailingVis = ownVis }
             } else {
                 vis = prevailingVis   // carry the prevailing forward (may itself be .unknown)
             }
@@ -85,6 +97,7 @@ struct TafParser {
                 type: type,
                 fromTime: from,
                 toTime: to,
+                becomingTime: becomingTime,
                 wind: wind,
                 visibility: vis,
                 clouds: clouds,
@@ -179,36 +192,39 @@ struct TafParser {
 
     // MARK: - Flight category from visibility + ceiling
     nonisolated private static func calculateFlightCategory(visibility: Visibility, clouds: [CloudLayer]) -> FlightCategory {
-        // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count)
+        // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count). The sky axis is known only
+        // when clouds were forecast: no layers at all means "not forecast", while a stated clear sky
+        // (SKC/NSC) or FEW/SCT only is a known "no ceiling".
+        let skyKnown = !clouds.isEmpty
         let ceilingFeet: Int? = clouds
             .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
             .map { $0.altitude * 100 }
 
-        // Feed the enum into the SAME threshold cascade via its lower bound, so the arithmetic is
-        // byte-identical to the old Double path. .exact(n) and .greaterThan(n) both threshold on n:
-        // for .greaterThan the true value is > n, so n is the conservative floor — and since NOAA
-        // emits .greaterThan only at 6/10 (both > 5), it lands on VFR exactly as the old 6.0/10.0
-        // did (6 <= 5 is false -> never dragged into MVFR). .unknown -> nil (unknown axis).
+        // .exact(n) and .greaterThan(n) both threshold on n: for .greaterThan the true value is > n,
+        // so n is the conservative floor (NOAA emits it only at 6/10, both VFR). .unknown -> nil.
         let vis = visibility.lowerBoundSM
 
-        // Take the worst of the two axes that are actually KNOWN. An unknown visibility must not
-        // default to 10 SM VFR (that silently cleared low-vis forecasts); guard each threshold
-        // with `if let`. If neither axis is known, the category is genuinely unknown.
+        // Each known axis on its own. Thresholds: LIFR ceiling < 500 / vis < 1; IFR ceiling < 1000 /
+        // vis < 3; MVFR ceiling <= 3000 / vis <= 5; otherwise VFR.
+        var axes: [FlightCategory] = []
+        if skyKnown {
+            if let ceil = ceilingFeet {
+                axes.append(ceil < 500 ? .lifr : ceil < 1000 ? .ifr : ceil <= 3000 ? .mvfr : .vfr)
+            } else {
+                axes.append(.vfr)
+            }
+        }
+        if let vis {
+            axes.append(vis < 1.0 ? .lifr : vis < 3.0 ? .ifr : vis <= 5.0 ? .mvfr : .vfr)
+        }
 
-        // LIFR: ceiling < 500 OR visibility < 1
-        if let ceil = ceilingFeet, ceil < 500 { return .lifr }
-        if let vis, vis < 1.0 { return .lifr }
-
-        // IFR: ceiling 500-999 OR visibility 1-2.99
-        if let ceil = ceilingFeet, ceil < 1000 { return .ifr }
-        if let vis, vis < 3.0 { return .ifr }
-
-        // MVFR: ceiling 1000-3000 OR visibility 3-5
-        if let ceil = ceilingFeet, ceil <= 3000 { return .mvfr }
-        if let vis, vis <= 5.0 { return .mvfr }
-
-        // Nothing known on either axis -> unknown; otherwise VFR (ceiling > 3000 AND/OR vis > 5)
-        if ceilingFeet == nil && !visibility.isKnown { return .unknown }
-        return .vfr
+        // Worst of the known axes. With one axis unknown, a known MVFR/IFR/LIFR is a real lower
+        // bound and stands; a known VFR axis can't vouch for the other, so the category is unknown.
+        let order: [FlightCategory] = [.vfr, .mvfr, .ifr, .lifr]
+        guard let worst = axes.max(by: { order.firstIndex(of: $0)! < order.firstIndex(of: $1)! }) else {
+            return .unknown
+        }
+        if axes.count == 1 && worst == .vfr { return .unknown }
+        return worst
     }
 }
