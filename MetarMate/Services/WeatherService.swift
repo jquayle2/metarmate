@@ -241,6 +241,43 @@ actor WeatherService {
         }
     }
 
+    // MARK: - TAFs near a point (nearby-TAF fallback)
+    /// Every TAF NOAA has in the box covering `radiusNm` around the point, with station position and
+    /// elevation. One request. 204 means none in the box: an empty list, not an error.
+    func fetchTafCandidates(latitude: Double, longitude: Double,
+                            radiusNm: Int = NearbyTaf.maxDistanceNm) async throws -> [NearbyTafCandidate] {
+        let bbox = NearbyTaf.boundingBox(latitude: latitude, longitude: longitude, radiusNm: radiusNm)
+        let url = try buildURL(path: "taf", params: ["bbox": bbox, "format": "json"])
+        let start = DispatchTime.now()
+        do {
+            let (data, response) = try await session.data(from: url)
+            try validateResponse(response)
+            let candidates = Self.tafCandidates(from: try JSONDecoder().decode([RawTaf].self, from: data))
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.info("[net] TAF bbox \(bbox, privacy: .public) - \(String(format: "%.0f", ms), privacy: .public) ms, \(candidates.count, privacy: .public) TAFs")
+            return candidates
+        } catch let err where Self.isNoContent(err) {
+            Log.net.info("[net] TAF bbox \(bbox, privacy: .public) no content (204)")
+            return []
+        } catch let err where Self.isCancellation(err) {
+            Log.net.info("[net] TAF bbox \(bbox, privacy: .public) cancelled (navigated away)")
+            throw err
+        } catch {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+            Log.net.error("[net] TAF bbox \(bbox, privacy: .public) FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
+            throw error
+        }
+    }
+
+    /// A bbox response's TAFs with their station positions; ones without a position or that don't
+    /// parse are skipped.
+    nonisolated static func tafCandidates(from raws: [RawTaf]) -> [NearbyTafCandidate] {
+        raws.compactMap { raw in
+            guard let lat = raw.lat, let lon = raw.lon, let taf = try? TafParser.parse(raw: raw) else { return nil }
+            return NearbyTafCandidate(taf: taf, latitude: lat, longitude: lon, elevationMeters: raw.elev, name: raw.name)
+        }
+    }
+
     // MARK: - Nearby stations with METAR
     func fetchNearbyMetars(latitude: Double, longitude: Double, radiusNm: Int = 50) async throws -> [Metar] {
         let url = try buildURL(path: "metar", params: [
