@@ -127,7 +127,7 @@ struct WidgetSnapshotParityTests {
 }
 
 // Report-age states and timeline instants (DECISIONS_2026-10 #4): late from 65 min, no current
-// report from 75 min, measured from the observation time at the supplied date.
+// report over 75 min (76+ whole minutes), measured from the observation time at the supplied date.
 struct WidgetReportAgeTests {
 
     private func snapshot() throws -> WidgetWeatherSnapshot {
@@ -144,8 +144,9 @@ struct WidgetReportAgeTests {
         #expect(at(s, minutes: -5) == .current)
         #expect(at(s, minutes: 64 + 59.0 / 60) == .current)
         #expect(at(s, minutes: 65) == .late(minutes: 65))
-        #expect(at(s, minutes: 74 + 59.0 / 60) == .late(minutes: 74))
-        #expect(at(s, minutes: 75) == .noCurrent(minutes: 75))
+        #expect(at(s, minutes: 75) == .late(minutes: 75))
+        #expect(at(s, minutes: 75 + 59.0 / 60) == .late(minutes: 75))
+        #expect(at(s, minutes: 76) == .noCurrent(minutes: 76))
         #expect(at(s, minutes: 130) == .noCurrent(minutes: 130))
     }
 
@@ -154,8 +155,8 @@ struct WidgetReportAgeTests {
         let minutes = s.ageChangeDates(after: s.observationTime)
             .map { Int($0.timeIntervalSince(s.observationTime) / 60) }
         #expect(minutes.first == 65)
-        #expect(minutes.contains(75))
-        #expect(Array(minutes.prefix(11)) == Array(65...75))
+        #expect(minutes.contains(76))
+        #expect(Array(minutes.prefix(12)) == Array(65...76))
         #expect(minutes.last == 720)
         // Only future instants are returned.
         let later = s.ageChangeDates(after: s.observationTime.addingTimeInterval(100 * 60))

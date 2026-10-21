@@ -212,7 +212,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         let requestedICAO = loaded.requestedICAO
 
         // One entry now, plus one at each future instant the report's age state or text changes
-        // (late at obs+65, no current METAR at obs+75, then the "last report" age), so the
+        // (late at obs+65, no current METAR over obs+75, then the "last report" age), so the
         // widget goes late/stale on time even when WidgetKit denies the next reload.
         let now = Date.now
         #if DEBUG

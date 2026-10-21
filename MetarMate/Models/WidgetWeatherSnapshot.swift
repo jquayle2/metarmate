@@ -62,27 +62,28 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // the future render the state they're scheduled for.
     enum ReportAge: Equatable {
         case current
-        case late(minutes: Int)        // 65 up to 75 min: warn, conditions still shown
-        case noCurrent(minutes: Int)   // 75 min and over: no current report, conditions withheld
+        case late(minutes: Int)        // 65 through 75 min: warn, conditions still shown
+        case noCurrent(minutes: Int)   // over 75 min (76+ whole minutes): conditions withheld
     }
 
     static let lateAfterMinutes = 65
     static let noCurrentAfterMinutes = 75
 
     func reportAge(at date: Date) -> ReportAge {
-        // Whole minutes, truncated: 64:59 is still current. A future obs time (clock skew) is current.
+        // Whole minutes, truncated: 64:59 is still current, 75:59 still late (D#4 "over 75").
+        // A future obs time (clock skew) is current.
         let minutes = Int(date.timeIntervalSince(observationTime) / 60)
-        if minutes >= Self.noCurrentAfterMinutes { return .noCurrent(minutes: minutes) }
+        if minutes > Self.noCurrentAfterMinutes { return .noCurrent(minutes: minutes) }
         if minutes >= Self.lateAfterMinutes { return .late(minutes: minutes) }
         return .current
     }
 
     /// The instants after `date` at which the rendered age changes, for timeline entries. The
     /// widget can't re-render without an entry, and a reload isn't guaranteed. Per minute through
-    /// the late window (so "68 min" is exact), every 5 min to 3 h, every 30 min to 12 h. From 12 h
-    /// the text is "12+ h" and never changes, so no further entries are needed.
+    /// the late window and into no-current at 76 (so "68 min" is exact), every 5 min to 3 h,
+    /// every 30 min to 12 h. From 12 h the text is "12+ h" and never changes.
     func ageChangeDates(after date: Date) -> [Date] {
-        let minutes = Array(Self.lateAfterMinutes...Self.noCurrentAfterMinutes)
+        let minutes = Array(Self.lateAfterMinutes...(Self.noCurrentAfterMinutes + 1))
             + Array(stride(from: 80, through: 180, by: 5))
             + Array(stride(from: 210, through: 720, by: 30))
         return minutes
