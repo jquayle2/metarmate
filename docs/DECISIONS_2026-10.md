@@ -80,6 +80,7 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
 - **Right-now details:** visibility differences ignored when both are above 5 SM; sustained and peak wind (gust, else sustained) compared separately, warn if either is >5 kt higher here; a missing item says "not reported" and skips only that comparison, and never counts as better.
 - **Siri** says the borrowed-TAF sentence only when it voices forecast content.
 - **TSRA OMTNS** is kept (never dropped) and shown as "TS over mountains", not at the station.
+- **Borrowed-TAF hero never says "now"** (Oct 21, from the KBCE/KCDC screenshot: badge IFR, hero "KCDC: VFR now" in green). It states what the TAF site forecasts ("KCDC forecasts VFR, but…"). When this field's METAR is worse than the TAF's current period, the hero leads with that ("KBCE is IFR now. KCDC (45 nm W) forecasts VFR…").
 
 ## Data source for ASOS Updates
 
