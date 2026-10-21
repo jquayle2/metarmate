@@ -33,13 +33,24 @@ struct RightNowTests {
     }
 
     @Test func ceilingMoreThan300ftLower() throws {
-        let there = try metar("KCDC", clouds: #"[{"cover":"BKN","base":6000}]"#)
-        #expect(!compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":5700}]"#), there).isWorse)   // 300: not more than
-        #expect(compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":5600}]"#), there).isWorse)    // 400
+        let there = try metar("KCDC", clouds: #"[{"cover":"BKN","base":3000}]"#)
+        #expect(!compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":2700}]"#), there).isWorse)   // 300: not more than
+        #expect(compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":2600}]"#), there).isWorse)    // 400
         // A ceiling here and none there (stated clear) is worse; the reverse is not.
         let clear = try metar("KCDC", clouds: "[]", raw: "METAR KCDC 211850Z 32006KT 10SM CLR 15/05 A2992")
-        #expect(compare(try metar("KBCE"), clear).isWorse)
+        #expect(compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":4000}]"#), clear).isWorse)
         #expect(!compare(clear, try metar("KBCE")).isWorse)
+    }
+
+    @Test func ceilingAbove5000ftHereIsNotCompared() throws {
+        let clear = try metar("KCDC", clouds: "[]", raw: "METAR KCDC 211850Z 32006KT 10SM CLR 15/05 A2992")
+        #expect(!compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":12000}]"#), clear).isWorse)   // BKN120 vs CLR
+        #expect(compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":4000}]"#), clear).isWorse)     // BKN040 vs CLR
+        #expect(compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":5000}]"#), clear).isWorse)     // 5,000: not above
+        #expect(!compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":5100}]"#), clear).isWorse)
+        // Above the cap against a higher ceiling there: also not compared.
+        #expect(!compare(try metar("KBCE", clouds: #"[{"cover":"BKN","base":6000}]"#),
+                         try metar("KCDC", clouds: #"[{"cover":"BKN","base":9000}]"#)).isWorse)
     }
 
     @Test func visibilityMoreThanHalfMileLowerUnlessBothAboveFive() throws {
@@ -130,6 +141,19 @@ struct RightNowTests {
 
     @Test func noLeadWhenNotWorseNotCurrentOrUnknown() throws {
         let taf = try kcdcTaf()
+        // Same category, worse by another threshold (wind 15 kt vs 6 forecast): the Right-now row may
+        // warn, but the hero only leads on a lower category.
+        let windier = try metar("KBCE", wind: #""wdir":320,"wspd":15"#)
+        #expect(WorseHere.compare(here: ComparableConditions(metar: windier),
+                                  there: ComparableConditions(forecast: try #require(taf.currentForecast(at: now)))).isWorse)
+        #expect(RightNow.heroLead(fieldId: "KBCE", field: windier, taf: taf, source: kcdc, at: now).fieldLead == nil)
+        // Live KBCE (Oct 21): BKN055 vs forecast BKN060, both VFR — above the cap, no lead, no warning.
+        let kbceLive = try metar("KBCE", clouds: #"[{"cover":"BKN","base":5500}]"#)
+        #expect(!WorseHere.compare(here: ComparableConditions(metar: kbceLive),
+                                   there: ComparableConditions(forecast: try #require(taf.currentForecast(at: now)))).isWorse)
+        // MVFR here vs VFR forecast: one category lower leads.
+        let mvfr = try metar("KBCE", cat: "MVFR", clouds: #"[{"cover":"BKN","base":2500}]"#)
+        #expect(RightNow.heroLead(fieldId: "KBCE", field: mvfr, taf: taf, source: kcdc, at: now).fieldLead?.category == .mvfr)
         let same = RightNow.heroLead(fieldId: "KBCE", field: try metar("KBCE"), taf: taf, source: kcdc, at: now)
         #expect(same.stationLabel == "KCDC" && same.fieldLead == nil)
         let stale = try metar("KBCE", minutesAgo: 80, cat: "IFR", visib: "5", clouds: #"[{"cover":"OVC","base":700}]"#)

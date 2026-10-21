@@ -4,9 +4,10 @@ import Foundation
 // This field's current METAR beside the TAF station's. Warn-never-reassure: say something only when
 // conditions here are worse; when either report is missing or not current, say which and compare
 // nothing. "Worse" uses the Forecast Deviation Strip thresholds (Oct 21): lower flight category,
-// ceiling more than 300 ft lower, visibility more than 0.5 SM lower (ignored when both are above
-// 5 SM), sustained or peak wind (gust, else sustained) more than 5 kt higher. A missing item is
-// "not reported" and skips only that comparison; it never counts as better.
+// ceiling more than 300 ft lower (not compared when this field's ceiling is above 5,000 ft),
+// visibility more than 0.5 SM lower (ignored when both are above 5 SM), sustained or peak wind
+// (gust, else sustained) more than 5 kt higher. A missing item is "not reported" and skips only
+// that comparison; it never counts as better.
 
 /// One place's conditions reduced to what "worse here" compares. nil / `.notReported` = missing.
 struct ComparableConditions {
@@ -69,6 +70,8 @@ enum WorseHere {
         }
 
         switch (here.ceiling, there.ceiling) {
+        case (.feet(let h), _) where h > ceilingCapFt:
+            break   // a ceiling above 5,000 ft here isn't a meaningful "worse" (Jeff, Oct 21)
         case (.notReported, _), (_, .notReported):
             if here.ceiling == .notReported { missingHere.append("ceiling") }
             if there.ceiling == .notReported { missingThere.append("ceiling") }
@@ -102,7 +105,10 @@ enum WorseHere {
         return Result(reasons: reasons, notReportedHere: missingHere, notReportedThere: missingThere)
     }
 
-    private static func severity(_ c: FlightCategory) -> Int {
+    /// Above this, this field's ceiling isn't compared (BKN120 here vs CLR there is not worse).
+    static let ceilingCapFt = 5000
+
+    static func severity(_ c: FlightCategory) -> Int {
         switch c {
         case .vfr: return 0
         case .mvfr: return 1
@@ -166,21 +172,19 @@ struct RightNow {
         return [ceiling, vis, wind].joined(separator: " · ")
     }
 
-    /// The borrowed hero's subject, and the lead when this field is worse than the TAF's current
-    /// period: ("KCDC (45 nm W)", ("KBCE", .ifr)) → "KBCE is IFR now. KCDC (45 nm W) forecasts …".
-    /// No lead when this field's METAR isn't current or its category is unknown.
+    /// The borrowed hero's subject, and the lead when this field's category is lower than the TAF's
+    /// current period: ("KCDC (45 nm W)", ("KBCE", .ifr)) → "KBCE is IFR now. KCDC (45 nm W)
+    /// forecasts …". Smaller differences stay in the Right-now warning (Jeff, Oct 21). No lead when
+    /// this field's METAR isn't current or either category is unknown.
     static func heroLead(fieldId: String, field: Metar?, taf: Taf, source: TafSource, at now: Date)
         -> (stationLabel: String, fieldLead: (id: String, category: FlightCategory)?) {
-        guard let field, field.flightCategory != .unknown, fieldWorseThanForecast(field: field, taf: taf, at: now) else {
+        guard let field, field.flightCategory != .unknown,
+              let period = taf.currentForecast(at: now), period.flightCategory != .unknown,
+              WorseHere.severity(field.flightCategory) > WorseHere.severity(period.flightCategory)
+        else { return (source.stationId, nil) }
+        if case .noCurrent = WidgetWeatherSnapshot.reportAge(observationTime: field.observationTime, at: now) {
             return (source.stationId, nil)
         }
         return ("\(source.stationId) (\(source.distanceNm) nm \(source.bearing))", (fieldId, field.flightCategory))
-    }
-
-    /// For the hero: is this field's current METAR worse than the TAF's period covering now?
-    static func fieldWorseThanForecast(field: Metar?, taf: Taf, at now: Date) -> Bool {
-        guard let field, let period = taf.currentForecast(at: now) else { return false }
-        if case .noCurrent = WidgetWeatherSnapshot.reportAge(observationTime: field.observationTime, at: now) { return false }
-        return WorseHere.compare(here: ComparableConditions(metar: field), there: ComparableConditions(forecast: period)).isWorse
     }
 }
