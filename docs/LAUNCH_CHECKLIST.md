@@ -85,7 +85,7 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 App Review blockers (required regardless of section 0):
 - [ ] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk)
 - [ ] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]
-- [ ] #22 Privacy manifest: `NSPrivacyAccessedAPITypes` for UserDefaults (CA92.1, 1C8F.1); add `PrivacyInfo.xcprivacy` to the widget extension (ITMS-91053)
+- [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
 - [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
 - [ ] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration
 
