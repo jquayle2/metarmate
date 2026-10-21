@@ -17,7 +17,7 @@ How this list is maintained:
 - [x] **Pro at launch or after?** At launch (D#18, Oct 21). Section 4's Pro gating is launch-blocking.
 - [x] **Pro scope** (D#19–20, Oct 21): Pro = widgets, unlimited custom minimums profiles, alerts, Siri, layout, Watch; $5.99 one-time, Family Sharing. Free = starter-profile verdicts, crosswind calculator, favorites.
 - [ ] **ASOS Updates subscription price** (D#21): set against Synoptic cost and category norms.
-- [ ] **Nearby-TAF fallback (D#13–17): launch or 1.3?** Design agreed Oct 21 (headline substitution, advisory styling, 10/25/50 nm tiers); not built.
+- [x] **Nearby-TAF fallback (D#13–17): at launch** (Oct 21). Build items in section 4b.
 - [ ] **Siri staleness rule:** apply late/no-current (65/75 min) to Siri answers? Yes/no, then into DECISIONS.
 - [ ] **P3 triage:** which items in section 5 are launch-required.
 - [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other.
@@ -118,6 +118,19 @@ Other:
 - [ ] #27 Favorites reconcile with `airports.json` at launch
 - [ ] Merge A3 [Jeff]
 
+## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]
+
+- [ ] When the field's TAF request returns 204, one `taf?bbox=` request around the airport; pick the nearest TAF within 50 nm
+- [ ] Forecast card headline is the substitution: "No TAF for KVGT · using KLAS (9 nm SW)"; advisory styling (dashed border, orange accent); no green/yellow/red for distance
+- [ ] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF
+- [ ] Elevation caution at ≥1,000 ft difference, on top of any tier
+- [ ] TAF accuracy and Forecast Deviation Strip computed against the TAF station's own METARs, labeled "KLAS forecast vs KLAS actual"
+- [ ] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse
+- [ ] Same substitution wording in the widget and Siri
+- [ ] Military TAF groups parse (`QNH…INS`, `TX/TN`) since the fallback pulls more stations
+- [ ] Unit tests: nearest selection, 50 nm cap, tier wording, verification against the TAF station
+- [ ] Device check against ForeFlight at KVGT (→ KLAS) and a field 25+ nm from its nearest TAF [Jeff]
+
 ## 5. P3 polish — triage in section 0 first
 
 - [ ] Green outside category/verdict (calm wind, steady wind, `ForecastStripColumn`, `TrendDirection.color`, accuracy colors, `spreadColor`, widget `trendColor`)
@@ -177,3 +190,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** List created. Widget "not refreshing" root-caused to an unconfigured widget (no airport set → cache only); configured to KVGT, unconfigured-fetch fix added to section 2. Synoptic chosen as ASOS source.
 - **Oct 21, 2026:** Jeff confirmed all product rulings himself (no Mike packet); Synoptic as ASOS source; nearby-TAF headline/tier design agreed. A2 is unblocked.
 - **Oct 21, 2026:** Pro decided: ships at launch, $5.99 one-time, Family Sharing. Free gets starter-profile verdicts and the crosswind calculator; Pro gets unlimited custom profiles, alerts, widgets, Siri, layout, Watch. ASOS subscription price still open.
+- **Oct 21, 2026:** Nearby-TAF fallback moved into launch scope (section 4b).
