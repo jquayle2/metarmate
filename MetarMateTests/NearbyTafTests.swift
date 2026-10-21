@@ -315,7 +315,7 @@ struct NearbyTafTests {
     @Test func borrowedTafIsVerifiedAgainstItsOwnStation() throws {
         let field = [try metar("KBVU", minutesBeforeNow: 0, ifr: true), try metar("KBVU", minutesBeforeNow: 30, ifr: true)]
         let station = [try metar("KHND", minutesBeforeNow: 0, ifr: false), try metar("KHND", minutesBeforeNow: 30, ifr: false)]
-        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: station)
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: station, at: now)
 
         // Accuracy/deviation: KHND forecast vs KHND actual (VFR vs VFR), not KBVU's IFR.
         let v = try #require(d.verification)
@@ -349,7 +349,7 @@ struct NearbyTafTests {
             #"{"icaoId":"KCDC","obsTime":1792608900,"temp":15,"dewp":2,"wdir":320,"wspd":6,"visib":"10+","altim":1013,"rawOb":"METAR KCDC synthetic","clouds":[{"cover":"BKN","base":6000}],"fltCat":"VFR"}"#.utf8)))
         let status = TafStatus.borrowed(TafSource(stationId: "KCDC", name: nil, distanceNm: 45, bearing: "W",
                                                   elevationDifferenceFt: -2003, isBorrowed: true), ownExpired: false)
-        let d = NearbyTaf.derive(fieldHistory: kbce, taf: kcdcTaf, status: status, stationHistory: [kcdcNow])
+        let d = NearbyTaf.derive(fieldHistory: kbce, taf: kcdcTaf, status: status, stationHistory: [kcdcNow], at: now)
 
         #expect(d.trend.observed.overall == .deteriorating)
         #expect(d.trend.forecast.overall == .steady)
@@ -359,7 +359,7 @@ struct NearbyTafTests {
         // The station's forecast never makes it look better here: steady here + KCDC improving stays steady.
         #expect(!d.trend.summaryText.contains("expected"))
         // Own TAF: the blended wording is unchanged.
-        #expect(WeatherTrend.derive(metars: kbce, taf: kcdcTaf, forecastMetar: kcdcNow).summaryText
+        #expect(WeatherTrend.derive(metars: kbce, taf: kcdcTaf, forecastMetar: kcdcNow, now: now).summaryText
                 == "Conditions have been deteriorating but are expected to stabilize.")
         // Period rows: "current" for a borrowed TAF, "now" for the field's own.
         #expect(TafFormat.currentPeriodTag(tafIsUpcoming: false, borrowed: true) == "current")
@@ -373,7 +373,7 @@ struct NearbyTafTests {
         let json = #"{"icaoId":"KHND","issueTime":"2026-10-21T17:20:00.000Z","validTimeFrom":\#(t18),"validTimeTo":\#(t18 + 86400),"rawTAF":"synthetic","fcsts":[{"timeFrom":\#(t18),"timeTo":\#(t18 + 10800),"wdir":160,"wspd":16,"visib":2,"clouds":[{"cover":"OVC","base":800}]},{"timeFrom":\#(t18 + 10800),"timeTo":\#(t18 + 86400),"fcstChange":"FM","wdir":150,"wspd":8,"visib":7,"clouds":[{"cover":"FEW","base":8000}]}]}"#
         let improving = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
         let station = [try metar("KHND", minutesBeforeNow: 0, ifr: true)]
-        let d = NearbyTaf.derive(fieldHistory: field, taf: improving, status: borrowedKhnd, stationHistory: station)
+        let d = NearbyTaf.derive(fieldHistory: field, taf: improving, status: borrowedKhnd, stationHistory: station, at: now)
         #expect(d.trend.forecast.overall == .improving)
         #expect(d.trend.observed.overall != .improving)
         #expect(d.trend.overall == d.trend.observed.overall)
@@ -381,14 +381,14 @@ struct NearbyTafTests {
 
     @Test func borrowedTafWithoutStationReportsNeverUsesThisField() throws {
         let field = [try metar("KBVU", minutesBeforeNow: 0, ifr: true), try metar("KBVU", minutesBeforeNow: 30, ifr: true)]
-        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: [])
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: borrowedKhnd, stationHistory: [], at: now)
         #expect(d.verification == nil)
         #expect(d.trend.forecast.overall == .unknown)
     }
 
     @Test func ownTafIsVerifiedAgainstThisField() throws {
         let field = [try metar("KHND", minutesBeforeNow: 0, ifr: true), try metar("KHND", minutesBeforeNow: 30, ifr: true)]
-        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: .own, stationHistory: [])
+        let d = NearbyTaf.derive(fieldHistory: field, taf: try khndTaf(), status: .own, stationHistory: [], at: now)
         #expect(d.verification?.points.map(\.actualCategory) == [.ifr])
         #expect(d.trend.forecast.ceiling == .steady)            // field OVC008 vs FM OVC008
         #expect(d.snapshotVerification?.categoryAccuracyPct == d.verification?.categoryAccuracyPct)

@@ -372,10 +372,11 @@ struct WeatherTrend: Codable {
     /// `forecastStation`: a borrowed TAF's station. Its forecast is then never blended with this
     /// field's observed trend: separate sentences, station named, and it can only make the overall
     /// direction worse, never better.
-    static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil, forecastStation: String? = nil) -> WeatherTrend {
+    static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil, forecastStation: String? = nil,
+                       now: Date = Date()) -> WeatherTrend {
         let currentMetar = metars.first ?? metars[0]
         let observed = ObservedTrend.derive(from: metars)
-        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf, station: forecastStation)
+        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf, now: now, station: forecastStation)
 
         if let station = forecastStation {
             return WeatherTrend(

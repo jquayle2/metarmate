@@ -1810,6 +1810,8 @@ struct WeatherDetailView: View {
                 // A borrowed TAF's first line is the substitution, not a caption (D#14).
                 if case .borrowed(let source, let ownExpired) = vm.tafStatus {
                     tafSubstitution(source, ownExpired: ownExpired)
+                    rightNowRow(RightNow.make(fieldId: airport.icao, field: vm.metar, stationId: source.stationId,
+                                              station: vm.tafStationHistory.first, at: Date()))
                 }
                 HStack(spacing: 8) {
                     sectionHeader("Forecast · TAF")
@@ -1919,6 +1921,64 @@ struct WeatherDetailView: View {
         }
     }
 
+    /// "Right now": this field's METAR beside the TAF station's (D#16). A warning only when it's worse
+    /// here; if either report isn't current, which one, and no comparison.
+    private func rightNowRow(_ row: RightNow) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("RIGHT NOW")
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .tracking(0.5)
+            rightNowLine(row.fieldId, row.field)
+            rightNowLine(row.stationId, row.station)
+            ForEach(row.notCurrent, id: \.self) { line in
+                Text(line)
+                    .font(.avenir(13, .demibold))
+                    .foregroundColor(Brand.cautionOrange)
+            }
+            if row.comparison?.isWorse == true {
+                Label(RightNow.worseText, systemImage: "exclamationmark.triangle.fill")
+                    .font(.avenir(13.5, .heavy))
+                    .foregroundColor(Brand.cautionOrange)
+            }
+            ForEach(row.notReportedLines, id: \.self) { line in
+                Text(line)
+                    .font(.caption)
+                    .foregroundColor(Brand.slate)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.04)))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func rightNowLine(_ id: String, _ metar: Metar?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(id)
+                .font(.brandMono(12.5, weight: .bold))
+                .foregroundColor(Brand.cloud)
+            if let metar {
+                Text(metar.flightCategory.rawValue)
+                    .font(.avenir(12, .heavy))
+                    .foregroundColor(ColorRules.flightCategoryColor(metar.flightCategory))
+                Text(RightNow.summary(metar))
+                    .font(.avenir(12, .medium))
+                    .foregroundColor(Brand.fog)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                Text(WidgetWeatherSnapshot.ageText(minutes: max(0, Int(Date().timeIntervalSince(metar.observationTime) / 60))) + " ago")
+                    .font(.caption2)
+                    .foregroundColor(Brand.slate)
+            } else {
+                Text("no report")
+                    .font(.avenir(12, .medium))
+                    .foregroundColor(Brand.slate)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
     /// "No TAF for KBVU · using KHND (13 nm W)", then any distance/elevation cautions.
     private func tafSubstitution(_ source: TafSource, ownExpired: Bool) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -1951,7 +2011,13 @@ struct WeatherDetailView: View {
     private func tafHeroBrief(_ taf: Taf) -> Text {
         // Pure derivation lives in TafHeroBrief.build; reduce the colored segments back to a
         // single Text (each segment keeps its own flight-category / caution-axis color).
-        TafHeroBrief.build(taf, stationLabel: vm.tafStatus.isBorrowed ? taf.stationId : nil)
+        var stationLabel: String?
+        var fieldLead: (id: String, category: FlightCategory)?
+        if case .borrowed(let source, _) = vm.tafStatus {
+            (stationLabel, fieldLead) = RightNow.heroLead(fieldId: airport.icao, field: vm.metar, taf: taf,
+                                                          source: source, at: Date())
+        }
+        return TafHeroBrief.build(taf, stationLabel: stationLabel, fieldLead: fieldLead)
             .reduce(Text("")) { $0 + Text($1.text).foregroundColor($1.color) }
     }
 

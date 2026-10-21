@@ -18,7 +18,18 @@ enum TafHeroBrief {
     /// and change groups that have already ended are not part of the story.
     /// `stationLabel` marks a borrowed TAF: the story is told as what that site forecasts ("KCDC
     /// forecasts VFR, but …") and never says "now", which would read as this field's conditions.
-    static func build(_ taf: Taf, now: Date = Date(), stationLabel: String? = nil) -> [HeroSegment] {
+    /// `fieldLead`: this field's current category when its METAR is worse than the borrowed TAF's
+    /// current period — the hero leads with it ("KBCE is IFR now. KCDC (45 nm W) forecasts VFR…").
+    static func build(_ taf: Taf, now: Date = Date(), stationLabel: String? = nil,
+                      fieldLead: (id: String, category: FlightCategory)? = nil) -> [HeroSegment] {
+        let story = brief(taf, now: now, stationLabel: stationLabel)
+        guard let fieldLead, stationLabel != nil else { return story }
+        return [HeroSegment(text: "\(fieldLead.id) is ", color: Brand.cloud),
+                HeroSegment(text: "\(fieldLead.category.rawValue) now.", color: ColorRules.flightCategoryColor(fieldLead.category)),
+                HeroSegment(text: " ", color: Brand.slate)] + story
+    }
+
+    private static func brief(_ taf: Taf, now: Date, stationLabel: String?) -> [HeroSegment] {
         let label = stationLabel.map { "\($0): " } ?? ""
         if now >= taf.validTo {
             return [HeroSegment(text: label + "This TAF has expired.", color: Brand.slate)]

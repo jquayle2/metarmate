@@ -124,20 +124,25 @@ enum NearbyTaf {
     /// Trend and TAF accuracy for the screen. The field's own TAF is compared with this field's
     /// METARs; a borrowed TAF only ever with its own station's (`stationHistory`, newest first) —
     /// forecast trend from the station's current METAR, accuracy and deviation from its history.
-    /// Without station METARs a borrowed TAF gets neither; it never falls back to this field's.
+    /// Without station METARs a borrowed TAF gets neither; it never falls back to this field's. The
+    /// forecast trend needs the station's newest METAR to be current (not over 75 min, D#4).
     /// `fieldHistory` must not be empty.
-    static func derive(fieldHistory: [Metar], taf: Taf?, status: TafStatus, stationHistory: [Metar]) -> Derived {
+    static func derive(fieldHistory: [Metar], taf: Taf?, status: TafStatus, stationHistory: [Metar],
+                       at now: Date = Date()) -> Derived {
         guard status.isBorrowed, let taf else {
-            let trend = WeatherTrend.derive(metars: fieldHistory, taf: taf)
+            let trend = WeatherTrend.derive(metars: fieldHistory, taf: taf, now: now)
             let verification = taf.flatMap { TafVerification.derive(metars: fieldHistory, taf: $0) }
             return Derived(trend: trend, verification: verification, snapshotTrend: trend, snapshotVerification: verification)
         }
-        let stationNow = stationHistory.first
+        let stationNow = stationHistory.first.flatMap { m -> Metar? in
+            if case .noCurrent = WidgetWeatherSnapshot.reportAge(observationTime: m.observationTime, at: now) { return nil }
+            return m
+        }
         let trend = WeatherTrend.derive(metars: fieldHistory, taf: stationNow == nil ? nil : taf, forecastMetar: stationNow,
-                                        forecastStation: taf.stationId)
+                                        forecastStation: taf.stationId, now: now)
         let verification = stationHistory.isEmpty ? nil : TafVerification.derive(metars: stationHistory, taf: taf)
         return Derived(trend: trend, verification: verification,
-                       snapshotTrend: WeatherTrend.derive(metars: fieldHistory, taf: nil), snapshotVerification: nil)
+                       snapshotTrend: WeatherTrend.derive(metars: fieldHistory, taf: nil, now: now), snapshotVerification: nil)
     }
 
     // MARK: Wording (D#14, D#17)

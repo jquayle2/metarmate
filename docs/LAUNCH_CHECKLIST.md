@@ -139,7 +139,7 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [x] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF
 - [x] Elevation caution at ≥1,000 ft difference, on top of any tier
 - [x] TAF accuracy and Forecast Deviation Strip computed against the TAF station's own METARs, labeled "KLAS forecast vs KLAS actual"
-- [ ] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse (category lower, ceiling >300 ft lower, vis >0.5 SM lower, wind/gust >5 kt higher); no comparison if either METAR is missing or not current
+- [x] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse (category lower, ceiling >300 ft lower, vis >0.5 SM lower, wind/gust >5 kt higher); no comparison if either METAR is missing or not current
 - [ ] Same substitution wording in the widget and Siri
 - [x] Military TAF groups parse (`QNH…INS`, `TX/TN`) since the fallback pulls more stations
 - [ ] Unit tests: nearest selection, 50 nm cap, tier wording, verification against the TAF station
