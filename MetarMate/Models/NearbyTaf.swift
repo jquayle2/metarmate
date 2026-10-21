@@ -133,7 +133,8 @@ enum NearbyTaf {
             return Derived(trend: trend, verification: verification, snapshotTrend: trend, snapshotVerification: verification)
         }
         let stationNow = stationHistory.first
-        let trend = WeatherTrend.derive(metars: fieldHistory, taf: stationNow == nil ? nil : taf, forecastMetar: stationNow)
+        let trend = WeatherTrend.derive(metars: fieldHistory, taf: stationNow == nil ? nil : taf, forecastMetar: stationNow,
+                                        forecastStation: taf.stationId)
         let verification = stationHistory.isEmpty ? nil : TafVerification.derive(metars: stationHistory, taf: taf)
         return Derived(trend: trend, verification: verification,
                        snapshotTrend: WeatherTrend.derive(metars: fieldHistory, taf: nil), snapshotVerification: nil)

@@ -1964,9 +1964,10 @@ struct WeatherDetailView: View {
         return "\(hour12)\(isPM ? "P" : "A")"
     }
 
-    // "now" / "next" for the current period, else a relative-time tag ("in 3 hrs", "tomorrow").
+    // "now" ("current" when borrowed) / "next" for the current period, else a relative-time tag
+    // ("in 3 hrs", "tomorrow").
     private func tafRelativeTag(_ period: TafForecast, isCurrent: Bool, tafIsUpcoming: Bool) -> String {
-        if isCurrent { return tafIsUpcoming ? "next" : "now" }
+        if isCurrent { return TafFormat.currentPeriodTag(tafIsUpcoming: tafIsUpcoming, borrowed: vm.tafStatus.isBorrowed) }
         let hours = period.fromTime.timeIntervalSinceNow / 3600
         if hours < 0 { return "" }
         if hours < 10 { return "in \(max(1, Int(hours.rounded()))) hrs" }

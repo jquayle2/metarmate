@@ -68,6 +68,13 @@ enum TafFormat {
         return "\(partOfDay) \(suffix)"
     }
 
+    // Tag for the period covering now. A borrowed TAF's says "current": "now" would read as this
+    // field's conditions.
+    static func currentPeriodTag(tafIsUpcoming: Bool, borrowed: Bool) -> String {
+        if tafIsUpcoming { return "next" }
+        return borrowed ? "current" : "now"
+    }
+
     // .exact(6) -> "6 SM" (never "6+"), .greaterThan(6) -> "6+ SM", .unknown -> "—".
     static func visText(_ vis: Visibility) -> String {
         vis.displayNumber.map { "\($0) SM" } ?? "—"

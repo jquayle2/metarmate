@@ -296,7 +296,8 @@ struct ForecastTrend: Codable {
     var forecastCategory: FlightCategory?
     var summaryText: String
 
-    static func derive(metar: Metar, taf: Taf?, now: Date = Date()) -> ForecastTrend {
+    /// `station`: a borrowed TAF's station, named in the summary ("KCDC forecasts conditions …").
+    static func derive(metar: Metar, taf: Taf?, now: Date = Date(), station: String? = nil) -> ForecastTrend {
         guard let taf = taf, let current = taf.currentForecast(at: now) else {
             return ForecastTrend(
                 visibility: .unknown, ceiling: .unknown,
@@ -341,7 +342,8 @@ struct ForecastTrend: Codable {
         else { overall = .steady }
 
         let timeframe = isForwardLooking ? "over the next few hours" : "for the current period"
-        let summary = "Forecast expects conditions to be \(overall.rawValue.lowercased()) \(timeframe)."
+        let summary = station.map { "\($0) forecasts conditions to be \(overall.rawValue.lowercased()) \(timeframe)." }
+            ?? "Forecast expects conditions to be \(overall.rawValue.lowercased()) \(timeframe)."
 
         return ForecastTrend(
             visibility: visTrend, ceiling: ceilTrend,
@@ -367,10 +369,23 @@ struct WeatherTrend: Codable {
 
     /// `forecastMetar`: the METAR the TAF is compared with for the forecast trend — this field's
     /// current one by default; a borrowed TAF's own station's (D#13 rulings, Oct 21).
-    static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil) -> WeatherTrend {
+    /// `forecastStation`: a borrowed TAF's station. Its forecast is then never blended with this
+    /// field's observed trend: separate sentences, station named, and it can only make the overall
+    /// direction worse, never better.
+    static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil, forecastStation: String? = nil) -> WeatherTrend {
         let currentMetar = metars.first ?? metars[0]
         let observed = ObservedTrend.derive(from: metars)
-        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf)
+        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf, station: forecastStation)
+
+        if let station = forecastStation {
+            return WeatherTrend(
+                observed: observed,
+                forecast: forecast,
+                overall: forecast.overall == .deteriorating ? .deteriorating : observed.overall,
+                headline: deriveHeadline(observed: observed, forecast: forecast),
+                summaryText: borrowedSummary(observed: observed, forecast: forecast, station: station)
+            )
+        }
 
         let overall: TrendDirection
         if observed.overall == forecast.overall {
@@ -422,6 +437,24 @@ struct WeatherTrend: Codable {
             headline: headline,
             summaryText: summary
         )
+    }
+
+    /// "Conditions here have been deteriorating. KCDC's forecast is steady." — this field's observed
+    /// trend and the borrowed TAF site's forecast as separate statements.
+    private static func borrowedSummary(observed: ObservedTrend, forecast: ForecastTrend, station: String) -> String {
+        let windIsSignificant = observed.wind != .steady && observed.overall == .steady
+        var sentences: [String] = []
+        switch observed.overall {
+        case .improving:     sentences.append("Conditions here have been improving.")
+        case .deteriorating: sentences.append("Conditions here have been deteriorating.")
+        case .steady:        sentences.append(windIsSignificant ? "Ceiling and visibility here have been steady; wind is the main story."
+                                                                : "Conditions here have been steady.")
+        case .unknown:       break
+        }
+        if forecast.overall != .unknown {
+            sentences.append("\(station)'s forecast is \(forecast.overall.rawValue.lowercased()).")
+        }
+        return sentences.isEmpty ? "Trend data is limited." : sentences.joined(separator: " ")
     }
 
     private static func deriveHeadline(observed: ObservedTrend, forecast: ForecastTrend) -> String {
