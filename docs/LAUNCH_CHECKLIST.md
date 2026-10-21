@@ -176,7 +176,7 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - [ ] App Privacy ("nutrition label") matches what the app collects (location, purchases)
 - [ ] Privacy policy URL and support URL live on the marketing site
 - [ ] Age rating questionnaire
-- [ ] Export compliance (encryption) answered
+- [x] Export compliance: `ITSAppUsesNonExemptEncryption = NO` in the app Info.plist (standard HTTPS only), so App Store Connect stops asking per upload. `63ada9d`
 - [ ] Data attribution where required (Open-Meteo CC BY 4.0; Synoptic per license)
 - [ ] Aviation disclaimer in-app and in description (supplemental, not an official briefing)
 - [ ] App Review notes: how to reach each feature; demo airport; IAP notes if any
