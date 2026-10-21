@@ -73,6 +73,14 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
 21. **ASOS Updates:** a subscription that includes Pro, with a StoreKit introductory offer; the old 60-day first-launch free period is removed. **Price not yet set:** decide against the Synoptic cost and category norms (weather-app subscriptions run ~$5–9/yr; 5-minute data is unique, so a premium may be justified).
 22. **XW Calc** becomes a free funnel into MetarMate. Its development is frozen.
 
+**Nearby-TAF Phase 0 rulings (Jeff, Oct 21):**
+- **Expired own TAF:** borrow a nearby one; headline "No current TAF for KXXX · using KHND (13 nm W)". A TAF issued but starting within 2 h counts as current (it is the current forecast), for display and for deciding whether to borrow.
+- **One TAF axis not forecast:** a known MVFR/IFR/LIFR on the other axis stands as a lower bound, labeled ("IFR · visibility not forecast"); a known VFR axis alone is unknown.
+- **Forecast trend on a borrowed TAF** compares the TAF station's own METAR with its forecast; the widget "Fcst" headline names the station.
+- **Right-now details:** visibility differences ignored when both are above 5 SM; sustained and peak wind (gust, else sustained) compared separately, warn if either is >5 kt higher here; a missing item says "not reported" and skips only that comparison, and never counts as better.
+- **Siri** says the borrowed-TAF sentence only when it voices forecast content.
+- **TSRA OMTNS** is kept (never dropped) and shown as "TS over mountains", not at the station.
+
 ## Data source for ASOS Updates
 
 23. **Synoptic, paid plan** (decided Oct 21). Synoptic is issuing a ~7-day trial first; validation and build happen during it. MADIS is not being used.
