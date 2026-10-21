@@ -286,7 +286,7 @@ struct AdverseWeatherParsingTests {
     @Test func heroSurfacesTempoOverlayOnCautionAxis() throws {
         // Benign (VFR) base: "VFR now, but TEMPO … " — TEMPO clause on the caution axis.
         let benign = TafHeroBrief.build(try taf(Obs.tafBenignBaseTempoTS), now: Obs.fixtureNow)
-        let benignTempo = try #require(benign.first { $0.text.contains("TEMPO") })
+        let benignTempo = try #require(benign.first { $0.text.contains("temporary thunderstorms with rain") })
         #expect(benignTempo.color == Brand.cautionOrange)   // amber caution axis…
         #expect(benignTempo.color != Brand.vfrGreen)        // …not the VFR category color
         #expect(benignTempo.color != Brand.mvfrBlue)
@@ -295,7 +295,7 @@ struct AdverseWeatherParsingTests {
         // Worsening base (VFR -> IFR): worst-base IFR lead (category axis) + overlay (caution axis).
         let worsening = TafHeroBrief.build(try taf(Obs.tafWorseningBaseTempoTS), now: Obs.fixtureNow)
         #expect(worsening.contains { $0.text.contains("IFR by") && $0.color == Brand.valueRed })
-        let worseTempo = try #require(worsening.first { $0.text.contains("TEMPO") })
+        let worseTempo = try #require(worsening.first { $0.text.contains("temporary thunderstorms with rain") })
         #expect(worseTempo.color == Brand.cautionOrange)
     }
 

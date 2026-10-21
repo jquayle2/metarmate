@@ -84,8 +84,8 @@ struct TafTimeLogicTests {
 
         // During the window: hero leads with the possible change; prevailing is unchanged.
         let during = TafHeroBrief.build(t, now: at(5))
-        #expect(during.map(\.text).joined().contains("VFR now, but BECMG IFR"))
-        #expect(during.contains { $0.text.contains("BECMG IFR") && $0.color == Brand.valueRed })
+        #expect(during.map(\.text).joined().contains("VFR now, but becoming IFR"))
+        #expect(during.contains { $0.text.contains("becoming IFR") && $0.color == Brand.valueRed })
         #expect(t.currentForecast(at: at(5))?.flightCategory == .vfr)
 
         // Trend warning: the next prevailing period is the BECMG's IFR.
@@ -182,8 +182,8 @@ struct TafTimeLogicTests {
         let tsTempo = #"{"timeFrom":\#(e(1)),"timeTo":\#(e(2)),"fcstChange":"TEMPO","visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000,"type":"CB"}]}"#
         let t = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#, tsTempo]
             .joined(separator: ","))
-        #expect(TafHeroBrief.build(t, now: at(0.5)).contains { $0.text.contains("TEMPO") })
-        #expect(!TafHeroBrief.build(t, now: at(3)).contains { $0.text.contains("TEMPO") })
+        #expect(TafHeroBrief.build(t, now: at(0.5)).contains { $0.text.contains("temporary") })
+        #expect(!TafHeroBrief.build(t, now: at(3)).contains { $0.text.contains("temporary") })
     }
 
     // MARK: - #14 category with one axis not forecast
@@ -194,7 +194,49 @@ struct TafTimeLogicTests {
         let p = try #require(t.forecasts.first)
         #expect(p.flightCategory == .ifr)
         #expect(p.unforecastAxis == "visibility")
-        #expect(TafHeroBrief.build(t, now: at(1)).map(\.text).joined().contains("visibility not forecast"))
+        let hero = TafHeroBrief.build(t, now: at(1)).map(\.text).joined()
+        #expect(hero.hasPrefix("At least IFR the entire forecast period."))   // a lower bound, said as one
+        #expect(hero.contains("visibility not forecast"))
+    }
+
+    // MARK: - Hero wording
+
+    @Test func heroLeadsWithTheEarliestHazard() throws {
+        // T6 shape: PROB30 TEMPO IFR 02–05, then FM MVFR at 08. The PROB30 comes first.
+        let t = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(8)),"wdir":250,"wspd":12,"visib":"6+","clouds":[{"cover":"SCT","base":4000}]}"#,
+                         #"{"timeFrom":\#(e(2)),"timeTo":\#(e(5)),"fcstChange":"TEMPO","probability":30,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3000,"type":"CB"}]}"#,
+                         #"{"timeFrom":\#(e(8)),"timeTo":\#(e(24)),"fcstChange":"FM","wdir":270,"wspd":10,"visib":"6+","clouds":[{"cover":"BKN","base":2500}]}"#]
+            .joined(separator: ","))
+        let segs = TafHeroBrief.build(t, now: at(0.5))
+        let hero = segs.map(\.text).joined()
+        #expect(hero.hasPrefix("PROB30 IFR "))
+        #expect(hero.contains(", then MVFR by "))
+        #expect(segs.first?.color == Brand.valueRed)
+        #expect(segs.contains { $0.text.hasPrefix("MVFR by") && $0.color == Brand.mvfrBlue })
+
+        // The later hazard still follows when the prevailing change comes first.
+        let later = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(2)),"wdir":250,"wspd":12,"visib":"6+","clouds":[{"cover":"SCT","base":4000}]}"#,
+                             #"{"timeFrom":\#(e(2)),"timeTo":\#(e(24)),"fcstChange":"FM","wdir":270,"wspd":10,"visib":"6+","clouds":[{"cover":"BKN","base":2500}]}"#,
+                             #"{"timeFrom":\#(e(5)),"timeTo":\#(e(7)),"fcstChange":"TEMPO","probability":30,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3000,"type":"CB"}]}"#]
+            .joined(separator: ","))
+        let laterHero = TafHeroBrief.build(later, now: at(0.5)).map(\.text).joined()
+        #expect(laterHero.hasPrefix("MVFR by "))
+        #expect(laterHero.contains("Plus PROB30 IFR "))
+    }
+
+    @Test func heroSpeaksPlainEnglish() throws {
+        // A convective BECMG reads "becoming thunderstorms with rain", never "BECMG thunderstorm rain".
+        let t = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#,
+                         #"{"timeFrom":\#(e(2)),"timeTo":\#(e(24)),"timeBec":\#(e(3)),"fcstChange":"BECMG","wdir":120,"wspd":16,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000}]}"#]
+            .joined(separator: ","))
+        let hero = TafHeroBrief.build(t, now: at(0.5)).map(\.text).joined()
+        #expect(hero.contains("VFR now, but becoming thunderstorms with rain "))
+        #expect(!hero.contains("BECMG"))
+        #expect(TafHeroBrief.plainWeather(["+TSRA"]) == "thunderstorms with heavy rain")
+        #expect(TafHeroBrief.plainWeather(["-SHRA"]) == "light rain showers")
+        #expect(TafHeroBrief.plainWeather(["VCTS"]) == "thunderstorms nearby")
+        #expect(TafHeroBrief.plainWeather(["VCSH"]) == "showers nearby")
+        #expect(TafHeroBrief.plainWeather(["BR"]) == "mist")
     }
 
     @Test func oneUnknownAxisThatAllowsVFRIsUnknown() throws {

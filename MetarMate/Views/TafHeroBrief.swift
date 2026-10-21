@@ -50,14 +50,15 @@ enum TafHeroBrief {
 
         // Worst-base story: lead category/time + limiting tail — "MVFR by 09:00. Ceiling 2,500 ft."
         // Shared by the overlay path and the plain worsening branch so the tail never diverges.
-        func worstBaseStory(_ w: TafForecast) -> [HeroSegment] {
+        // `leading` is false when it follows an earlier hazard ("…, then MVFR by 09:00.").
+        func worstBaseStory(_ w: TafForecast, leading: Bool = true) -> [HeroSegment] {
             let isLow = w.flightCategory == .ifr || w.flightCategory == .lifr
-            let lead = HeroSegment(text: "\(w.flightCategory.rawValue) by \(TafFormat.timeLabel(w.fromTime)). ",
+            let lead = HeroSegment(text: "\(categoryText(w, capitalized: leading)) by \(TafFormat.timeLabel(w.fromTime)). ",
                                    color: isLow ? Brand.valueRed : Brand.mvfrBlue)
             var tailParts: [String] = []
             if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
             if let v = w.visibility.lowerBoundSM, v < 5 { tailParts.append("visibility \(TafFormat.visText(w.visibility))") }
-            if !w.weatherPhenomena.isEmpty { tailParts.append(WeatherDecoder.decodeAll(w.weatherPhenomena).lowercased()) }
+            if !w.weatherPhenomena.isEmpty { tailParts.append(plainWeather(w.weatherPhenomena)) }
             if let axis = w.unforecastAxis { tailParts.append("\(axis) not forecast") }
             let tailText: String
             if tailParts.isEmpty {
@@ -84,27 +85,33 @@ enum TafHeroBrief {
                     && TafFormat.categorySeverity($0.flightCategory) > worstBaseSeverity)
                 || (inProgress.contains($0.id) && TafFormat.categorySeverity($0.flightCategory) > firstSeverity)
         }) {
-            let label = overlay.type == .becmg ? "BECMG" : (overlay.type == .tempo ? "TEMPO" : overlay.type.rawValue)
+            // Plain English: "becoming …", "temporary …"; PROB keeps its probability ("PROB30 …").
+            let label = overlay.type == .becmg ? "becoming" : (overlay.type == .tempo ? "temporary" : overlay.type.rawValue)
             let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
             let convective = TafFormat.hasConvectiveOrHeavy(overlay)
             let what = (low || !convective)
-                ? overlay.flightCategory.rawValue
-                : (overlay.weatherPhenomena.isEmpty ? "convective activity" : WeatherDecoder.decodeAll(overlay.weatherPhenomena).lowercased())
+                ? categoryText(overlay, capitalized: false)
+                : (overlay.weatherPhenomena.isEmpty ? "convective activity" : plainWeather(overlay.weatherPhenomena))
             let color = low ? Brand.valueRed : (convective ? Brand.cautionOrange : Brand.mvfrBlue)
             // A BECMG's window is its change window (NOAA's toTime runs to the next change).
             let windowEnd = overlay.type == .becmg ? (overlay.becomingTime ?? overlay.toTime) : overlay.toTime
-            let overlayClause = HeroSegment(text: " \(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: windowEnd)).",
-                                            color: color)
+            let phrase = "\(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: windowEnd))"
+            let overlayClause = HeroSegment(text: " \(phrase).", color: color)
             let basesWorsen = worst.map { TafFormat.categorySeverity($0.flightCategory) > firstSeverity } ?? false
             let overlayIsWorstUnderWay = inProgress.contains(overlay.id) && worst?.id == overlay.id
             if basesWorsen, let w = worst, !overlayIsWorstUnderWay {
-                // Keep the full worst-base story (lead + limiting tail), then the overlay as a
-                // separate sentence — both hazards, base detail intact.
+                // Both hazards, earliest first: "PROB30 IFR 3–6 PM, then MVFR by 9 PM. Ceiling …"
+                // or "MVFR by 9 PM. Ceiling … Plus temporary thunderstorms with rain 10–11 PM."
+                if overlay.fromTime < w.fromTime {
+                    return [HeroSegment(text: phrase.prefix(1).uppercased() + phrase.dropFirst() + ",", color: color),
+                            HeroSegment(text: " then ", color: Brand.slate)]
+                        + worstBaseStory(w, leading: false)
+                }
                 return worstBaseStory(w) + [HeroSegment(text: " Plus", color: Brand.slate), overlayClause]
             }
             // Benign/steady base, or the worst change is already under way — contrast the current
             // category with the overlay.
-            return [HeroSegment(text: "\(first.flightCategory.rawValue) now,", color: ColorRules.flightCategoryColor(first.flightCategory)),
+            return [HeroSegment(text: "\(categoryText(first)) now,", color: ColorRules.flightCategoryColor(first.flightCategory)),
                     HeroSegment(text: " but", color: Brand.slate),
                     overlayClause]
         }
@@ -120,7 +127,7 @@ enum TafHeroBrief {
                 // CFII ruling (Mike): drop the destination-category suffix — say "improving" without
                 // naming the better category (a TAF improvement is not a guarantee to plan against).
                 // The segment color still carries the improved category; only the words change.
-                return [HeroSegment(text: "\(first.flightCategory.rawValue) now, ",
+                return [HeroSegment(text: "\(categoryText(first)) now, ",
                                     color: ColorRules.flightCategoryColor(first.flightCategory)),
                         HeroSegment(text: "improving by \(TafFormat.timeLabel(firstBetter.fromTime)).",
                                     color: ColorRules.flightCategoryColor(firstBetter.flightCategory))]
@@ -130,14 +137,45 @@ enum TafHeroBrief {
             // claim "no significant changes" while the Pilot Notes card flags gusts (amber axis).
             let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
             if let gusty = firstGusty {
-                return [HeroSegment(text: "\(first.flightCategory.rawValue) throughout, ", color: Brand.cloud),
+                return [HeroSegment(text: "\(categoryText(first)) throughout, ", color: Brand.cloud),
                         HeroSegment(text: "but gusty periods \(TafFormat.coarseWhen(gusty.fromTime)).", color: Brand.cautionOrange)]
             }
-            return [HeroSegment(text: "\(first.flightCategory.rawValue) the entire forecast period. ", color: Brand.cloud),
+            return [HeroSegment(text: "\(categoryText(first)) the entire forecast period. ", color: Brand.cloud),
                     HeroSegment(text: "No significant changes expected.", color: Brand.slate)]
         }
 
         // Bases worsen with no significant overlay — the full worst-base story (lead + limiting tail).
         return worstBaseStory(worst)
+    }
+
+    /// "IFR", or "At least IFR" when the category rests on the one axis that was forecast (the other
+    /// isn't, so the true category could be worse).
+    private static func categoryText(_ p: TafForecast, capitalized: Bool = true) -> String {
+        guard p.unforecastAxis != nil, p.flightCategory != .unknown else { return p.flightCategory.rawValue }
+        return "\(capitalized ? "At" : "at") least \(p.flightCategory.rawValue)"
+    }
+
+    /// Plain-English weather for the hero: TSRA → "thunderstorms with rain", -SHRA → "light rain
+    /// showers", VCTS → "thunderstorms nearby". Intensity applies to the precipitation.
+    static func plainWeather(_ codes: [String]) -> String {
+        codes.map(plainWeather).joined(separator: ", ")
+    }
+
+    private static func plainWeather(_ code: String) -> String {
+        var c = code.uppercased()
+        var intensity = ""
+        var nearby = ""
+        if c.hasPrefix("+") { intensity = "heavy "; c.removeFirst() }
+        else if c.hasPrefix("-") { intensity = "light "; c.removeFirst() }
+        else if c.hasPrefix("VC") { nearby = " nearby"; c.removeFirst(2) }
+        if c.hasPrefix("TS") {
+            let rest = String(c.dropFirst(2))
+            return (rest.isEmpty ? "thunderstorms" : "thunderstorms with \(intensity)\(WeatherDecoder.decode(rest).lowercased())") + nearby
+        }
+        if c.hasPrefix("SH") {
+            let rest = String(c.dropFirst(2))
+            return (rest.isEmpty ? "showers" : "\(intensity)\(WeatherDecoder.decode(rest).lowercased()) showers") + nearby
+        }
+        return WeatherDecoder.decode(code).lowercased()
     }
 }
