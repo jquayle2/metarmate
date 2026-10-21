@@ -93,7 +93,7 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [ ] #24 Siri waits for entitlements before reading `isProUser`
 - [ ] #24 Lock-screen widgets gated
 - [ ] #24 StoreKit listener started in `App.init`
-- [ ] #24 Stop requesting ASOS product IDs until ASOS ships
+- [x] #24 ASOS product IDs requested only when `FeatureFlags.asosAvailable` is on. `49dd6d5`
 - [ ] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro`
 - [ ] Widgets Pro: `WidgetDataManager.widgetsRequirePro = true` (home and lock screen)
 - [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only
