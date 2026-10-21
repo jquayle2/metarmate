@@ -374,7 +374,8 @@ struct LockScreenRectangularView: View {
                                 Text("LATE \(minutes)m")
                                     .font(.system(.caption2, design: .rounded, weight: .bold))
                                     .foregroundStyle(.orange)
-                            } else if let pct = snap.tafAccuracyPct {
+                            } else if let pct = snap.tafAccuracyPct, snap.borrowedTafStation == nil {
+                                // A borrowed TAF's accuracy can't be labeled with its station here.
                                 Text("TAF \(pct)%")
                                     .font(.system(.caption2, design: .rounded))
                                     .foregroundStyle(.secondary)
@@ -573,7 +574,9 @@ struct HomeScreenSmallView: View {
                 Image(systemName: snap.trendDirection.systemImage)
                     .font(.caption2)
                     .foregroundStyle(trendColor(snap.trendDirection))
-                Text(shortTrendLabel(snap.trendHeadline))
+                Text(snap.borrowedTafStation.map { station in
+                         snap.trendHeadline.hasSuffix("Forecast") ? "\(station) \(shortTrendLabel(snap.trendHeadline))" : shortTrendLabel(snap.trendHeadline)
+                     } ?? shortTrendLabel(snap.trendHeadline))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -684,6 +687,13 @@ struct HomeScreenMediumView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         mediumConditions(snap)
+                        if let line = snap.borrowedTafLine {
+                            Text(line)
+                                .font(.system(.caption2, weight: .semibold))
+                                .foregroundStyle(.orange)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
 
                     Spacer(minLength: 0)
@@ -793,7 +803,7 @@ struct HomeScreenMediumView: View {
                     Image(systemName: snap.trendDirection.systemImage)
                         .font(.caption)
                         .foregroundStyle(trendColor(snap.trendDirection))
-                    Text(snap.trendHeadline)
+                    Text(snap.trendHeadlineLabeled)
                         .font(.system(.caption, weight: .medium))
                         .foregroundStyle(trendColor(snap.trendDirection))
                         .lineLimit(2)
@@ -804,6 +814,11 @@ struct HomeScreenMediumView: View {
 
             // Forecast deviation lines
             let hasDeviations = hasAnyDeviation(snap)
+            if let station = snap.borrowedTafStation, hasDeviations || snap.tafAccuracyPct != nil {
+                Text("\(station) fcst vs actual")
+                    .font(.system(.caption2, weight: .semibold))
+                    .foregroundStyle(.orange)
+            }
             if hasDeviations {
                 VStack(alignment: .trailing, spacing: 2) {
                     if let windDiv = snap.forecastWindDivergenceKt, abs(windDiv) > 5 {
@@ -844,7 +859,7 @@ struct HomeScreenMediumView: View {
             // TAF accuracy
             if let pct = snap.tafAccuracyPct {
                 HStack(spacing: 3) {
-                    Text("TAF")
+                    Text(snap.borrowedTafStation.map { "\($0) TAF" } ?? "TAF")
                         .font(.system(.caption2, design: .rounded))
                         .foregroundStyle(.secondary)
                     Text("\(pct)%")

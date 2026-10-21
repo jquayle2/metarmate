@@ -329,9 +329,9 @@ struct NearbyTafTests {
         // The observed half stays this field's.
         #expect(d.trend.observed.metarCount == 2)
 
-        // Widget snapshot: nothing from the borrowed TAF until the widget names the station.
-        #expect(d.snapshotTrend.forecast.overall == .unknown)
-        #expect(d.snapshotVerification == nil)
+        // Widget snapshot: the same results; the widget names the station (borrowedTafStation).
+        #expect(d.snapshotTrend.forecast.ceiling == .deteriorating)
+        #expect(d.snapshotVerification?.categoryAccuracyPct == 100)
     }
 
     // KBCE (Oct 21): ceiling 3,900 → 700 ft here; KCDC, 45 nm away, reports and forecasts VFR. The
@@ -392,6 +392,85 @@ struct NearbyTafTests {
         #expect(d.verification?.points.map(\.actualCategory) == [.ifr])
         #expect(d.trend.forecast.ceiling == .steady)            // field OVC008 vs FM OVC008
         #expect(d.snapshotVerification?.categoryAccuracyPct == d.verification?.categoryAccuracyPct)
+    }
+
+    // MARK: - Widget and Siri (D#14: same wording)
+
+    private func widgetSnapshot(headline: String = "Deterioration Forecast") throws -> WidgetWeatherSnapshot {
+        let raw = try JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":1792608900,"icaoId":"KBVU","rawOb":"METAR KBVU 211855Z 17015G21KT 10SM FEW060 29/12 A2992","visib":"10+","wdir":170,"wspd":15,"wgst":21,"fltCat":"VFR"}"#.utf8))
+        let base = try #require(WidgetWeatherSnapshot.from(rawMetar: raw, icao: "KBVU"))
+        return WidgetWeatherSnapshot(
+            icao: base.icao, iata: base.iata, airportName: base.airportName, flightCategory: base.flightCategory,
+            windDirection: base.windDirection, windSpeed: base.windSpeed, windGust: base.windGust,
+            windIsVariable: base.windIsVariable, visibility: base.visibility, ceilingFeet: base.ceilingFeet,
+            temperature: base.temperature, dewpoint: base.dewpoint, altimeter: base.altimeter,
+            trendDirection: .deteriorating, trendHeadline: headline, tafAccuracyPct: 78,
+            borrowedTafStation: "KHND", borrowedTafLine: "No TAF for KBVU · using KHND (13 nm W)",
+            forecastWindDivergenceKt: nil, forecastCeilingDivergenceFt: nil, forecastVisibilityDivergenceSM: nil,
+            isAdvisory: false, observationTime: base.observationTime, snapshotTime: base.snapshotTime)
+    }
+
+    @Test func widgetNamesTheBorrowedStation() throws {
+        let borrowed = try widgetSnapshot()
+        #expect(borrowed.trendHeadlineLabeled == "Deterioration Forecast · KHND TAF")
+        #expect(try widgetSnapshot(headline: "Wind Increasing (+13 kt)").trendHeadlineLabeled == "Wind Increasing (+13 kt)")
+        var own = borrowed
+        own.borrowedTafStation = nil
+        #expect(own.trendHeadlineLabeled == "Deterioration Forecast")
+    }
+
+    @Test func widgetMergeKeepsBorrowedLabelsOnlyForTheSameObservation() throws {
+        let cached = try widgetSnapshot()
+        let same = WidgetWeatherSnapshot.merge(live: cached, cached: cached)
+        #expect(same.borrowedTafStation == "KHND")
+        #expect(same.borrowedTafLine == "No TAF for KBVU · using KHND (13 nm W)")
+        let newerRaw = try JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":1792612500,"icaoId":"KBVU","rawOb":"METAR KBVU 211955Z 17012KT 10SM FEW060 28/12 A2991","visib":"10+","wdir":170,"wspd":12,"fltCat":"VFR"}"#.utf8))
+        let newer = WidgetWeatherSnapshot.merge(live: try #require(WidgetWeatherSnapshot.from(rawMetar: newerRaw, icao: "KBVU")), cached: cached)
+        #expect(newer.borrowedTafStation == nil)
+        #expect(newer.tafAccuracyPct == nil)
+    }
+
+    @Test func olderSnapshotsWithoutBorrowedFieldsStillDecode() throws {
+        let data = try JSONEncoder().encode(try widgetSnapshot())
+        var object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object["borrowedTafStation"] = nil
+        object["borrowedTafLine"] = nil
+        let decoded = try JSONDecoder().decode(WidgetWeatherSnapshot.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(decoded.borrowedTafStation == nil)
+        #expect(decoded.tafAccuracyPct == 78)
+    }
+
+    @Test func siriSaysWhereTheForecastComesFrom() {
+        let khnd = TafSource(stationId: "KHND", name: "Henderson Exec", distanceNm: 13, bearing: "W", elevationDifferenceFt: 282, isBorrowed: true)
+        #expect(NearbyTaf.spokenBorrowedForecast(fieldName: "Boulder City Municipal", stationName: "Henderson Executive",
+                                                 source: khnd, ownExpired: false, conditions: "steady")
+                == "There's no TAF for Boulder City Municipal. The forecast from Henderson Executive, 13 miles west, shows conditions steady.")
+        #expect(NearbyTaf.spokenBorrowedForecast(fieldName: "Boulder City Municipal", stationName: "Henderson Executive",
+                                                 source: khnd, ownExpired: true, conditions: "deteriorating")
+                .hasPrefix("There's no current TAF for Boulder City Municipal."))
+        let one = TafSource(stationId: "KXYZ", name: nil, distanceNm: 1, bearing: "NW", elevationDifferenceFt: nil, isBorrowed: true)
+        #expect(NearbyTaf.spokenBorrowedForecast(fieldName: "A", stationName: "B", source: one, ownExpired: false, conditions: "steady")
+                .contains("B, 1 mile northwest, shows"))
+    }
+
+    // The full Siri answer: report age per D#4 first, then the borrowed sentence only where the
+    // forecast is voiced (no observed trend); with an observed trend, nothing about any TAF.
+    @Test func siriDialogNamesTheBorrowedForecastAfterTheReportAge() throws {
+        let m = try MetarParser.parse(raw: JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":1792608900,"icaoId":"KBVU","rawOb":"METAR KBVU 211855Z 17015G21KT 10SM FEW060 29/12 A2992","visib":"10+","wdir":170,"wspd":15,"wgst":21,"clouds":[{"cover":"FEW","base":6000}],"fltCat":"VFR"}"#.utf8)))
+        let khnd = TafSource(stationId: "KHND", name: "Henderson Exec", distanceNm: 13, bearing: "W", elevationDifferenceFt: 282, isBorrowed: true)
+        let borrowed = (source: khnd, ownExpired: false, stationName: "Henderson Executive")
+        let at = m.observationTime.addingTimeInterval(16 * 60)
+        var trend = WeatherTrend.derive(metars: [m], taf: nil, now: at)
+        #expect(trend.observed.overall == .unknown)
+        trend.forecast.overall = .deteriorating
+        let spoken = SiriReportWording.dialog(airportName: "Boulder City Municipal", metar: m, trend: trend, borrowed: borrowed, at: at)
+        #expect(spoken.hasPrefix("As of 16 minutes ago, Boulder City Municipal is VFR."))
+        #expect(spoken.hasSuffix("There's no TAF for Boulder City Municipal. The forecast from Henderson Executive, 13 miles west, shows conditions deteriorating."))
+        #expect(!spoken.contains("Forecast shows"))
+
+        trend.observed.overall = .steady
+        let observed = SiriReportWording.dialog(airportName: "Boulder City Municipal", metar: m, trend: trend, borrowed: borrowed, at: at)
+        #expect(!observed.contains("TAF") && !observed.contains("Henderson"))
     }
 
     // MARK: - Units and geometry

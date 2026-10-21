@@ -45,6 +45,10 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
 
     // TAF accuracy (the widget differentiator)
     let tafAccuracyPct: Int?        // category accuracy; nil = no TAF
+    // Borrowed TAF (D#14): the station whose TAF the trend forecast, accuracy and deviation come
+    // from, and the substitution line ("No TAF for KBVU · using KHND (13 nm W)"). nil = own TAF.
+    var borrowedTafStation: String? = nil
+    var borrowedTafLine: String? = nil
 
     // Forecast deviation (for medium widget)
     let forecastWindDivergenceKt: Int?
@@ -147,6 +151,13 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     static let widgetRefreshHeadline = "Widget Refresh"
 
     var hasTrend: Bool { trendHeadline != Self.widgetRefreshHeadline }
+
+    /// The trend headline, naming a borrowed TAF's station when the headline comes from its
+    /// forecast ("Deterioration Forecast · KHND TAF"; Jeff, Oct 21).
+    var trendHeadlineLabeled: String {
+        guard let station = borrowedTafStation, trendHeadline.hasSuffix("Forecast") else { return trendHeadline }
+        return "\(trendHeadline) · \(station) TAF"
+    }
 
     // MARK: - Wind display (replicates Wind.displayString for widget use)
     var windDisplayString: String {
@@ -314,6 +325,8 @@ extension WidgetWeatherSnapshot {
             trendDirection: sameObservation ? cached.trendDirection : live.trendDirection,
             trendHeadline: sameObservation ? cached.trendHeadline : live.trendHeadline,
             tafAccuracyPct: sameObservation ? cached.tafAccuracyPct : nil,
+            borrowedTafStation: sameObservation ? cached.borrowedTafStation : nil,
+            borrowedTafLine: sameObservation ? cached.borrowedTafLine : nil,
             forecastWindDivergenceKt: sameObservation ? cached.forecastWindDivergenceKt : nil,
             forecastCeilingDivergenceFt: sameObservation ? cached.forecastCeilingDivergenceFt : nil,
             forecastVisibilityDivergenceSM: sameObservation ? cached.forecastVisibilityDivergenceSM : nil,

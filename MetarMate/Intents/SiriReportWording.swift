@@ -34,7 +34,11 @@ enum SiriReportWording {
 
     // MARK: - Dialog
 
-    static func dialog(airportName: String, metar: Metar, trend: WeatherTrend, at date: Date) -> String {
+    /// `borrowed`: the nearby TAF standing in for this field's (D#14). Named whenever the forecast
+    /// is voiced, so a nearby station's forecast never sounds like this field's.
+    static func dialog(airportName: String, metar: Metar, trend: WeatherTrend,
+                       borrowed: (source: TafSource, ownExpired: Bool, stationName: String)? = nil,
+                       at date: Date) -> String {
         let minutes = ageMinutes(observationTime: metar.observationTime, at: date)
         var parts: [String] = []
 
@@ -84,7 +88,14 @@ enum SiriReportWording {
         if trend.observed.overall != .unknown {
             parts.append("Conditions are \(trend.observed.overall.rawValue.lowercased()).")
         } else if trend.forecast.overall != .unknown {
-            parts.append("Forecast shows conditions \(trend.forecast.overall.rawValue.lowercased()).")
+            let conditions = trend.forecast.overall.rawValue.lowercased()
+            if let borrowed {
+                parts.append(NearbyTaf.spokenBorrowedForecast(fieldName: airportName, stationName: borrowed.stationName,
+                                                              source: borrowed.source, ownExpired: borrowed.ownExpired,
+                                                              conditions: conditions))
+            } else {
+                parts.append("Forecast shows conditions \(conditions).")
+            }
         } else {
             parts.append("No trend data available.")
         }

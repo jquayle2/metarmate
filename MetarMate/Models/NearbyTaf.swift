@@ -115,8 +115,8 @@ enum NearbyTaf {
     struct Derived {
         let trend: WeatherTrend
         let verification: TafVerification?
-        // For the widget snapshot: no borrowed-TAF forecast or accuracy until the widget names the
-        // station (nearby-TAF widget step).
+        // For the widget snapshot. The widget names a borrowed TAF's station (snapshot
+        // borrowedTafStation), so it gets the same results as the screen.
         let snapshotTrend: WeatherTrend
         let snapshotVerification: TafVerification?
     }
@@ -141,8 +141,7 @@ enum NearbyTaf {
         let trend = WeatherTrend.derive(metars: fieldHistory, taf: stationNow == nil ? nil : taf, forecastMetar: stationNow,
                                         forecastStation: taf.stationId, now: now)
         let verification = stationHistory.isEmpty ? nil : TafVerification.derive(metars: stationHistory, taf: taf)
-        return Derived(trend: trend, verification: verification,
-                       snapshotTrend: WeatherTrend.derive(metars: fieldHistory, taf: nil, now: now), snapshotVerification: nil)
+        return Derived(trend: trend, verification: verification, snapshotTrend: trend, snapshotVerification: verification)
     }
 
     // MARK: Wording (D#14, D#17)
@@ -158,6 +157,18 @@ enum NearbyTaf {
          (" · using ", false),
          (source.stationId, true),
          (" (\(source.distanceNm) nm \(source.bearing))", false)]
+    }
+
+    /// Siri, only when it voices forecast content (Jeff, Oct 21): "There's no TAF for Boulder City
+    /// Municipal. The forecast from Henderson Executive, 13 miles west, shows conditions steady."
+    static func spokenBorrowedForecast(fieldName: String, stationName: String, source: TafSource,
+                                       ownExpired: Bool, conditions: String) -> String {
+        let directions = ["N": "north", "NE": "northeast", "E": "east", "SE": "southeast",
+                          "S": "south", "SW": "southwest", "W": "west", "NW": "northwest"]
+        let miles = source.distanceNm == 1 ? "1 mile" : "\(source.distanceNm) miles"
+        let direction = directions[source.bearing].map { " \($0)" } ?? ""
+        return "There's no \(ownExpired ? "current " : "")TAF for \(fieldName). "
+            + "The forecast from \(stationName), \(miles)\(direction), shows conditions \(conditions)."
     }
 
     /// Distance tier and elevation cautions under the substitution line. Wording only — no color

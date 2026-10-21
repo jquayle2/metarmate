@@ -93,24 +93,39 @@ struct FlyingWeatherIntent: AppIntent {
             )
         }
 
+        let now = Date()
+
         // 3. TAF: the field's own, or the nearest current TAF within 50 nm (never on a failed request)
         let ownTaf = await WeatherService.shared.tafResult(for: fetchId)
         let field = (ids: Set([resolvedAirport.icao.uppercased(), fetchId.uppercased()]), latitude: resolvedAirport.latitude,
                      longitude: resolvedAirport.longitude, elevationFt: resolvedAirport.elevation)
-        let (taf, tafStatus) = await NearbyTaf.resolve(own: NearbyTaf.outcome(of: ownTaf), field: field, at: Date()) {
+        let (taf, tafStatus) = await NearbyTaf.resolve(own: NearbyTaf.outcome(of: ownTaf), field: field, at: now) {
             try await WeatherService.shared.tafCandidates(forField: fetchId,
                                                           latitude: field.latitude, longitude: field.longitude)
         }
 
-        // 4. Derive trend. A borrowed TAF never feeds this field's forecast trend: Siri voices it
-        // only with the borrowed-TAF sentence (nearby-TAF Step 6), so until then it isn't voiced.
-        let tafForTrend = tafStatus.isBorrowed ? nil : taf
-        let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: tafForTrend) }
+        // 4. Derive trend, the same way as the detail screen: a borrowed TAF only against its own
+        // station's METARs. Siri voices the forecast only without an observed trend, so the
+        // station's reports are fetched only then.
+        let observedKnown = await MainActor.run { ObservedTrend.derive(from: metarHistory).overall != .unknown }
+        var stationHistory: [Metar] = []
+        var borrowed: (source: TafSource, ownExpired: Bool, stationName: String)?
+        if case .borrowed(let source, let ownExpired) = tafStatus {
+            if !observedKnown {
+                stationHistory = (try? await WeatherService.shared.fetchMetarHistory(for: source.stationId, hours: 6)) ?? []
+            }
+            let stationName = await MainActor.run { AirportService.shared.airport(icao: source.stationId)?.name }
+            borrowed = (source, ownExpired, stationName ?? source.name ?? source.stationId)
+        }
+        let stationReports = stationHistory
+        let trend = await MainActor.run {
+            NearbyTaf.derive(fieldHistory: metarHistory, taf: taf, status: tafStatus, stationHistory: stationReports, at: now).trend
+        }
 
         // 5. Build spoken dialog and snippet. Report age per D#4: every answer speaks it; over
         // 75 min there is no category, conditions or trend, in speech or on the card.
-        let now = Date()
-        let spokenText = SiriReportWording.dialog(airportName: resolvedAirport.name, metar: metar, trend: trend, at: now)
+        let spokenText = SiriReportWording.dialog(airportName: resolvedAirport.name, metar: metar, trend: trend,
+                                                    borrowed: borrowed, at: now)
         let detail = SiriReportWording.summaryLine(metar: metar, at: now)
 
         return .result(

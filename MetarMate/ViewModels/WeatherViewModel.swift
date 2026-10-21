@@ -175,7 +175,7 @@ class WeatherViewModel: ObservableObject {
                                 trend: snapshotTrend,
                                 tafVerification: snapshotVerification
                             )
-                            WidgetDataManager.save(snapshot: snapshot)
+                            WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
                         }
                         return
                     }
@@ -209,7 +209,7 @@ class WeatherViewModel: ObservableObject {
                     trend: snapshotTrend,
                     tafVerification: snapshotVerification
                 )
-                WidgetDataManager.save(snapshot: snapshot)
+                WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
             }
         } catch is CancellationError {
             // User navigated away mid-load. Not a failure — don't set error (which would
@@ -264,6 +264,15 @@ class WeatherViewModel: ObservableObject {
         tafVerification = derived.verification
         snapshotTrend = derived.snapshotTrend
         snapshotVerification = derived.snapshotVerification
+    }
+
+    /// The snapshot with a borrowed TAF's station and substitution line, so the widget labels it.
+    private func withBorrowedTaf(_ snapshot: WidgetWeatherSnapshot) -> WidgetWeatherSnapshot {
+        guard case .borrowed(let source, let ownExpired) = tafStatus else { return snapshot }
+        var labeled = snapshot
+        labeled.borrowedTafStation = source.stationId
+        labeled.borrowedTafLine = NearbyTaf.substitutionLine(fieldId: snapshot.icao, source: source, ownExpired: ownExpired)
+        return labeled
     }
 
     // MARK: - Advisory weather path (Open-Meteo, for non-METAR airports)
