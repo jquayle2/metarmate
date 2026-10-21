@@ -150,6 +150,19 @@ struct WidgetReportAgeTests {
         #expect(at(s, minutes: 130) == .noCurrent(minutes: 130))
     }
 
+    @Test func sharedRuleMatchesTheWidget() throws {
+        // The shared function (used for any report's observation time) is the widget's rule.
+        let s = try snapshot()
+        for minutes in [-5.0, 64 + 59.0 / 60, 65, 75, 75 + 59.0 / 60, 76, 130] {
+            let date = s.observationTime.addingTimeInterval(minutes * 60)
+            #expect(WidgetWeatherSnapshot.reportAge(observationTime: s.observationTime, at: date) == s.reportAge(at: date))
+        }
+        // Over 75 (76+ whole minutes) is no current report; 75:59 is still late.
+        let obs = s.observationTime
+        #expect(WidgetWeatherSnapshot.reportAge(observationTime: obs, at: obs.addingTimeInterval(75 * 60 + 59)) == .late(minutes: 75))
+        #expect(WidgetWeatherSnapshot.reportAge(observationTime: obs, at: obs.addingTimeInterval(76 * 60)) == .noCurrent(minutes: 76))
+    }
+
     @Test func ageChangeDatesCoverEveryTransition() throws {
         let s = try snapshot()
         let minutes = s.ageChangeDates(after: s.observationTime)

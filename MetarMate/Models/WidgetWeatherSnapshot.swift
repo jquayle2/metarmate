@@ -73,7 +73,8 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
         Self.reportAge(observationTime: observationTime, at: date)
     }
 
-    // Static so Siri classifies a Metar with the same boundaries and truncation as the widget.
+    /// The one 65/75-minute rule for any report (widgets, Siri, the app's "Right now" row, a
+    /// borrowed TAF station's METAR), from its observation time.
     static func reportAge(observationTime: Date, at date: Date) -> ReportAge {
         // Whole minutes, truncated: 64:59 is still current, 75:59 still late (D#4 "over 75").
         // A future obs time (clock skew) is current.
