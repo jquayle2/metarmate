@@ -43,8 +43,8 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [x] SwiftData store opened only from window content; open logged with app state (#2)
 - [x] ASOS free period removed; hard-coded Synoptic token deleted (#3)
 - [x] Alerts are METAR-only (D#1)
-- [ ] **Unconfigured widget fetches live** (fall back to most-recent ICAO, don't replay cache). Found Oct 21: an unconfigured widget never fetched. [Code]
-- [ ] **`widget.diag` breadcrumb** in the App Group (last run, ICAO, configured/fallback, fetch result) [Code]
+- [x] **Unconfigured widget fetches live** (falls back to the last-viewed ICAO). Found Oct 21: an unconfigured widget never fetched. `9fa71fa` [Code]
+- [x] **`widget.diag` breadcrumb**: last 40 provider runs (time, kind, ICAO, configured/fallback, fetch outcome) in the App Group. `b8a732c` [Code]
 - [ ] Device check: widget refreshes on its own for 3–4 h without opening the app (KVGT configured Oct 21, 9:45 AM) [Jeff]
 - [ ] Device check: refresh button [Jeff]
 - [ ] Device check: late / no-current states via the DEBUG age override, then set it back to Off [Jeff]
