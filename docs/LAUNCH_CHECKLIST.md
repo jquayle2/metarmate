@@ -106,9 +106,9 @@ Pro gating (launch-blocking; scope in D#19–20):
 
 Siri (#25):
 - [ ] Use location instead of prompting "Which airport?"
-- [ ] `nearest(count:1)` respects `hasMetar`
+- [x] Nearest fallback picks the nearest airport that reports a METAR (searches 25, not 1). `eadefa0`
 - [ ] 3-character LIDs (CMA, 36K) resolve via `noaaCandidate`
-- [ ] Remove the `O→0` rewrite that corrupts O-prefixed ICAOs
+- [x] `O→0` rewrite replaced: the spoken code is tried as heard, then with the leading O/0 swapped, preferring a METAR station (O22, OK36 and 0L7 all resolve). `eadefa0`
 - [ ] Siri speaks the report age on every answer; "late" at 65–75 min; over 75 min says stale, no category/conditions/verdict (D#4)
 
 Background task (#26):
