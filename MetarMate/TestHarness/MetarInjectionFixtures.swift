@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Canned adverse-weather fixtures (A1–A13, T1–T4)
+// MARK: - Canned adverse-weather fixtures (A1–A13, T1–T7)
 //
 // The corpus from docs/PRE_MERGE_TEST_PLAN.md, authored as STRUCTURED NOAA JSON — because the real
 // parser reads NOAA's decoded fields (visib/wdir/clouds/wxString/fltCat/fcsts), NOT the raw string.
@@ -22,10 +22,10 @@ import Foundation
 //
 // METAR category (`fltCat`) is a PASSTHROUGH — MetarParser reads it verbatim and never computes it.
 // So A1–A12's `fltCat` is set to NOAA's real value for that ob (flagged per-row in the plan). TAF
-// category IS computed by TafParser.calculateFlightCategory, so T1–T4 OMIT any category hint and let
+// category IS computed by TafParser.calculateFlightCategory, so T1–T7 OMIT any category hint and let
 // the ceiling/visibility drive it — that is the thing under test (esp. T4).
 //
-// T1–T4 are TAF cases, but the production detail view only renders the TAF section when a METAR is
+// T1–T7 are TAF cases, but the production detail view only renders the TAF section when a METAR is
 // present (`if let metar = vm.metar`). Rather than change that production gating, each TAF is paired
 // with a scaffolding METAR history (same ident) so the screen renders. The scaffold's CURRENT category
 // is MATCHED to the TAF's FIRST period (a real station's METAR ≈ its TAF's current period) so the
@@ -306,6 +306,75 @@ enum MetarInjectionFixtures {
                     let json = #"""
                     [{"icaoId":"KT04","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT04 empty vis + BKN007 (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(24)),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":700}]}
+                    ]}]
+                    """#
+                    return try tafInjection(scaffold: scaffold, tafJSON: json)
+                }
+            ),
+            InjectionFixture(
+                id: "T5", title: "T5 · military BECMG chain (KINS)",
+                subtitle: "BECMG becomes prevailing at the end of its window; strip shows each completed change.",
+                airport: airport("KT05", name: "T5 military BECMG (SIM)"),
+                make: {
+                    // Live KINS TAF AMD 211620Z (Oct 21, 2026), times shifted so the second BECMG is
+                    // under way now. Scaffold matches the base period (VFR); no phenomena.
+                    let scaffold = [
+                        ob("KT05", minAgo: 0,   wind: #""wdir":110,"wspd":10"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":10000}]"#, temp: 24, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 11010KT 10SM SCT100 24/02 A2992 (SIM SCAFFOLD)"),
+                        ob("KT05", minAgo: 60,  wind: #""wdir":110,"wspd":8"#,  visib: #""10+""#, clouds: #"[{"cover":"SCT","base":10000}]"#, temp: 23, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 11008KT 10SM SCT100 23/02 A2992 (SIM SCAFFOLD)"),
+                        ob("KT05", minAgo: 120, wind: #""wdir":100,"wspd":6"#,  visib: #""10+""#, clouds: #"[{"cover":"FEW","base":12000}]"#, temp: 21, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 10006KT 10SM FEW120 21/02 A2992 (SIM SCAFFOLD)"),
+                    ]
+                    let json = #"""
+                    [{"icaoId":"KT05","validTimeFrom":\#(epoch(-2)),"validTimeTo":\#(epoch(25)),"rawTAF":"TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS (SIMULATED, times shifted)","fcsts":[
+                      {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(25)),"wdir":"VRB","wspd":6,"visib":"6+","clouds":[{"cover":"FEW","base":12000}]},
+                      {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(-0.5)),"timeBec":\#(epoch(-1)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
+                      {"timeFrom":\#(epoch(-0.5)),"timeTo":\#(epoch(2)),"timeBec":\#(epoch(0.5)),"fcstChange":"BECMG","wdir":110,"wspd":12,"wgst":21,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
+                      {"timeFrom":\#(epoch(0.5)),"timeTo":\#(epoch(2.5)),"fcstChange":"TEMPO","wdir":120,"wspd":16,"wgst":28,"visib":"","clouds":[]},
+                      {"timeFrom":\#(epoch(2)),"timeTo":\#(epoch(11)),"timeBec":\#(epoch(3)),"fcstChange":"BECMG","wdir":120,"wspd":16,"wgst":28,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":8000}]},
+                      {"timeFrom":\#(epoch(3)),"timeTo":\#(epoch(7)),"fcstChange":"TEMPO","wdir":130,"wspd":18,"wgst":31,"visib":"","wxString":"VCSH","clouds":[]},
+                      {"timeFrom":\#(epoch(11)),"timeTo":\#(epoch(21)),"timeBec":\#(epoch(12)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"SCT","base":8000}]},
+                      {"timeFrom":\#(epoch(21)),"timeTo":\#(epoch(25)),"timeBec":\#(epoch(22)),"fcstChange":"BECMG","wdir":250,"wspd":10,"wgst":15,"visib":"6+","wxString":"SHRA","clouds":[{"cover":"BKN","base":5000}]}
+                    ]}]
+                    """#
+                    return try tafInjection(scaffold: scaffold, tafJSON: json)
+                }
+            ),
+            InjectionFixture(
+                id: "T6", title: "T6 · PROB30 TEMPO TSRA",
+                subtitle: "PROB30 TEMPO stays an overlay labeled PROB30, never the prevailing forecast.",
+                airport: airport("KT06", name: "T6 PROB30 TEMPO (SIM)"),
+                make: {
+                    // NOAA sends "PROB30 TEMPO" as fcstChange TEMPO + probability 30 (EGLL/LFPG/LIRF
+                    // style). Scaffold matches the base period (VFR); no phenomena.
+                    let scaffold = [
+                        ob("KT06", minAgo: 0,   wind: #""wdir":250,"wspd":12"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":4000}]"#, temp: 18, dewp: 9, altim: 1012, fltCat: "VFR", raw: "METAR KT06 25012KT 10SM SCT040 18/09 A2988 (SIM SCAFFOLD)"),
+                        ob("KT06", minAgo: 60,  wind: #""wdir":250,"wspd":11"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":4500}]"#, temp: 18, dewp: 9, altim: 1012, fltCat: "VFR", raw: "METAR KT06 25011KT 10SM SCT045 18/09 A2988 (SIM SCAFFOLD)"),
+                        ob("KT06", minAgo: 120, wind: #""wdir":240,"wspd":10"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":5000}]"#, temp: 17, dewp: 9, altim: 1012, fltCat: "VFR", raw: "METAR KT06 24010KT 10SM SCT050 17/09 A2988 (SIM SCAFFOLD)"),
+                    ]
+                    let json = #"""
+                    [{"icaoId":"KT06","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT06 25012KT P6SM SCT040 PROB30 TEMPO TSRA BKN030CB, FM BKN025 (SIMULATED)","fcsts":[
+                      {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(8)),"wdir":250,"wspd":12,"visib":"6+","clouds":[{"cover":"SCT","base":4000}]},
+                      {"timeFrom":\#(epoch(2)),"timeTo":\#(epoch(5)),"fcstChange":"TEMPO","probability":30,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3000,"type":"CB"}]},
+                      {"timeFrom":\#(epoch(8)),"timeTo":\#(epoch(24)),"fcstChange":"FM","wdir":270,"wspd":10,"visib":"6+","clouds":[{"cover":"BKN","base":2500}]}
+                    ]}]
+                    """#
+                    return try tafInjection(scaffold: scaffold, tafJSON: json)
+                }
+            ),
+            InjectionFixture(
+                id: "T7", title: "T7 · starts in 30 min",
+                subtitle: "issued before its validity (KVGT 1728Z valid 1800Z): counts as current, tagged UPCOMING.",
+                airport: airport("KT07", name: "T7 upcoming TAF (SIM)"),
+                make: {
+                    // Scaffold matches the first period (VFR); no phenomena.
+                    let scaffold = [
+                        ob("KT07", minAgo: 0,   wind: #""wdir":200,"wspd":8"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":6000}]"#, temp: 22, dewp: 5, altim: 1014, fltCat: "VFR", raw: "METAR KT07 20008KT 10SM SCT060 22/05 A2994 (SIM SCAFFOLD)"),
+                        ob("KT07", minAgo: 60,  wind: #""wdir":200,"wspd":7"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":6000}]"#, temp: 21, dewp: 5, altim: 1014, fltCat: "VFR", raw: "METAR KT07 20007KT 10SM SCT060 21/05 A2994 (SIM SCAFFOLD)"),
+                        ob("KT07", minAgo: 120, wind: #""wdir":190,"wspd":6"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":7000}]"#, temp: 20, dewp: 5, altim: 1014, fltCat: "VFR", raw: "METAR KT07 19006KT 10SM SCT070 20/05 A2994 (SIM SCAFFOLD)"),
+                    ]
+                    let json = #"""
+                    [{"icaoId":"KT07","validTimeFrom":\#(epoch(0.5)),"validTimeTo":\#(epoch(24.5)),"rawTAF":"TAF KT07 issued 30 min before validity: VFR then FM MVFR (SIMULATED)","fcsts":[
+                      {"timeFrom":\#(epoch(0.5)),"timeTo":\#(epoch(6)),"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SCT","base":6000}]},
+                      {"timeFrom":\#(epoch(6)),"timeTo":\#(epoch(24.5)),"fcstChange":"FM","wdir":190,"wspd":12,"wgst":22,"visib":4,"clouds":[{"cover":"BKN","base":2000}]}
                     ]}]
                     """#
                     return try tafInjection(scaffold: scaffold, tafJSON: json)

@@ -12,7 +12,7 @@ import os
 enum HarnessAudit {
     private static let logger = Logger(subsystem: "com.jeffquayle.MetarMate", category: "harness")
 
-    /// Dump the whole corpus (A1–A13, T1–T4) in one pass to the console.
+    /// Dump the whole corpus (A1–A13, T1–T7) in one pass to the console.
     static func logAll() { for l in reportAll() { line(l) } }
 
     /// Dump one fixture to the console.

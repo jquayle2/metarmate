@@ -8,7 +8,7 @@ import os
 // (sandbox receipt) so it is unreachable in an App Store production build.
 //
 // Sections:
-//   1. Canned adverse fixtures (A1–A13, T1–T4) — injected, SIMULATED, banner-marked.
+//   1. Canned adverse fixtures (A1–A13, T1–T7) — injected, SIMULATED, banner-marked.
 //   2. Live spot-check airports — a NORMAL live fetch, clearly labeled LIVE (no banner).
 //   3. Free-text paste — arbitrary raw METAR/TAF or NOAA JSON through the same decode→parse seam.
 //   4. (DEBUG builds only) Widget forced report age — exercises the widgets' late/no-current states.
