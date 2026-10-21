@@ -17,6 +17,7 @@ class WeatherViewModel: ObservableObject {
     @Published var metar: Metar?
     @Published var metarHistory: [Metar] = []
     @Published var taf: Taf?
+    @Published var tafStatus: TafStatus = .own   // own, borrowed from a nearby station, or none
     @Published var trend: WeatherTrend?
     @Published var tafVerification: TafVerification?
     @Published var isLoading = false
@@ -47,6 +48,7 @@ class WeatherViewModel: ObservableObject {
         }
         if force {
             await weatherService.clearMetarCache()
+            await weatherService.clearTafCandidateCache()
             Log.load.info("[load] \(airport.icao, privacy: .public) FORCE refresh (cache cleared)")
         }
         let loadStart = DispatchTime.now()
@@ -64,7 +66,7 @@ class WeatherViewModel: ObservableObject {
             // try the K-prefixed ICAO against NOAA before falling back to advisory. Only
             // fall back after this genuinely misses.
             if let kIcao = WeatherService.noaaCandidate(for: airport.icao) {
-                await loadMETAR(icao: kIcao)
+                await loadMETAR(icao: kIcao, field: airport)
                 if metar != nil {
                     isLoading = false
                     return
@@ -76,7 +78,7 @@ class WeatherViewModel: ObservableObject {
         } else {
             // For 3-char FAA LIDs, use the K-prefixed ICAO for NOAA lookup (CMA → KCMA)
             let icaoForFetch = WeatherService.noaaCandidate(for: airport.icao) ?? airport.icao
-            await loadMETAR(icao: icaoForFetch)
+            await loadMETAR(icao: icaoForFetch, field: airport)
             if noWeatherReporting || (metar == nil && error != nil) {
                 // This is the silent-fallback case: a hasMetar station couldn't return a
                 // real METAR (usually a slow/timed-out fetch), so we drop to advisory.
@@ -124,6 +126,7 @@ class WeatherViewModel: ObservableObject {
         metarHistory = injection.metars
         metar = injection.metars.first
         taf = injection.taf
+        tafStatus = .own
         trend = WeatherTrend.derive(metars: injection.metars, taf: injection.taf)
         if let taf = injection.taf {
             tafVerification = TafVerification.derive(metars: injection.metars, taf: taf)
@@ -134,17 +137,17 @@ class WeatherViewModel: ObservableObject {
     }
 
     // MARK: - METAR path (aviationweather.gov)
-    private func loadMETAR(icao: String) async {
+    private func loadMETAR(icao: String, field: Airport? = nil) async {
         error = nil
         noWeatherReporting = false
         nearbyReportingAirports = []
 
         do {
             async let historyResult = weatherService.fetchMetarHistory(for: icao, hours: 6)
-            async let tafResult = try? weatherService.fetchTaf(for: icao)
+            async let tafResult = weatherService.tafResult(for: icao)
 
             let fetchedHistory = try await historyResult
-            let fetchedTaf = await tafResult
+            let ownTafResult = await tafResult
 
             if fetchedHistory.isEmpty {
                 // For 3-char FAA LIDs (CMA, 36K, 1G4, …), try the K-prefixed ICAO (KCMA, K36K)
@@ -153,14 +156,9 @@ class WeatherViewModel: ObservableObject {
                        !retryHistory.isEmpty {
                         metarHistory = retryHistory
                         metar = retryHistory.first
-                        let retryTaf = try? await weatherService.fetchTaf(for: kIcao)
-                        taf = retryTaf
-                        trend = WeatherTrend.derive(metars: retryHistory, taf: retryTaf)
-                        if let retryTaf {
-                            tafVerification = TafVerification.derive(metars: retryHistory, taf: retryTaf)
-                        } else {
-                            tafVerification = nil
-                        }
+                        let (retryTaf, retryStatus) = await resolveTaf(await weatherService.tafResult(for: kIcao),
+                                                                       fetchIcao: kIcao, field: field)
+                        applyTaf(retryTaf, status: retryStatus, history: retryHistory)
                         lastUpdated = Date()
                         if let currentMetar = metar {
                             let snapshot = WidgetWeatherSnapshot.from(
@@ -181,20 +179,15 @@ class WeatherViewModel: ObservableObject {
                 metar = nil
                 metarHistory = []
                 taf = nil
+                tafStatus = .own
                 trend = nil
                 tafVerification = nil
                 await loadNearbyReporting(icao: icao)
             } else {
                 metarHistory = fetchedHistory
                 metar = fetchedHistory.first
-                taf = fetchedTaf
-
-                trend = WeatherTrend.derive(metars: fetchedHistory, taf: fetchedTaf)
-                if let fetchedTaf {
-                    tafVerification = TafVerification.derive(metars: fetchedHistory, taf: fetchedTaf)
-                } else {
-                    tafVerification = nil
-                }
+                let (resolvedTaf, status) = await resolveTaf(ownTafResult, fetchIcao: icao, field: field)
+                applyTaf(resolvedTaf, status: status, history: fetchedHistory)
             }
 
             lastUpdated = Date()
@@ -221,6 +214,44 @@ class WeatherViewModel: ObservableObject {
         } catch {
             self.error = error
         }
+    }
+
+    // MARK: - TAF: own, or the nearest current TAF within 50 nm (D#13–17)
+    /// The field's own TAF when it has a current one; otherwise (204 / empty / expired) the nearest
+    /// current TAF within 50 nm. A failed request never borrows. The nearby lookup is cached ~10 min
+    /// per field; the field's own TAF is requested on every refresh, so one that appears wins at once.
+    private func resolveTaf(_ ownResult: Result<Taf, Error>, fetchIcao: String, field: Airport?) async -> (Taf?, TafStatus) {
+        let field = field ?? AirportService.shared.airport(icao: fetchIcao)
+        let position = field.map { f in
+            (ids: Set([fetchIcao.uppercased(), f.icao.uppercased()]), latitude: f.latitude, longitude: f.longitude, elevationFt: f.elevation)
+        }
+        let service = weatherService
+        let resolved = await NearbyTaf.resolve(own: NearbyTaf.outcome(of: ownResult), field: position, at: Date()) {
+            guard let position else { return [] }
+            return try await service.tafCandidates(forField: fetchIcao, latitude: position.latitude, longitude: position.longitude)
+        }
+        switch resolved.status {
+        case .borrowed(let source, let ownExpired):
+            Log.load.info("[taf] \(fetchIcao, privacy: .public) borrowing \(source.stationId, privacy: .public) \(source.distanceNm, privacy: .public) nm \(source.bearing, privacy: .public) (own expired: \(ownExpired, privacy: .public))")
+        case .noneWithin50nm:
+            Log.load.info("[taf] \(fetchIcao, privacy: .public) no TAF within 50 nm")
+        case .unavailable:
+            Log.load.info("[taf] \(fetchIcao, privacy: .public) TAF unavailable (request or lookup failed)")
+        case .own:
+            break
+        }
+        return resolved
+    }
+
+    /// Publish the TAF and what's derived from it. Until verification against the TAF station's own
+    /// METARs lands (D#15, nearby-TAF Steps 5–6), a borrowed TAF is never compared with this field's
+    /// METAR: no forecast trend, TAF accuracy or Forecast Deviation Strip for it.
+    private func applyTaf(_ resolvedTaf: Taf?, status: TafStatus, history: [Metar]) {
+        taf = resolvedTaf
+        tafStatus = status
+        let tafForThisField = status.isBorrowed ? nil : resolvedTaf
+        trend = WeatherTrend.derive(metars: history, taf: tafForThisField)
+        tafVerification = tafForThisField.map { TafVerification.derive(metars: history, taf: $0) } ?? nil
     }
 
     // MARK: - Advisory weather path (Open-Meteo, for non-METAR airports)

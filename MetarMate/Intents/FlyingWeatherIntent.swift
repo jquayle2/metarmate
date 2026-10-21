@@ -93,11 +93,19 @@ struct FlyingWeatherIntent: AppIntent {
             )
         }
 
-        // 3. Fetch TAF (optional)
-        let taf = try? await WeatherService.shared.fetchTaf(for: fetchId)
+        // 3. TAF: the field's own, or the nearest current TAF within 50 nm (never on a failed request)
+        let ownTaf = await WeatherService.shared.tafResult(for: fetchId)
+        let field = (ids: Set([resolvedAirport.icao.uppercased(), fetchId.uppercased()]), latitude: resolvedAirport.latitude,
+                     longitude: resolvedAirport.longitude, elevationFt: resolvedAirport.elevation)
+        let (taf, tafStatus) = await NearbyTaf.resolve(own: NearbyTaf.outcome(of: ownTaf), field: field, at: Date()) {
+            try await WeatherService.shared.tafCandidates(forField: fetchId,
+                                                          latitude: field.latitude, longitude: field.longitude)
+        }
 
-        // 4. Derive trend
-        let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
+        // 4. Derive trend. A borrowed TAF never feeds this field's forecast trend: Siri voices it
+        // only with the borrowed-TAF sentence (nearby-TAF Step 6), so until then it isn't voiced.
+        let tafForTrend = tafStatus.isBorrowed ? nil : taf
+        let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: tafForTrend) }
 
         // 5. Build spoken dialog and snippet. Report age per D#4: every answer speaks it; over
         // 75 min there is no category, conditions or trend, in speech or on the card.

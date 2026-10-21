@@ -1215,31 +1215,35 @@ struct WeatherDetailView: View {
                     .foregroundColor(.secondary)
             }
 
-            Divider()
-
-            // Forecast Deviation Strip (Point 3) — TAF vs actual
-            if let verification = verification, let strip = forecastDeviationStrip(verification) {
-                strip
+            // A borrowed TAF isn't compared with this field's METAR (no deviation strip or forecast
+            // trend) until verification against the TAF station's own METARs lands (D#15).
+            if !vm.tafStatus.isBorrowed {
                 Divider()
-            }
 
-            // FORECAST
-            Text("FORECAST")
-                .font(.caption2.bold())
-                .foregroundColor(.secondary)
-                .tracking(0.5)
+                // Forecast Deviation Strip (Point 3) — TAF vs actual
+                if let verification = verification, let strip = forecastDeviationStrip(verification) {
+                    strip
+                    Divider()
+                }
 
-            if trend.forecast.overall == .unknown {
-                Text("No TAF available for this station.")
-                    .font(.caption)
+                // FORECAST
+                Text("FORECAST")
+                    .font(.caption2.bold())
                     .foregroundColor(.secondary)
-            } else {
-                TrendIndicator(direction: trend.forecast.wind, label: "Wind")
-                TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
-                TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
-                Text(trend.forecast.summaryText)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .tracking(0.5)
+
+                if trend.forecast.overall == .unknown {
+                    Text(vm.tafStatus.isNoneWithin50nm ? "No TAF within 50 nm." : "No TAF available for this station.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    TrendIndicator(direction: trend.forecast.wind, label: "Wind")
+                    TrendIndicator(direction: trend.forecast.visibility, label: "Visibility")
+                    TrendIndicator(direction: trend.forecast.ceiling, label: "Ceiling")
+                    Text(trend.forecast.summaryText)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding()
@@ -1800,10 +1804,14 @@ struct WeatherDetailView: View {
         let periods = taf.prevailingTimeline
         let currentID = taf.currentForecast?.id
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return borrowedTafFrame(VStack(alignment: .leading, spacing: 8) {
 
             // Adaptive hero — brief, per-period limiting-factor row, category ribbon.
             VStack(alignment: .leading, spacing: 12) {
+                // A borrowed TAF's first line is the substitution, not a caption (D#14).
+                if case .borrowed(let source, let ownExpired) = vm.tafStatus {
+                    tafSubstitution(source, ownExpired: ownExpired)
+                }
                 HStack(spacing: 8) {
                     sectionHeader("Forecast · TAF")
                     Spacer()
@@ -1889,7 +1897,47 @@ struct WeatherDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(cardBackground)
             }
+        })
+    }
+
+    // MARK: - Borrowed TAF (D#14, D#17)
+    // Every borrowed TAF looks the same as other "not this field's data": the advisory treatment
+    // (orange wash, dashed border) around the whole forecast card. Distance is wording, never color.
+    @ViewBuilder
+    private func borrowedTafFrame<Content: View>(_ content: Content) -> some View {
+        if vm.tafStatus.isBorrowed {
+            content
+                .padding(8)
+                .advisoryStyle(radius: 16)
+        } else {
+            content
         }
+    }
+
+    /// "No TAF for KBVU · using KHND (13 nm W)", then any distance/elevation cautions.
+    private func tafSubstitution(_ source: TafSource, ownExpired: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                // Heavy for "No TAF for KBVU" and "KHND"; the distance never breaks across lines.
+                NearbyTaf.substitutionParts(fieldId: airport.icao, source: source, ownExpired: ownExpired)
+                    .reduce(Text("")) { line, part in
+                        line + Text(part.emphasized ? part.text : part.text.replacingOccurrences(of: " nm ", with: "\u{00A0}nm\u{00A0}"))
+                            .font(.avenir(15.5, part.emphasized ? .heavy : .medium))
+                    }
+                    .foregroundColor(Brand.cloud)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(NearbyTaf.cautions(for: source), id: \.self) { line in
+                Text(line)
+                    .font(.avenir(13, .demibold))
+                    .foregroundColor(Brand.cautionOrange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - TAF hero brief
@@ -1898,7 +1946,8 @@ struct WeatherDetailView: View {
     private func tafHeroBrief(_ taf: Taf) -> Text {
         // Pure derivation lives in TafHeroBrief.build; reduce the colored segments back to a
         // single Text (each segment keeps its own flight-category / caution-axis color).
-        TafHeroBrief.build(taf).reduce(Text("")) { $0 + Text($1.text).foregroundColor($1.color) }
+        TafHeroBrief.build(taf, stationLabel: vm.tafStatus.isBorrowed ? taf.stationId : nil)
+            .reduce(Text("")) { $0 + Text($1.text).foregroundColor($1.color) }
     }
 
     // Compact hero-strip time label, e.g. "5P", "8P", "11P", "12A".
@@ -2285,7 +2334,7 @@ struct WeatherDetailView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(accent)
                         .font(.caption)
-                    Text("TAF PILOT NOTES")
+                    Text(vm.tafStatus.isBorrowed ? "TAF PILOT NOTES · \(taf.stationId)" : "TAF PILOT NOTES")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
                         .tracking(1)

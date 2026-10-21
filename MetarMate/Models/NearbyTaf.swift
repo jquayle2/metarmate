@@ -24,6 +24,35 @@ struct NearbyTafCandidate {
     let name: String?
 }
 
+/// What the forecast card shows for a field.
+enum TafStatus: Equatable {
+    case own                                       // the field's own current TAF (or nothing to show)
+    case borrowed(TafSource, ownExpired: Bool)     // the nearest current TAF within 50 nm stands in
+    case noneWithin50nm(ownExpired: Bool)          // looked: no current TAF within 50 nm
+    case unavailable                               // the field's TAF request or the nearby lookup failed
+
+    var isBorrowed: Bool { if case .borrowed = self { return true }; return false }
+    var isNoneWithin50nm: Bool { if case .noneWithin50nm = self { return true }; return false }
+}
+
+/// Nearby-TAF lookups per field, kept ~10 min so the 5-min auto-refresh doesn't repeat the bbox
+/// request. Only the lookup is cached: the field's own TAF is requested on every refresh.
+nonisolated struct NearbyTafCandidateCache {
+    static let ttl: TimeInterval = 600
+    private var entries: [String: (candidates: [NearbyTafCandidate], fetchedAt: Date)] = [:]
+
+    func candidates(for field: String, at now: Date) -> [NearbyTafCandidate]? {
+        guard let entry = entries[field], now.timeIntervalSince(entry.fetchedAt) < Self.ttl else { return nil }
+        return entry.candidates
+    }
+
+    mutating func store(_ candidates: [NearbyTafCandidate], for field: String, at now: Date) {
+        entries[field] = (candidates, now)
+    }
+
+    mutating func removeAll() { entries.removeAll() }
+}
+
 enum NearbyTaf {
 
     nonisolated static let maxDistanceNm = 50
@@ -58,6 +87,58 @@ enum NearbyTaf {
         case .none:           return true
         case .failed:         return false
         }
+    }
+
+    /// The TAF to show and its status. The field's own current TAF always wins (one that appears
+    /// replaces a borrowed one on the next refresh); `candidates` (the bbox lookup) runs only when
+    /// borrowing is needed and the field's position is known.
+    static func resolve(own: OwnTaf,
+                        field: (ids: Set<String>, latitude: Double, longitude: Double, elevationFt: Int)?,
+                        at now: Date,
+                        candidates: () async throws -> [NearbyTafCandidate]) async -> (taf: Taf?, status: TafStatus) {
+        if case .found(let taf) = own, taf.currentForecast(at: now) != nil { return (taf, .own) }
+        guard needsBorrow(own, at: now), let field else { return (nil, .unavailable) }
+        let ownExpired: Bool = { if case .found = own { return true }; return false }()
+        do {
+            let found = try await candidates()
+            guard let pick = select(from: found, fieldLatitude: field.latitude, fieldLongitude: field.longitude,
+                                    fieldElevationFt: field.elevationFt, excluding: field.ids, at: now)
+            else { return (nil, .noneWithin50nm(ownExpired: ownExpired)) }
+            return (pick.taf, .borrowed(pick.source, ownExpired: ownExpired))
+        } catch {
+            return (nil, .unavailable)
+        }
+    }
+
+    // MARK: Wording (D#14, D#17)
+
+    /// "No TAF for KBVU · using KHND (13 nm W)" — the forecast card's first line (also widget, Siri).
+    static func substitutionLine(fieldId: String, source: TafSource, ownExpired: Bool) -> String {
+        substitutionParts(fieldId: fieldId, source: source, ownExpired: ownExpired).map(\.text).joined()
+    }
+
+    /// The same line in pieces; the card sets "No TAF for KBVU" and "KHND" in heavy type.
+    static func substitutionParts(fieldId: String, source: TafSource, ownExpired: Bool) -> [(text: String, emphasized: Bool)] {
+        [("\(ownExpired ? "No current TAF" : "No TAF") for \(fieldId)", true),
+         (" · using ", false),
+         (source.stationId, true),
+         (" (\(source.distanceNm) nm \(source.bearing))", false)]
+    }
+
+    /// Distance tier and elevation cautions under the substitution line. Wording only — no color
+    /// encodes distance.
+    static func cautions(for source: TafSource) -> [String] {
+        var lines: [String] = []
+        switch source.distanceNm {
+        case ...10:  break
+        case ...25:  lines.append("TAF site \(source.distanceNm) nm away. Local conditions may differ.")
+        default:     lines.append("TAF site \(source.distanceNm) nm away. Conditions here may be quite different.")
+        }
+        if let diff = source.elevationDifferenceFt, abs(diff) >= 1000 {
+            let rounded = Int((Double(abs(diff)) / 100).rounded()) * 100
+            lines.append("TAF site is \(rounded.formatted()) ft \(diff > 0 ? "higher" : "lower").")
+        }
+        return lines
     }
 
     // MARK: Which station

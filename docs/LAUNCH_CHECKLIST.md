@@ -134,10 +134,10 @@ Other:
 Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 
 - [x] Step 1: TAF time logic, audit #13/#14 ("period covering time t" helper; no expired periods/TAFs, overlays kept separate, BECMG applied, unknown axis not VFR). Also closes those two A2 items.
-- [ ] When the field's TAF request returns 204, one `taf?bbox=` request around the airport; pick the nearest TAF within 50 nm
-- [ ] Forecast card headline is the substitution: "No TAF for KVGT · using KLAS (9 nm SW)"; advisory styling (dashed border, orange accent); no green/yellow/red for distance
-- [ ] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF
-- [ ] Elevation caution at ≥1,000 ft difference, on top of any tier
+- [x] When the field's TAF request returns 204, one `taf?bbox=` request around the airport; pick the nearest TAF within 50 nm
+- [x] Forecast card headline is the substitution: "No TAF for KVGT · using KLAS (9 nm SW)"; advisory styling (dashed border, orange accent); no green/yellow/red for distance
+- [x] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF
+- [x] Elevation caution at ≥1,000 ft difference, on top of any tier
 - [ ] TAF accuracy and Forecast Deviation Strip computed against the TAF station's own METARs, labeled "KLAS forecast vs KLAS actual"
 - [ ] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse (category lower, ceiling >300 ft lower, vis >0.5 SM lower, wind/gust >5 kt higher); no comparison if either METAR is missing or not current
 - [ ] Same substitution wording in the widget and Siri

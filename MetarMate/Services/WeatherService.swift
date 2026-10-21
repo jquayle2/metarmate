@@ -231,6 +231,10 @@ actor WeatherService {
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] TAF \(icao, privacy: .public) no content (204, no active TAF) - \(String(format: "%.0f", ms), privacy: .public) ms")
             throw WeatherError.noContent
+        } catch WeatherError.noData {
+            // 200 with an empty list: also "no TAF" (KBVU answers this way), not a failure.
+            Log.net.info("[net] TAF \(icao, privacy: .public) empty (200, no active TAF)")
+            throw WeatherError.noData
         } catch let err where Self.isCancellation(err) {
             Log.net.info("[net] TAF \(icao, privacy: .public) cancelled (navigated away)")
             throw err
@@ -239,6 +243,30 @@ actor WeatherService {
             Log.net.error("[net] TAF \(icao, privacy: .public) FAILED after \(String(format: "%.0f", ms), privacy: .public) ms - \(String(describing: error), privacy: .public)")
             throw error
         }
+    }
+
+    /// The field's own TAF request as a result, so "no TAF" (204 / empty) and "request failed" stay
+    /// distinguishable (only the former may borrow a nearby TAF).
+    func tafResult(for icao: String) async -> Result<Taf, Error> {
+        do { return .success(try await fetchTaf(for: icao)) } catch { return .failure(error) }
+    }
+
+    // MARK: - TAFs near a field, cached ~10 min per field
+    private var tafCandidateCache = NearbyTafCandidateCache()
+
+    func tafCandidates(forField icao: String, latitude: Double, longitude: Double) async throws -> [NearbyTafCandidate] {
+        if let cached = tafCandidateCache.candidates(for: icao, at: Date()) {
+            Log.net.info("[cache] TAF bbox for \(icao, privacy: .public) HIT - \(cached.count, privacy: .public) TAFs")
+            return cached
+        }
+        let fetched = try await fetchTafCandidates(latitude: latitude, longitude: longitude)
+        tafCandidateCache.store(fetched, for: icao, at: Date())
+        return fetched
+    }
+
+    /// Drop cached nearby-TAF lookups — on an explicit pull-to-refresh, like the METAR cache.
+    func clearTafCandidateCache() {
+        tafCandidateCache.removeAll()
     }
 
     // MARK: - TAFs near a point (nearby-TAF fallback)

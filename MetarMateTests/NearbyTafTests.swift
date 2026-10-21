@@ -142,6 +142,119 @@ struct NearbyTafTests {
         #expect(isFailed(NearbyTaf.outcome(of: .failure(WeatherError.httpStatus(503)))))
     }
 
+    // MARK: - Resolve: own TAF, borrowed, none, unavailable
+
+    private final class Calls { var count = 0 }
+    private var kbvuField: (ids: Set<String>, latitude: Double, longitude: Double, elevationFt: Int) {
+        (["KBVU"], Self.kbvu.lat, Self.kbvu.lon, Self.kbvu.elevFt)
+    }
+
+    @Test func ownCurrentTafWinsWithoutALookup() async throws {
+        let cs = try live()
+        let own = try #require(only(["KHND"], cs).first).taf   // stands in for a field's own current TAF
+        let calls = Calls()
+        let r = await NearbyTaf.resolve(own: .found(own), field: kbvuField, at: now) { calls.count += 1; return cs }
+        #expect(r.status == .own)
+        #expect(r.taf?.stationId == "KHND")
+        #expect(calls.count == 0)   // a TAF that appears replaces the borrowed one on the next refresh
+    }
+
+    @Test func noOwnTafBorrowsNearest() async throws {
+        let cs = try live()
+        let r = await NearbyTaf.resolve(own: .none, field: kbvuField, at: now) { cs }
+        #expect(r.taf?.stationId == "KHND")
+        guard case .borrowed(let source, let ownExpired) = r.status else { Issue.record("not borrowed"); return }
+        #expect(source.distanceNm == 13 && source.bearing == "W")
+        #expect(ownExpired == false)
+    }
+
+    @Test func expiredOwnTafBorrowsAndSaysSo() async throws {
+        let cs = try live()
+        var expired = try #require(only(["KLAS"], cs).first).taf
+        expired.validTo = now - 60
+        let r = await NearbyTaf.resolve(own: .found(expired), field: kbvuField, at: now) { cs }
+        #expect(r.status.isBorrowed)
+        if case .borrowed(let source, let ownExpired) = r.status {
+            #expect(ownExpired)
+            #expect(NearbyTaf.substitutionLine(fieldId: "KBVU", source: source, ownExpired: ownExpired)
+                    == "No current TAF for KBVU · using KHND (13 nm W)")
+        }
+    }
+
+    @Test func failedRequestOrLookupNeverBorrows() async throws {
+        let cs = try live()
+        let calls = Calls()
+        let failed = await NearbyTaf.resolve(own: .failed, field: kbvuField, at: now) { calls.count += 1; return cs }
+        #expect(failed.taf == nil)
+        #expect(failed.status == .unavailable)
+        #expect(calls.count == 0)
+        let lookupFailed = await NearbyTaf.resolve(own: .none, field: kbvuField, at: now) { throw URLError(.timedOut) }
+        #expect(lookupFailed.taf == nil)
+        #expect(lookupFailed.status == .unavailable)
+        let noPosition = await NearbyTaf.resolve(own: .none, field: nil, at: now) { calls.count += 1; return cs }
+        #expect(noPosition.status == .unavailable)
+        #expect(calls.count == 0)
+    }
+
+    @Test func nothingWithinFiftyNm() async throws {
+        let kins = only(["KINS"], try live())
+        let r = await NearbyTaf.resolve(own: .none, field: kbvuField, at: now) { kins }
+        #expect(r.taf == nil)
+        #expect(r.status == .noneWithin50nm(ownExpired: false))
+    }
+
+    // MARK: - Lookup cache (~10 min per field)
+
+    @Test func candidateCacheKeepsTenMinutes() throws {
+        let cs = try live()
+        var cache = NearbyTafCandidateCache()
+        cache.store(cs, for: "KBVU", at: now)
+        #expect(cache.candidates(for: "KBVU", at: now + 5 * 60)?.count == cs.count)    // the 5-min refresh: no new request
+        #expect(cache.candidates(for: "KBVU", at: now + 599)?.count == cs.count)
+        #expect(cache.candidates(for: "KBVU", at: now + 600) == nil)
+        #expect(cache.candidates(for: "KVGT", at: now) == nil)                          // per field
+        cache.removeAll()                                                               // pull-to-refresh
+        #expect(cache.candidates(for: "KBVU", at: now) == nil)
+    }
+
+    // MARK: - Wording (D#14, D#17)
+
+    private func source(_ nm: Int, elevation: Int? = nil) -> TafSource {
+        TafSource(stationId: "KHND", name: nil, distanceNm: nm, bearing: "W", elevationDifferenceFt: elevation, isBorrowed: true)
+    }
+
+    @Test func substitutionLine() {
+        #expect(NearbyTaf.substitutionLine(fieldId: "KBVU", source: source(13), ownExpired: false)
+                == "No TAF for KBVU · using KHND (13 nm W)")
+        let emphasized = NearbyTaf.substitutionParts(fieldId: "KBVU", source: source(13), ownExpired: false)
+            .filter(\.emphasized).map(\.text)
+        #expect(emphasized == ["No TAF for KBVU", "KHND"])
+    }
+
+    @Test func distanceTiersAtTheBoundaries() {
+        #expect(NearbyTaf.cautions(for: source(10)) == [])
+        #expect(NearbyTaf.cautions(for: source(11)) == ["TAF site 11 nm away. Local conditions may differ."])
+        #expect(NearbyTaf.cautions(for: source(25)) == ["TAF site 25 nm away. Local conditions may differ."])
+        #expect(NearbyTaf.cautions(for: source(26)) == ["TAF site 26 nm away. Conditions here may be quite different."])
+        #expect(NearbyTaf.cautions(for: source(50)) == ["TAF site 50 nm away. Conditions here may be quite different."])
+    }
+
+    @Test func elevationCaution() {
+        #expect(NearbyTaf.cautions(for: source(5, elevation: 999)) == [])
+        #expect(NearbyTaf.cautions(for: source(5, elevation: -999)) == [])
+        #expect(NearbyTaf.cautions(for: source(5, elevation: 1000)) == ["TAF site is 1,000 ft higher."])
+        // KIFP from KBVU: 1,457 ft lower, 50 nm — both cautions.
+        #expect(NearbyTaf.cautions(for: source(50, elevation: -1457))
+                == ["TAF site 50 nm away. Conditions here may be quite different.", "TAF site is 1,500 ft lower."])
+    }
+
+    @Test func heroNamesABorrowedStation() throws {
+        let khnd = try #require(only(["KHND"], try live()).first).taf
+        let segs = TafHeroBrief.build(khnd, now: now, stationLabel: "KHND")
+        #expect(segs.first == HeroSegment(text: "KHND: ", color: Brand.slate))
+        #expect(TafHeroBrief.build(khnd, now: now).first?.text.hasPrefix("KHND") == false)
+    }
+
     // MARK: - Units and geometry
 
     @Test func elevationMetersToFeet() {

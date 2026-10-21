@@ -16,7 +16,14 @@ enum TafHeroBrief {
     /// Pure derivation of the hero one-liner as colored segments (display order). The View
     /// concatenates the segments. Narrates from the prevailing period covering `now` onward; periods
     /// and change groups that have already ended are not part of the story.
-    static func build(_ taf: Taf, now: Date = Date()) -> [HeroSegment] {
+    /// `stationLabel` names a borrowed TAF's station ("KHND: VFR now, …").
+    static func build(_ taf: Taf, now: Date = Date(), stationLabel: String? = nil) -> [HeroSegment] {
+        let story = brief(taf, now: now)
+        guard let stationLabel else { return story }
+        return [HeroSegment(text: "\(stationLabel): ", color: Brand.slate)] + story
+    }
+
+    private static func brief(_ taf: Taf, now: Date) -> [HeroSegment] {
         if now >= taf.validTo {
             return [HeroSegment(text: "This TAF has expired.", color: Brand.slate)]
         }
