@@ -53,10 +53,9 @@ struct FlyingWeatherIntent: AppIntent {
             // Siri didn't slot-fill the parameter — prompt once, then give up gracefully
             do {
                 let requestedEntity = try await $airport.requestValue("Which airport?")
-                let rawCode = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
-                let code = rawCode.hasPrefix("O") ? "0" + rawCode.dropFirst() : rawCode
+                let code = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
                 NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' normalized='\(code)'")
-                if let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }), found.hasMetar {
+                if let found = await Self.airportForSpokenCode(code), found.hasMetar {
                     resolvedAirport = found
                 } else {
                     return .result(
@@ -72,8 +71,9 @@ struct FlyingWeatherIntent: AppIntent {
                         view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
                     )
                 }
-                let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 1) }
-                guard let nearest = nearby.first else {
+                // Nearest airport that actually reports a METAR, not just the nearest strip.
+                let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 25) }
+                guard let nearest = nearby.first(where: { $0.hasMetar }) else {
                     return .result(
                         dialog: IntentDialog("No nearby airport found."),
                         view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
@@ -205,6 +205,22 @@ struct FlyingWeatherIntent: AppIntent {
             windStr = "\(metar.wind.speed)kt"
         }
         return "\(ceiling) · \(vis) · Wind \(windStr)"
+    }
+
+    // MARK: - Spoken identifier lookup
+    // Speech recognition hears "oh" and "zero" interchangeably. Try the code exactly as heard
+    // first, so O-prefixed idents (O22, OK36) resolve, and only then with the leading O/0 swapped
+    // (0L7 heard as "OL7"). A blanket O→0 rewrite broke every O-prefixed identifier.
+    static func airportForSpokenCode(_ code: String) async -> Airport? {
+        var heard = [code]
+        if code.hasPrefix("O") { heard.append("0" + code.dropFirst()) }
+        if code.hasPrefix("0") { heard.append("O" + code.dropFirst()) }
+        let candidates = heard
+        return await MainActor.run {
+            let found = candidates.compactMap { AirportService.shared.airport(identifier: $0) }
+            // Both readings can exist; prefer the one that reports a METAR.
+            return found.first(where: { $0.hasMetar }) ?? found.first
+        }
     }
 
     // MARK: - Snippet View
