@@ -74,25 +74,36 @@ enum TafHeroBrief {
         // 09:00" base story. Lead with it when it's convective/heavy (always), or when it is IFR/LIFR
         // AND more severe than the worst base. Hoisted above the worsening guard on purpose. (PROB
         // reaches overlayForecasts via the F2 fix.) Change groups that have ended don't count.
+        // A BECMG whose change is under way now is possible now: it leads when it's worse than the
+        // current period, rather than reading only as "<category> by <end of the window>".
+        let inProgress = Set((taf.forecast(at: now)?.overlays ?? []).filter { $0.type == .becmg }.map(\.id))
+        let firstSeverity = TafFormat.categorySeverity(first.flightCategory)
         if let overlay = taf.remainingOverlays(at: now).first(where: {
             TafFormat.hasConvectiveOrHeavy($0)
                 || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
                     && TafFormat.categorySeverity($0.flightCategory) > worstBaseSeverity)
+                || (inProgress.contains($0.id) && TafFormat.categorySeverity($0.flightCategory) > firstSeverity)
         }) {
             let label = overlay.type == .becmg ? "BECMG" : (overlay.type == .tempo ? "TEMPO" : overlay.type.rawValue)
             let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
-            let what = low
+            let convective = TafFormat.hasConvectiveOrHeavy(overlay)
+            let what = (low || !convective)
                 ? overlay.flightCategory.rawValue
                 : (overlay.weatherPhenomena.isEmpty ? "convective activity" : WeatherDecoder.decodeAll(overlay.weatherPhenomena).lowercased())
-            let overlayClause = HeroSegment(text: " \(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: overlay.toTime)).",
-                                            color: low ? Brand.valueRed : Brand.cautionOrange)
-            let basesWorsen = worst.map { TafFormat.categorySeverity($0.flightCategory) > TafFormat.categorySeverity(first.flightCategory) } ?? false
-            if basesWorsen, let w = worst {
+            let color = low ? Brand.valueRed : (convective ? Brand.cautionOrange : Brand.mvfrBlue)
+            // A BECMG's window is its change window (NOAA's toTime runs to the next change).
+            let windowEnd = overlay.type == .becmg ? (overlay.becomingTime ?? overlay.toTime) : overlay.toTime
+            let overlayClause = HeroSegment(text: " \(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: windowEnd)).",
+                                            color: color)
+            let basesWorsen = worst.map { TafFormat.categorySeverity($0.flightCategory) > firstSeverity } ?? false
+            let overlayIsWorstUnderWay = inProgress.contains(overlay.id) && worst?.id == overlay.id
+            if basesWorsen, let w = worst, !overlayIsWorstUnderWay {
                 // Keep the full worst-base story (lead + limiting tail), then the overlay as a
                 // separate sentence — both hazards, base detail intact.
                 return worstBaseStory(w) + [HeroSegment(text: " Plus", color: Brand.slate), overlayClause]
             }
-            // Benign/steady base — contrast the current category with the overlay hazard.
+            // Benign/steady base, or the worst change is already under way — contrast the current
+            // category with the overlay.
             return [HeroSegment(text: "\(first.flightCategory.rawValue) now,", color: ColorRules.flightCategoryColor(first.flightCategory)),
                     HeroSegment(text: " but", color: Brand.slate),
                     overlayClause]

@@ -6,6 +6,7 @@ import Foundation
 // BECMG applied once its window ends, TEMPO/PROB returned separately, nothing current outside the
 // TAF's validity — and the TAF category rule when one axis isn't forecast. Synthetic TAFs in NOAA's
 // JSON shape, hours counted from t0.
+@MainActor
 struct TafTimeLogicTests {
 
     private static let t0 = 1783634400   // 2026-07-09 22:00Z
@@ -61,13 +62,36 @@ struct TafTimeLogicTests {
     @Test func becmgBeforeDuringAfter() throws {
         let t = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#, becmgToIFR].joined(separator: ","))
         #expect(t.forecast(at: at(3))?.prevailing.flightCategory == .vfr)   // before
-        #expect(t.forecast(at: at(5))?.prevailing.flightCategory == .vfr)   // during the change window
+        #expect(t.forecast(at: at(3))?.overlays.isEmpty == true)
+        #expect(t.forecast(at: at(5))?.prevailing.flightCategory == .vfr)   // during the change window…
+        #expect(t.forecast(at: at(5))?.overlays.map(\.type) == [.becmg])    // …it's a possible overlay
         let after = try #require(t.forecast(at: at(6))?.prevailing)        // after: the change is prevailing
         #expect(after.flightCategory == .ifr)
         #expect(after.type == .becmg)
         #expect(after.fromTime == at(6))
-        #expect(t.forecast(at: at(6))?.overlays.isEmpty == true)            // a BECMG is never an overlay
+        #expect(t.forecast(at: at(6))?.overlays.isEmpty == true)            // complete: no longer an overlay
         #expect(t.currentForecast(at: at(10))?.flightCategory == .ifr)
+    }
+
+    @Test func becmgUnderWayIsSurfacedAsPossibleNow() throws {
+        let t = try taf([#"{"timeFrom":\#(e(0)),"timeTo":\#(e(24)),"wdir":200,"wspd":6,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#, becmgToIFR].joined(separator: ","))
+        let m = try metar(hours: 5, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":5000}]"#, cat: "VFR")
+
+        // Before the window: the change reads as coming, at the end of its window.
+        let before = TafHeroBrief.build(t, now: at(3)).map(\.text).joined()
+        #expect(before.contains("IFR by"))
+        #expect(!before.contains("BECMG"))
+
+        // During the window: hero leads with the possible change; prevailing is unchanged.
+        let during = TafHeroBrief.build(t, now: at(5))
+        #expect(during.map(\.text).joined().contains("VFR now, but BECMG IFR"))
+        #expect(during.contains { $0.text.contains("BECMG IFR") && $0.color == Brand.valueRed })
+        #expect(t.currentForecast(at: at(5))?.flightCategory == .vfr)
+
+        // Trend warning: the next prevailing period is the BECMG's IFR.
+        let trend = ForecastTrend.derive(metar: m, taf: t, now: at(5))
+        #expect(trend.forecastCategory == .ifr)
+        #expect(trend.overall == .deteriorating)
     }
 
     @Test func becmgInheritsWhatItOmits() throws {

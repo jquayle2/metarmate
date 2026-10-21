@@ -58,7 +58,8 @@ struct Taf: Identifiable, Codable {
 
     struct Conditions {
         let prevailing: TafForecast     // base/FM, or a completed BECMG — a segment of prevailingTimeline
-        let overlays: [TafForecast]     // TEMPO/PROB covering t; never merged into prevailing
+        let overlays: [TafForecast]     // TEMPO/PROB covering t, and a BECMG whose change is under way
+                                        // (possible, not yet prevailing); never merged into prevailing
     }
 
     /// The forecast in effect at `t`, or nil outside the TAF's validity (never "current" once past
@@ -68,7 +69,11 @@ struct Taf: Identifiable, Codable {
               let prevailing = prevailingTimeline.last(where: { $0.fromTime <= t && t < $0.toTime })
         else { return nil }
         let overlays = forecasts.filter {
-            ($0.type == .tempo || $0.type == .prob30 || $0.type == .prob40) && $0.fromTime <= t && t < $0.toTime
+            switch $0.type {
+            case .tempo, .prob30, .prob40: return $0.fromTime <= t && t < $0.toTime
+            case .becmg:                   return $0.fromTime <= t && t < $0.effectiveFrom
+            case .base, .fm:               return false
+            }
         }
         return Conditions(prevailing: prevailing, overlays: overlays)
     }
