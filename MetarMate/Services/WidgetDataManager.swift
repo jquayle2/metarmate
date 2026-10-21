@@ -104,6 +104,24 @@ nonisolated enum WidgetDataManager {
         return sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
+    // MARK: - Widget run diagnostics (written by the widget extension, all builds)
+    // Last `diagCapacity` provider runs, newest last, as plain strings so they read directly from
+    // the App Group plist pulled off a device. Tiny (~100 bytes per line); no personal data.
+    private static let diagKey = "widget.diag"
+    private static let diagCapacity = 40
+
+    nonisolated static func appendDiag(_ line: String) {
+        guard let defaults = sharedDefaults else { return }
+        var lines = defaults.stringArray(forKey: diagKey) ?? []
+        lines.append(line)
+        if lines.count > diagCapacity { lines.removeFirst(lines.count - diagCapacity) }
+        defaults.set(lines, forKey: diagKey)
+    }
+
+    nonisolated static func diagLines() -> [String] {
+        sharedDefaults?.stringArray(forKey: diagKey) ?? []
+    }
+
     #if DEBUG
     // MARK: - Debug: forced report age (DEBUG builds only; compiled out of Release)
     // Makes every widget treat its report as exactly N minutes old at each timeline refresh, to
