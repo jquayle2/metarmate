@@ -46,7 +46,10 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [x] Alerts are METAR-only (D#1)
 - [x] **Unconfigured widget fetches live** (falls back to the last-viewed ICAO). Found Oct 21: an unconfigured widget never fetched. `9fa71fa` [Code]
 - [x] **`widget.diag` breadcrumb**: last 40 provider runs (time, kind, ICAO, configured/fallback, fetch outcome) in the App Group. `b8a732c` [Code]
-- [ ] Device check: widget refreshes on its own for 3–4 h without opening the app (KVGT configured Oct 21, 9:45 AM) [Jeff]
+- [x] No-current boundary is "over 75" (76+ whole minutes), matching D#4. `e929f3c` [Code]
+- [x] Reloads scheduled to the report cadence (obs+64, retry 10 min to obs+2 h, then 30 min) instead of a fixed 15 min; Oct 21 diag showed the configured widget getting 30–80 min reloads and briefly showing "No current METAR" with a newer report available. `20aad2a` [Code]
+- [x] Device check: widget refreshes on its own without opening the app. Oct 21 diag: 31 runs from 17:41Z, all fetches OK, 1753Z/1853Z/1953Z picked up unaided [Jeff]
+- [ ] Device check after `20aad2a`: new report shows within ~15 min of :53 on the configured widget (pull `widget.diag`) [Jeff]
 - [ ] Device check: refresh button [Jeff]
 - [ ] Device check: late / no-current states via the DEBUG age override, then set it back to Off [Jeff]
 - [ ] Device check: background alert run (debugger attached) [Jeff]
@@ -196,3 +199,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** Nearby-TAF fallback moved into launch scope (section 4b).
 - **Oct 21, 2026:** Siri staleness rule decided (D#4).
 - **Oct 21, 2026:** KVGT and KHND now issue their own TAFs (1728Z TAFs seen); KBVU is the new nearby-TAF test field. "Worse" thresholds for the Right-now row decided. TAF time-logic fix moved to step 1 of the nearby-TAF pass.
+- **Oct 21, 2026:** Widget refresh confirmed on device; reload scheduling changed to follow the report cadence (`20aad2a`).
