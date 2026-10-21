@@ -17,7 +17,7 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
    - 65 to 75 min: **Late** warning, e.g. "METAR late: 68 min old". The verdict is still shown.
    - Over 75 min: **No current METAR**, with the age shown ("Last report 2 h 10 min ago"). No go/no-go verdict at all. Widgets and lock-screen widgets follow the same rule.
    - A SPECI counts as a METAR here: it resets the age.
-   - **Siri** (Oct 21): always speaks the report's age ("As of 12 minutes ago, North Las Vegas is VFR…"). 65 to 75 min: says the report is late before the conditions ("The latest North Las Vegas report is 68 minutes old. As of then…"). Over 75 min: says it's stale and gives no category, conditions or verdict, matching the app ("There's no current METAR for North Las Vegas. The last report is 2 hours old.").
+   - **Siri** (Oct 21): always speaks the report's age ("As of 12 minutes ago, North Las Vegas is VFR…"). 65 to 75 min: says the report is late before the conditions ("The latest North Las Vegas report is 68 minutes old. As of then…"). Over 75 min: says it's stale and gives no category, conditions or verdict, matching the app ("There's no current METAR for North Las Vegas. The last report is 76 minutes old, about 15 minutes overdue."). Age is spoken in minutes under 2 h, then hours and minutes.
 
 ## 5-minute data (ASOS Updates)
 
