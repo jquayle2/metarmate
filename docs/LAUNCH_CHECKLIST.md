@@ -79,6 +79,7 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 
 App Review blockers (required regardless of section 0):
 - [ ] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk)
+- [ ] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]
 - [ ] #22 Privacy manifest: `NSPrivacyAccessedAPITypes` for UserDefaults (CA92.1, 1C8F.1); add `PrivacyInfo.xcprivacy` to the widget extension (ITMS-91053)
 - [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
 - [ ] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration
@@ -115,6 +116,7 @@ Other:
 - [ ] Trend arrow up for steady/unknown; VoiceOver "improving or stable" for unknown; LIFR folded into IFR on TAF ribbon; VV labelled "Broken"
 - [ ] Accessibility: airport rows show category by color rail only, no text, no age
 - [ ] Performance: `DateFormatter` in view bodies; `pilotNotes()` and density altitude computed twice per render
+- [x] UI test target: template tests removed (`16f53c0`); full suite runs clean with `-parallel-testing-enabled NO` (parallel clones were refused launch); simulator `iPhone 17` re-created on iOS 26.1 after it went missing
 - [ ] Misc: search race, layout prefs wiped on unknown `SectionID`, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache, `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, two DA formulas, PROB defaults
 
 ## 6. ASOS Updates — Synoptic (launch-blocking only if section 0 says so)
