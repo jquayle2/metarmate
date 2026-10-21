@@ -16,7 +16,7 @@ How this list is maintained:
 - [ ] **ASOS Updates at launch or after?** D#18 says no IAP in the first submission; the Synoptic paid plan may change that. If "at launch", section 6 moves onto the critical path.
 - [ ] **Pro at launch or after?** D#18 (no IAP at launch) conflicts with D#20 (widgets and crosswind calculator are Pro). Pick one; it decides whether section 4's Pro gating items are launch blockers.
 - [ ] **Pro scope:** confirm Siri/Shortcuts, personal minimums + go/no-go alerts, layout customization (D#20, proposed).
-- [ ] **Nearby-TAF fallback (D#13–17): launch or 1.3?** Mockup approved Oct 20; not built.
+- [ ] **Nearby-TAF fallback (D#13–17): launch or 1.3?** Design agreed Oct 21 (headline substitution, advisory styling, 10/25/50 nm tiers); not built.
 - [ ] **Siri staleness rule:** apply late/no-current (65/75 min) to Siri answers? Yes/no, then into DECISIONS.
 - [ ] **P3 triage:** which items in section 5 are launch-required.
 - [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other.
@@ -28,10 +28,10 @@ Send the confirmation list at the bottom of `docs/DECISIONS_2026-10.md` as one p
 - [ ] D#2 CHECK for unevaluated minimums, no "back within minimums" alert
 - [ ] D#3 VRB worst-case crosswind; CHECK when it decides the outcome
 - [ ] D#4 Staleness: late 65 min, no verdict over 75 min
-- [ ] D#5–7 Warn-never-reassure, displayed-gust rule, supplemental label wording
+- [ ] D#5–7 Warn-never-reassure (never NO-GO→GO), displayed-gust rule, label "ASOS 5-min · supplemental"
 - [ ] D#8 ½ gust factor, with the stated wording
 - [ ] D#9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards, PROB TSRA in headline
-- [ ] D#13–17 Nearby-TAF cap, labels, cautions (only if in launch scope)
+- [ ] D#13–17 Nearby-TAF: 50 nm cap, substitution headline + advisory styling, 10/25/50 nm wording tiers, elevation caution (design agreed Oct 21; launch scope still open)
 
 ## 2. A1 — launch hardening P0s (`fix/launch-hardening-a1`)
 
@@ -121,7 +121,7 @@ Other:
 
 ## 6. ASOS Updates — Synoptic (launch-blocking only if section 0 says so)
 
-Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. MADIS stays as fallback (spike: `spike/madis-omo`).
+Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. MADIS is not being used. 5-min data never changes a verdict (D#1).
 - [ ] Synoptic confirms: display in a paid app via our own proxy with shared caching is licensed [Jeff]
 - [ ] Synoptic confirms: rate limits on the paid plan; trial = same data/latency as paid [Jeff]
 - [ ] Trial token received [Jeff]

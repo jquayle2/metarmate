@@ -4,7 +4,7 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
 
 ## Go/no-go and verdicts
 
-1. **Verdict source is the METAR only.** 5-minute ASOS/OMO data never sets or changes a go/no-go verdict, flight category or gust. (Removes the "5-min ob with no gust flips NO-GO to GO" path, `AlertPipeline.swift:150`.)
+1. **Verdict source is the METAR only.** 5-minute ASOS data never sets or changes a go/no-go verdict, flight category or verdict gust; in particular it never turns a NO-GO into a GO. Revisit only by a new decision (reaffirmed Oct 21). (Removes the "5-min ob with no gust flips NO-GO to GO" path, `AlertPipeline.swift:150`.)
 2. **Missing fields (#4, #6, #8, #10, #12, #15).** A missing METAR field is labeled "not reported" wherever it would appear. A minimum that can't be checked is never treated as passing:
    - The verdict becomes a neutral **CHECK** naming the missing field (e.g. "CHECK: visibility not reported").
    - A transition into CHECK never sends "Back within your minimums."
@@ -16,12 +16,13 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
    - Under 65 min: normal.
    - 65 to 75 min: **Late** warning, e.g. "METAR late: 68 min old". The verdict is still shown.
    - Over 75 min: **No current METAR**, with the age shown ("Last report 2 h 10 min ago"). No go/no-go verdict at all. Widgets and lock-screen widgets follow the same rule.
+   - A SPECI counts as a METAR here: it resets the age.
 
 ## 5-minute data (ASOS Updates)
 
 5. **Warn, never reassure.** 5-minute values worse than the latest METAR (lower ceiling, lower vis, more wind) may be shown as a warning. Better values never change category, verdict or gust.
-6. **Displayed gust** = the higher of the current METAR's gust and any 5-minute gust in the last 10 minutes, labeled by source. A 5-minute ob with no gust means "gust not reported", never "no gust".
-7. 5-minute data is labeled supplemental, not official. ASOS Updates stays off until the data source is chosen (see Data source below). **Mike: confirm label wording.**
+6. **Displayed gust** = the higher of the current METAR's gust and any 5-minute gust in the last 10 minutes, labeled by source. Display only: the verdict always uses the METAR gust (#1). A 5-minute ob with no gust means "gust not reported", never "no gust".
+7. 5-minute data is labeled supplemental, not official: **"ASOS 5-min · supplemental"**, always with its observation time. Source: Synoptic (see Data source below). **Mike: confirm label wording.**
 
 ## Pilot Notes
 
@@ -34,12 +35,18 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
 ## Nearby-TAF fallback (Oct 16 addendum)
 
 13. When the field has no TAF, use the nearest TAF within **50 nm**.
-14. **Label it everywhere:** "TAF from KLAS · 9 nm SW", in the detail view, widget and Siri.
+14. **Make the substitution impossible to miss** (Oct 21: ForeFlight's small distance label is easy to overlook, even for a 16-year user):
+    - The forecast card's first line is the substitution, not a caption: "**No TAF for KVGT** · using **KLAS** (9 nm SW)". Same wording in the widget and Siri.
+    - Every borrowed TAF gets the advisory treatment (dashed border, orange accent), so "not this field's data" always looks the same.
+    - **No green/yellow/red for distance.** Those colors mean flight category and verdict; a green badge on a forecast would read as "VFR".
 15. **Forecast accuracy and the Forecast Deviation Strip** compare the TAF station's forecast against **that station's own METARs**, labeled (e.g. "KLAS forecast vs KLAS actual"). They are never computed against this field's METAR.
 16. **"Right now" row:** this field's current METAR beside the TAF station's. Warn-never-reassure applies: if this field is worse, show "Conditions here are worse than at the TAF site"; if it's better, say nothing.
-17. **Cautions:**
-    - Elevation difference of 1,000 ft or more: "TAF site is N ft lower/higher".
-    - Distance over 25 nm: the distance is included in the caution.
+17. **Distance tiers (wording, not color) and cautions:**
+    - Up to 10 nm: the substitution line only.
+    - Over 10 to 25 nm: add "TAF site 18 nm away. Local conditions may differ."
+    - Over 25 to 50 nm: stronger caution text; distance repeated in the widget and Siri.
+    - Over 50 nm: no TAF shown.
+    - Elevation difference of 1,000 ft or more: "TAF site is N ft lower/higher", on top of any tier.
     - Mockup reviewed and approved Oct 20, 2026.
 
 ## Business model (launch)
@@ -58,19 +65,15 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Items mar
 
 ## Data source for ASOS Updates
 
-23. The research spike (branch `spike/madis-omo`, `docs/research/MADIS_ASOS_findings.md`) recommends MADIS hfmetar behind a small proxy: a scheduled ingest job publishing per-station JSON to a CDN.
-24. **Before building:**
-    - MADIS support confirms licensing for use in a paid app.
-    - Phase 2 (with a MADIS account) reruns the freshness and gust tests.
-    - Optionally, a Synoptic eval token to compare latency.
-    - Synoptic starter plan: $100/month, held in reserve.
+23. **Synoptic, paid plan** (decided Oct 21). Synoptic is issuing a ~7-day trial first; validation and build happen during it. MADIS is not being used.
+24. The Synoptic token lives only on our proxy, never in the app. The proxy verifies the StoreKit purchase, caches each station ~5 min, and enforces quotas. Details and status: `docs/LAUNCH_CHECKLIST.md` section 6.
 
 ## Mike: confirmation list
 
 - [ ] #2 CHECK for unevaluated minimums, with no "back within minimums" alert
 - [ ] #3 VRB worst-case crosswind; CHECK when it decides the outcome
 - [ ] #4 Staleness: late at 65 min, no verdict over 75 min
-- [ ] #5–7 Warn-never-reassure, the displayed-gust rule, the supplemental label wording
+- [ ] #5–7 Warn-never-reassure (5-min data never turns NO-GO into GO), the displayed-gust rule, the label "ASOS 5-min · supplemental"
 - [ ] #8 ½ gust factor, with the stated wording
 - [ ] #9–12 5 kt crosswind floor, symmetric missing notes, F17 hazards in history, PROB TSRA in the headline
-- [ ] #13–17 Nearby-TAF cap, labels and cautions
+- [ ] #13–17 Nearby-TAF: 50 nm cap (ForeFlight uses ~50 nm), substitution as the headline with advisory styling, 10/25/50 nm wording tiers, elevation caution
