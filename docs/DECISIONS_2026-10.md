@@ -35,13 +35,15 @@ Decided by Jeff on Oct 20, 2026. These are binding for implementation. Oct 21: J
 
 ## Nearby-TAF fallback (Oct 16 addendum)
 
-13. When the field has no TAF, use the nearest TAF within **50 nm**.
+13. When the field has no TAF, use the nearest TAF within **50 nm**. Build order: the TAF time-logic fix (audit #13/#14, one "period covering time t" helper) lands first, so a borrowed TAF doesn't inherit expired-period and overlay bugs.
 14. **Make the substitution impossible to miss** (Oct 21: ForeFlight's small distance label is easy to overlook, even for a 16-year user):
     - The forecast card's first line is the substitution, not a caption: "**No TAF for KVGT** · using **KLAS** (9 nm SW)". Same wording in the widget and Siri.
     - Every borrowed TAF gets the advisory treatment (dashed border, orange accent), so "not this field's data" always looks the same.
     - **No green/yellow/red for distance.** Those colors mean flight category and verdict; a green badge on a forecast would read as "VFR".
 15. **Forecast accuracy and the Forecast Deviation Strip** compare the TAF station's forecast against **that station's own METARs**, labeled (e.g. "KLAS forecast vs KLAS actual"). They are never computed against this field's METAR.
 16. **"Right now" row:** this field's current METAR beside the TAF station's. Warn-never-reassure applies: if this field is worse, show "Conditions here are worse than at the TAF site"; if it's better, say nothing.
+    - **"Worse"** (Oct 21) uses the Forecast Deviation Strip thresholds, so the app has one notion of a meaningful difference: lower flight category, ceiling more than 300 ft lower, visibility more than 0.5 SM lower, or wind/gust more than 5 kt higher.
+    - If either station's METAR is missing or not current (over 75 min, #4), the row says which one and makes no comparison.
 17. **Distance tiers (wording, not color) and cautions:**
     - Up to 10 nm: the substitution line only.
     - Over 10 to 25 nm: add "TAF site 18 nm away. Local conditions may differ."

@@ -120,16 +120,19 @@ Other:
 
 ## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]
 
+Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
+
+- [ ] Step 1: TAF time logic, audit #13/#14 ("period covering time t" helper; no expired periods/TAFs, overlays kept separate, BECMG applied, unknown axis not VFR). Also closes those two A2 items.
 - [ ] When the field's TAF request returns 204, one `taf?bbox=` request around the airport; pick the nearest TAF within 50 nm
 - [ ] Forecast card headline is the substitution: "No TAF for KVGT · using KLAS (9 nm SW)"; advisory styling (dashed border, orange accent); no green/yellow/red for distance
 - [ ] Distance tiers in wording: ≤10 nm line only; 10–25 nm "local conditions may differ"; 25–50 nm stronger caution; >50 nm no TAF
 - [ ] Elevation caution at ≥1,000 ft difference, on top of any tier
 - [ ] TAF accuracy and Forecast Deviation Strip computed against the TAF station's own METARs, labeled "KLAS forecast vs KLAS actual"
-- [ ] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse
+- [ ] "Right now" row: this field's METAR beside the TAF station's; warn only if this field is worse (category lower, ceiling >300 ft lower, vis >0.5 SM lower, wind/gust >5 kt higher); no comparison if either METAR is missing or not current
 - [ ] Same substitution wording in the widget and Siri
 - [ ] Military TAF groups parse (`QNH…INS`, `TX/TN`) since the fallback pulls more stations
 - [ ] Unit tests: nearest selection, 50 nm cap, tier wording, verification against the TAF station
-- [ ] Device check against ForeFlight at KVGT (→ KLAS) and a field 25+ nm from its nearest TAF [Jeff]
+- [ ] Device check against ForeFlight: KBVU (→ KHND, ~13 nm W), a field 25–50 nm from its nearest TAF, a field with none within 50 nm, and KVGT (has its own TAF since Oct 21) unchanged [Jeff]
 
 ## 5. P3 polish — triage in section 0 first
 
@@ -192,3 +195,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** Pro decided: ships at launch, $5.99 one-time, Family Sharing. Free gets starter-profile verdicts and the crosswind calculator; Pro gets unlimited custom profiles, alerts, widgets, Siri, layout, Watch. ASOS subscription price still open.
 - **Oct 21, 2026:** Nearby-TAF fallback moved into launch scope (section 4b).
 - **Oct 21, 2026:** Siri staleness rule decided (D#4).
+- **Oct 21, 2026:** KVGT and KHND now issue their own TAFs (1728Z TAFs seen); KBVU is the new nearby-TAF test field. "Worse" thresholds for the Right-now row decided. TAF time-logic fix moved to step 1 of the nearby-TAF pass.
