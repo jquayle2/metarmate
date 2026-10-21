@@ -164,6 +164,22 @@ struct WidgetReportAgeTests {
         #expect(s.ageChangeDates(after: s.observationTime.addingTimeInterval(720 * 60)).isEmpty)
     }
 
+    // Reloads are requested when a new report can exist, not on a fixed clock.
+    @Test func nextReloadDateFollowsReportCadence() throws {
+        let s = try snapshot()
+        func next(atMinute m: Double) -> Double {
+            let now = s.observationTime.addingTimeInterval(m * 60)
+            return s.nextReloadDate(after: now).timeIntervalSince(s.observationTime) / 60
+        }
+        #expect(next(atMinute: 5) == 64)        // fresh report: wait for the next one
+        #expect(next(atMinute: 63) == 64)
+        #expect(next(atMinute: 64) == 74)       // due: retry every 10 min
+        #expect(next(atMinute: 100) == 110)
+        #expect(next(atMinute: 119) == 129)
+        #expect(next(atMinute: 120) == 150)     // station silent: every 30 min
+        #expect(next(atMinute: 400) == 430)
+    }
+
     @Test func ageText() {
         #expect(WidgetWeatherSnapshot.ageText(minutes: 68) == "1 h 8 min")
         #expect(WidgetWeatherSnapshot.ageText(minutes: 59) == "59 min")

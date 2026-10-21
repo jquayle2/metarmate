@@ -224,7 +224,10 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         let entries = ([now] + futureDates).map {
             MetarMateEntry(date: $0, snapshot: snapshot, requestedICAO: requestedICAO)
         }
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: now)!
+        // Reload when a new report can exist (see WidgetWeatherSnapshot.nextReloadDate), not on a
+        // fixed 15 min clock that spends WidgetKit's daily budget fetching the same report.
+        let nextUpdate = snapshot?.nextReloadDate(after: now)
+            ?? Calendar.current.date(byAdding: .minute, value: 15, to: now)!
         return Timeline(entries: entries, policy: .after(nextUpdate))
     }
 

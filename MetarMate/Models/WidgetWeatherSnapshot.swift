@@ -91,6 +91,25 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             .filter { $0 > date }
     }
 
+    // MARK: - Reload scheduling
+    // WidgetKit grants a limited number of reloads per widget per day, so ask for them when a new
+    // report can exist. Routine METARs are hourly: first ask a few minutes after the next one is
+    // due (obs + 64 min), then every 10 min until obs + 2 h (a late or missed report), then every
+    // 30 min while the station stays silent. Advisory snapshots have no METAR cadence: 30 min.
+    static let expectedReportMinutes = 64
+    static let retryMinutes = 10
+    static let retryUntilMinutes = 120
+    static let silentStationMinutes = 30
+
+    func nextReloadDate(after now: Date) -> Date {
+        if isAdvisory { return now.addingTimeInterval(TimeInterval(Self.silentStationMinutes * 60)) }
+        let expected = observationTime.addingTimeInterval(TimeInterval(Self.expectedReportMinutes * 60))
+        if expected > now { return expected }
+        let retryUntil = observationTime.addingTimeInterval(TimeInterval(Self.retryUntilMinutes * 60))
+        let step = now < retryUntil ? Self.retryMinutes : Self.silentStationMinutes
+        return now.addingTimeInterval(TimeInterval(step * 60))
+    }
+
     /// Age for the "Last report … ago" line: "2 h", "2 h 10 min", or "12+ h". The late state
     /// shows plain minutes ("68 min") instead.
     static func ageText(minutes: Int) -> String {
