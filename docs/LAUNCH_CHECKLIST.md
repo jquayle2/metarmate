@@ -18,7 +18,7 @@ How this list is maintained:
 - [x] **Pro scope** (D#19–20, Oct 21): Pro = widgets, unlimited custom minimums profiles, alerts, Siri, layout, Watch; $5.99 one-time, Family Sharing. Free = starter-profile verdicts, crosswind calculator, favorites.
 - [ ] **ASOS Updates subscription price** (D#21): set against Synoptic cost and category norms.
 - [x] **Nearby-TAF fallback (D#13–17): at launch** (Oct 21). Build items in section 4b.
-- [ ] **Siri staleness rule:** apply late/no-current (65/75 min) to Siri answers? Yes/no, then into DECISIONS.
+- [x] **Siri staleness rule** (D#4, Oct 21): Siri always speaks the report age, says when it's late, and calls it stale with no conditions over 75 min.
 - [ ] **P3 triage:** which items in section 5 are launch-required.
 - [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other.
 
@@ -106,7 +106,7 @@ Siri (#25):
 - [ ] `nearest(count:1)` respects `hasMetar`
 - [ ] 3-character LIDs (CMA, 36K) resolve via `noaaCandidate`
 - [ ] Remove the `O→0` rewrite that corrupts O-prefixed ICAOs
-- [ ] Siri staleness rule, if approved (section 0)
+- [ ] Siri speaks the report age on every answer; "late" at 65–75 min; over 75 min says stale, no category/conditions/verdict (D#4)
 
 Background task (#26):
 - [ ] Expiry handler stops the work; no save after cancel
@@ -191,3 +191,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** Jeff confirmed all product rulings himself (no Mike packet); Synoptic as ASOS source; nearby-TAF headline/tier design agreed. A2 is unblocked.
 - **Oct 21, 2026:** Pro decided: ships at launch, $5.99 one-time, Family Sharing. Free gets starter-profile verdicts and the crosswind calculator; Pro gets unlimited custom profiles, alerts, widgets, Siri, layout, Watch. ASOS subscription price still open.
 - **Oct 21, 2026:** Nearby-TAF fallback moved into launch scope (section 4b).
+- **Oct 21, 2026:** Siri staleness rule decided (D#4).
