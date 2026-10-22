@@ -149,6 +149,9 @@ struct FlyingWeatherIntent: AppIntent {
 }
 
 // MARK: - App Shortcuts Provider
+// Phrases led by the app name, or without the bare word "weather", so Siri doesn't hand them to
+// Apple Weather (Oct 22 device test). Airport phrases match the registered favorites:
+// updateAppShortcutParameters() runs at launch and whenever favorites change (ContentView).
 struct MetarMateShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -158,6 +161,10 @@ struct MetarMateShortcuts: AppShortcutsProvider {
                 "What's the flying weather in \(.applicationName)",
                 "Flying conditions with \(.applicationName)",
                 "\(.applicationName) weather check",
+                "\(.applicationName) nearest METAR",
+                "Ask \(.applicationName) for the METAR",
+                "\(.applicationName), how's the flying",
+                "Get the METAR with \(.applicationName)",
                 "Check flying weather at \(\.$airport) with \(.applicationName)",
                 "What's the weather at \(\.$airport) in \(.applicationName)"
             ],

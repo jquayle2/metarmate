@@ -1,12 +1,14 @@
 import SwiftUI
 import SwiftData
+import AppIntents
 
 struct ContentView: View {
     @StateObject private var airportVM = AirportViewModel()
     @StateObject private var locationService = LocationService.shared
     @StateObject private var weatherCache = WeatherCache.shared
     @State private var selectedTab: Int
-    // Mirrored for Siri, which must not open the store (SiriFavorites).
+    // Mirrored for Siri, which must not open the store (SiriFavorites), and registered as the
+    // airport values for "…at KVGT…" phrases.
     @Query private var favorites: [AirportFavorite]
 
     init() {
@@ -86,8 +88,10 @@ struct ContentView: View {
             locationService.requestPermission()
             locationService.startUpdating()
         }
+        // initial: true also covers launch.
         .onChange(of: AirportFavorite.ordered(favorites).map(\.icao), initial: true) { _, icaos in
             SiriFavorites.save(icaos)
+            MetarMateShortcuts.updateAppShortcutParameters()
         }
     }
 }
