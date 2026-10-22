@@ -140,27 +140,28 @@ struct MetarMateEntry: TimelineEntry {
 private enum WidgetFetcher {
     static let baseURL = "https://aviationweather.gov/api/data"
 
-    static func fetchSnapshot(icao: String) async -> (snapshot: WidgetWeatherSnapshot?, outcome: String) {
-        guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return (nil, "bad URL") }
+    static func fetchSnapshot(icao: String) async -> (snapshot: WidgetWeatherSnapshot?, outcome: String, reportIntervalMinutes: Int?) {
+        guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return (nil, "bad URL", nil) }
         do {
             // Bypass the URL cache (a refresh must hit NOAA) and fail fast instead of the 60 s
             // default — the extension's run time is limited.
             let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return (nil, "no HTTP response") }
-            guard http.statusCode == 200 else { return (nil, "HTTP \(http.statusCode)") }
+            guard let http = response as? HTTPURLResponse else { return (nil, "no HTTP response", nil) }
+            guard http.statusCode == 200 else { return (nil, "HTTP \(http.statusCode)", nil) }
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
-            guard let raw = raws.first else { return (nil, "no reports") }
+            guard let raw = raws.first else { return (nil, "no reports", nil) }
             // Snapshot builder lives on WidgetWeatherSnapshot (shared + unit-testable); nil = the
             // observation couldn't be parsed, propagated the same as a fetch/decode failure.
             guard let snapshot = WidgetWeatherSnapshot.from(rawMetar: raw, icao: icao) else {
-                return (nil, "unparseable: \(raw.rawOb ?? "no rawOb")")
+                return (nil, "unparseable: \(raw.rawOb ?? "no rawOb")", nil)
             }
-            return (snapshot, "ok obs \(WidgetDiag.zulu(snapshot.observationTime))")
+            let interval = WidgetWeatherSnapshot.reportIntervalMinutes(from: raws)
+            return (snapshot, "ok obs \(WidgetDiag.zulu(snapshot.observationTime)) every \(interval.map { "\($0)m" } ?? "?")", interval)
         } catch let error as URLError {
-            return (nil, "URLError \(error.code.rawValue)")
+            return (nil, "URLError \(error.code.rawValue)", nil)
         } catch {
-            return (nil, "error: \(error.localizedDescription)")
+            return (nil, "error: \(error.localizedDescription)", nil)
         }
     }
 
@@ -203,7 +204,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
-        let (snapshot, requestedICAO) = await loadSnapshot(for: configuration, kind: context.isPreview ? "preview" : "snapshot")
+        let (snapshot, requestedICAO, _) = await loadSnapshot(for: configuration, kind: context.isPreview ? "preview" : "snapshot")
         return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: requestedICAO)
     }
 
@@ -226,7 +227,7 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         }
         // Reload when a new report can exist (see WidgetWeatherSnapshot.nextReloadDate), not on a
         // fixed 15 min clock that spends WidgetKit's daily budget fetching the same report.
-        let nextUpdate = snapshot?.nextReloadDate(after: now)
+        let nextUpdate = snapshot?.nextReloadDate(after: now, reportIntervalMinutes: loaded.reportIntervalMinutes)
             ?? Calendar.current.date(byAdding: .minute, value: 15, to: now)!
         return Timeline(entries: entries, policy: .after(nextUpdate))
     }
@@ -244,11 +245,11 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     /// The airport to show and fetch: the configured one, or (unconfigured widget) the airport
     /// most recently written to the App Group, i.e. the last one viewed in the app. Either way the
     /// widget fetches live; an unconfigured widget used to replay the cache and never refreshed.
-    private func loadSnapshot(for configuration: SelectAirportIntent, kind: String) async -> (snapshot: WidgetWeatherSnapshot?, requestedICAO: String?) {
+    private func loadSnapshot(for configuration: SelectAirportIntent, kind: String) async -> (snapshot: WidgetWeatherSnapshot?, requestedICAO: String?, reportIntervalMinutes: Int?) {
         let configured = resolveICAO(for: configuration)
         guard let icao = configured ?? WidgetDataManager.mostRecent()?.icao else {
             WidgetDiag.record(kind: kind, icao: nil, configured: false, outcome: "no airport")
-            return (nil, nil)
+            return (nil, nil, nil)
         }
         let cached = WidgetDataManager.load(icao: icao)
         let fetched = await WidgetFetcher.fetchSnapshot(icao: icao)
@@ -256,10 +257,10 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
         if let live = fetched.snapshot {
             let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
             WidgetDataManager.save(snapshot: merged, reload: false)
-            return (merged, nil)
+            return (merged, nil, fetched.reportIntervalMinutes)
         }
         // "Waiting for data" only for an airport the user chose; the fallback always has a cache.
-        return (cached, cached == nil && configured != nil ? icao : nil)
+        return (cached, cached == nil && configured != nil ? icao : nil, nil)
     }
 
     private func resolveICAO(for configuration: SelectAirportIntent) -> String? {

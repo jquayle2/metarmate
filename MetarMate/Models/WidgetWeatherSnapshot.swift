@@ -93,21 +93,37 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
 
     // MARK: - Reload scheduling
     // WidgetKit grants a limited number of reloads per widget per day, so ask for them when a new
-    // report can exist. Routine METARs are hourly: first ask a few minutes after the next one is
-    // due (obs + 64 min), then every 10 min until obs + 2 h (a late or missed report), then every
-    // 30 min while the station stays silent. Advisory snapshots have no METAR cadence: 30 min.
-    static let expectedReportMinutes = 64
+    // report can exist. Stations report on their own cycle: hourly for most ASOS, every 20 min for
+    // many AWOS (KBVU :15/:35/:55). First ask a few minutes after the next one is due (obs +
+    // interval + 4 min; hourly when the interval is unknown), then every 10 min until obs + 2 h (a
+    // late or missed report), then every 30 min while the station stays silent. Advisory
+    // snapshots have no METAR cadence: 30 min.
+    static let defaultReportIntervalMinutes = 60
+    static let reportGraceMinutes = 4
     static let retryMinutes = 10
     static let retryUntilMinutes = 120
     static let silentStationMinutes = 30
 
-    func nextReloadDate(after now: Date) -> Date {
+    func nextReloadDate(after now: Date, reportIntervalMinutes: Int? = nil) -> Date {
         if isAdvisory { return now.addingTimeInterval(TimeInterval(Self.silentStationMinutes * 60)) }
-        let expected = observationTime.addingTimeInterval(TimeInterval(Self.expectedReportMinutes * 60))
+        let interval = reportIntervalMinutes ?? Self.defaultReportIntervalMinutes
+        let expected = observationTime.addingTimeInterval(TimeInterval((interval + Self.reportGraceMinutes) * 60))
         if expected > now { return expected }
         let retryUntil = observationTime.addingTimeInterval(TimeInterval(Self.retryUntilMinutes * 60))
         let step = now < retryUntil ? Self.retryMinutes : Self.silentStationMinutes
         return now.addingTimeInterval(TimeInterval(step * 60))
+    }
+
+    /// The station's routine reporting interval, from the two newest routine METARs (SPECIs are
+    /// off-cycle and skipped). nil when it can't be told or looks implausible (outside 10–70 min).
+    nonisolated static func reportIntervalMinutes(from raws: [RawMetar]) -> Int? {
+        let routine = raws
+            .filter { !($0.rawOb ?? "").hasPrefix("SPECI") }
+            .compactMap(\.obsTime)
+        let times = Array(Set(routine)).sorted(by: >)
+        guard times.count >= 2 else { return nil }
+        let minutes = (times[0] - times[1]) / 60
+        return (10...70).contains(minutes) ? minutes : nil
     }
 
     /// Age for the "Last report … ago" line: "2 h", "2 h 10 min", or "12+ h". The late state

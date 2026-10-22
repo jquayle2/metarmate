@@ -180,6 +180,33 @@ struct WidgetReportAgeTests {
         #expect(next(atMinute: 400) == 430)
     }
 
+    // A 20-minute station (AWOS, e.g. KBVU :15/:35/:55) is asked for again after 24 min, not 64.
+    @Test func nextReloadDateUsesTheStationInterval() throws {
+        let s = try snapshot()
+        func next(atMinute m: Double, interval: Int?) -> Double {
+            let now = s.observationTime.addingTimeInterval(m * 60)
+            return s.nextReloadDate(after: now, reportIntervalMinutes: interval).timeIntervalSince(s.observationTime) / 60
+        }
+        #expect(next(atMinute: 5, interval: 20) == 24)
+        #expect(next(atMinute: 24, interval: 20) == 34)     // due: retry every 10 min
+        #expect(next(atMinute: 5, interval: 60) == 64)
+        #expect(next(atMinute: 5, interval: nil) == 64)     // unknown: hourly
+    }
+
+    @Test func reportIntervalFromRecentReports() throws {
+        func raw(_ obsTime: Int, _ type: String) throws -> RawMetar {
+            try JSONDecoder().decode(RawMetar.self, from: Data(#"{"obsTime":\#(obsTime),"rawOb":"\#(type) KTST 27008KT 10SM CLR 20/10 A2992"}"#.utf8))
+        }
+        let t = 1_760_046_900
+        // KBVU-style: :55, :35, :15 (newest first, as NOAA returns them)
+        #expect(WidgetWeatherSnapshot.reportIntervalMinutes(from: [try raw(t, "METAR"), try raw(t - 1200, "METAR"), try raw(t - 2400, "METAR")]) == 20)
+        // Hourly with a SPECI in between: the SPECI is skipped
+        #expect(WidgetWeatherSnapshot.reportIntervalMinutes(from: [try raw(t, "METAR"), try raw(t - 1500, "SPECI"), try raw(t - 3600, "METAR")]) == 60)
+        // One report, or an implausible gap: unknown
+        #expect(WidgetWeatherSnapshot.reportIntervalMinutes(from: [try raw(t, "METAR")]) == nil)
+        #expect(WidgetWeatherSnapshot.reportIntervalMinutes(from: [try raw(t, "METAR"), try raw(t - 7200, "METAR")]) == nil)
+    }
+
     @Test func ageText() {
         #expect(WidgetWeatherSnapshot.ageText(minutes: 68) == "1 h 8 min")
         #expect(WidgetWeatherSnapshot.ageText(minutes: 59) == "59 min")
