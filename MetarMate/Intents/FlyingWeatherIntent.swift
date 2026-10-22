@@ -113,28 +113,8 @@ struct FlyingWeatherIntent: AppIntent {
     }
 
     // MARK: - Identifier lookup
-    // Exact ident as heard, with the O/0 swap, then the K-prefixed form of a 3-char LID ("CMA" is
-    // KCMA in the database).
     static func airportForIdent(_ code: String) async -> Airport? {
-        if let found = await airportForSpokenCode(code) { return found }
-        guard let k = WeatherService.noaaCandidate(for: code) else { return nil }
-        return await MainActor.run { AirportService.shared.airport(identifier: k) }
-    }
-
-    // MARK: - Spoken identifier lookup
-    // Speech recognition hears "oh" and "zero" interchangeably. Try the code exactly as heard
-    // first, so O-prefixed idents (O22, OK36) resolve, and only then with the leading O/0 swapped
-    // (0L7 heard as "OL7"). A blanket O→0 rewrite broke every O-prefixed identifier.
-    static func airportForSpokenCode(_ code: String) async -> Airport? {
-        var heard = [code]
-        if code.hasPrefix("O") { heard.append("0" + code.dropFirst()) }
-        if code.hasPrefix("0") { heard.append("O" + code.dropFirst()) }
-        let candidates = heard
-        return await MainActor.run {
-            let found = candidates.compactMap { AirportService.shared.airport(identifier: $0) }
-            // Both readings can exist; prefer the one that reports a METAR.
-            return found.first(where: { $0.hasMetar }) ?? found.first
-        }
+        await MainActor.run { SiriAirportResolver.airport(forIdent: code) }
     }
 
     // MARK: - Snippet View
@@ -203,6 +183,15 @@ final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @unchecke
 
     // Static strong reference to keep the helper alive during the async call
     private static var activeHelper: IntentLocationHelper?
+
+    /// The system's cached fix, without starting a request. For ranking Siri's airport lists,
+    /// where waiting up to 5 s for a fresh fix would stall the query.
+    static func lastKnownLocation() -> CLLocation? {
+        let manager = CLLocationManager()
+        let status = manager.authorizationStatus
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else { return nil }
+        return manager.location
+    }
 
     static func currentLocation() async throws -> CLLocation {
         try await withCheckedThrowingContinuation { continuation in

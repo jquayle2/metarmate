@@ -114,4 +114,53 @@ struct SiriAirportResolverTests {
     @Test func oPrefixedIdentsStillResolve() async throws {
         #expect(await FlyingWeatherIntent.airportForIdent("OL7")?.icao == "0L7")
     }
+
+    // MARK: - Suggestions
+
+    @Test func suggestionsAreMetarOnlyAndDistanceSorted() {
+        let list = SiriAirportResolver.suggestions(favorites: [], location: Self.nearKingman)
+        #expect(!list.isEmpty && list.count <= 8)
+        #expect(list.allSatisfy { $0.hasMetar })
+        #expect(list.first?.icao == "KIGM")
+        let distances = list.map { $0.distance(from: Self.nearKingman) }
+        #expect(distances == distances.sorted())
+    }
+
+    @Test func suggestionsPutFavoritesFirstAndDropNonMetarFavorites() {
+        let list = SiriAirportResolver.suggestions(favorites: ["KVGT", "9K8", "KLAS"], location: Self.nearKingman)
+        #expect(list.prefix(3).map(\.icao) == ["KVGT", "KLAS", "KIGM"])
+        #expect(!list.contains { $0.icao == "9K8" })
+        #expect(Set(list.map(\.icao)).count == list.count)
+    }
+
+    @Test func suggestionsWithoutLocationAreFavoritesOnly() {
+        #expect(SiriAirportResolver.suggestions(favorites: ["KVGT"], location: nil).map(\.icao) == ["KVGT"])
+    }
+
+    // MARK: - Spoken name or ident
+
+    @Test func kingmanNearKigmIsOnlyKigm() {
+        let list = SiriAirportResolver.matches("Kingman", favorites: [], location: Self.nearKingman)
+        #expect(list.map(\.icao) == ["KIGM"])
+    }
+
+    @Test func exactIdentReturnsOne() {
+        #expect(SiriAirportResolver.matches("KVGT", favorites: [], location: nil).map(\.icao) == ["KVGT"])
+        #expect(SiriAirportResolver.matches("K V G T", favorites: [], location: nil).map(\.icao) == ["KVGT"])
+        #expect(SiriAirportResolver.matches("VGT", favorites: [], location: nil).map(\.icao) == ["KVGT"])
+        #expect(SiriAirportResolver.matches("CMA", favorites: [], location: nil).map(\.icao) == ["KCMA"])
+    }
+
+    // Several METAR fields share the name: Siri still asks "Which one?" (accepted), favorites first.
+    // search() matches name and ident, not city, so KLAS ("Harry Reid International") isn't here.
+    @Test func ambiguousNameReturnsSeveralRanked() {
+        let list = SiriAirportResolver.matches("Las Vegas", favorites: [], location: Self.nearKingman)
+        #expect(list.map(\.icao) == ["KVGT", "KLVS"])
+        #expect(list.allSatisfy { $0.hasMetar })
+        let distances = list.map { $0.distance(from: Self.nearKingman) }
+        #expect(distances == distances.sorted())
+
+        let withFavorite = SiriAirportResolver.matches("Las Vegas", favorites: ["KVGT"], location: Self.nearKingman)
+        #expect(withFavorite.first?.icao == "KVGT")
+    }
 }

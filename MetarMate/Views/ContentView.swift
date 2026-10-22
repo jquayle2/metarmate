@@ -6,6 +6,8 @@ struct ContentView: View {
     @StateObject private var locationService = LocationService.shared
     @StateObject private var weatherCache = WeatherCache.shared
     @State private var selectedTab: Int
+    // Mirrored for Siri, which must not open the store (SiriFavorites).
+    @Query private var favorites: [AirportFavorite]
 
     init() {
         _selectedTab = State(initialValue: LayoutPreferences.shared.startingTab.tabIndex)
@@ -83,6 +85,9 @@ struct ContentView: View {
         .onAppear {
             locationService.requestPermission()
             locationService.startUpdating()
+        }
+        .onChange(of: AirportFavorite.ordered(favorites).map(\.icao), initial: true) { _, icaos in
+            SiriFavorites.save(icaos)
         }
     }
 }

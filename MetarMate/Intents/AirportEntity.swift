@@ -34,23 +34,25 @@ struct AirportEntityQuery: EntityStringQuery {
         return results
     }
 
+    // METAR stations only, ranked so a clear match is a single result and Siri doesn't ask
+    // "Which one?" (SiriAirportResolver.matches).
     func entities(matching string: String) async throws -> [AirportEntity] {
-        await MainActor.run {
-            AirportService.shared.search(query: string, limit: 10)
+        let favorites = SiriFavorites.load()
+        let location = IntentLocationHelper.lastKnownLocation()
+        return await MainActor.run {
+            SiriAirportResolver.matches(string, favorites: favorites, location: location)
                 .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
         }
     }
 
+    // Favorites, then nearest METAR stations. Not the widget snapshot cache: it holds every
+    // airport ever viewed, including non-METAR strips (Oct 22: 06NV, 07NV, 0CL3…).
     func suggestedEntities() async throws -> [AirportEntity] {
-        let snapshots = WidgetDataManager.loadAll()
-        if !snapshots.isEmpty {
-            return snapshots.map { AirportEntity(id: $0.icao, name: $0.airportName) }
-        }
+        let favorites = SiriFavorites.load()
+        let location = IntentLocationHelper.lastKnownLocation()
         return await MainActor.run {
-            ["KLAS", "KVGT", "KLAX", "KSFO", "KORD"].compactMap { icao in
-                AirportService.shared.airport(icao: icao)
-                    .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
-            }
+            SiriAirportResolver.suggestions(favorites: favorites, location: location)
+                .map { AirportEntity(id: $0.icao.uppercased(), name: $0.name) }
         }
     }
 }

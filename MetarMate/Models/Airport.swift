@@ -75,6 +75,20 @@ final class AirportFavorite {
         self.sortOrder = sortOrder
     }
 
+    /// The user's order: sortOrder when set (drag to reorder), else the order added.
+    static func ordered(_ favorites: [AirportFavorite]) -> [AirportFavorite] {
+        let byDate = favorites.sorted { $0.addedDate < $1.addedDate }
+        let dateIndex: [String: Int] = Dictionary(
+            uniqueKeysWithValues: byDate.enumerated().map { ($1.icao, $0) }
+        )
+        return byDate.sorted {
+            let a = $0.sortOrder ?? dateIndex[$0.icao] ?? 0
+            let b = $1.sortOrder ?? dateIndex[$1.icao] ?? 0
+            if a == b { return $0.addedDate < $1.addedDate }
+            return a < b
+        }
+    }
+
     var asAirport: Airport {
         Airport(icao: icao, iata: iata, name: name,
                 latitude: latitude, longitude: longitude,
