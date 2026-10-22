@@ -161,9 +161,13 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 
 Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. MADIS is not being used. 5-min data never changes a verdict (D#1).
 - [x] Synoptic confirms (email Oct 21): displaying values in the app is allowed; the data must not be redistributed through an API [Jeff]
-- [ ] Synoptic confirms in writing that our proxy (authenticated app users only, app-shaped responses, no raw passthrough) is not "redistribution through an API" [Jeff]
-- [ ] Paid plan's statement of work covers commercial display in a paid consumer app (T&C 2.2(d)(i) needs written consent for commercial use) [Jeff]
-- [ ] Check contract term: T&C says 12-month term, non-refundable, 60 days' notice to terminate. Confirm whether $100/mo is billed monthly or is an annual commitment [Jeff]
+- [x] Synoptic confirms in writing that our proxy (authenticated app users only, app-shaped responses, no raw passthrough) is not "redistribution through an API" [Jeff]. Email Oct 22: an API closed to our authenticated users is allowed; a redistribution API is not.
+- [x] Paid plan's statement of work covers commercial display in a paid consumer app (T&C 2.2(d)(i) needs written consent for commercial use) [Jeff]. Email Oct 22: display on a monetized app is allowed.
+- [ ] Signed quote states the commercial app use [Jeff]
+- [x] Check contract term: T&C says 12-month term, non-refundable, 60 days' notice to terminate. Confirm whether $100/mo is billed monthly or is an annual commitment [Jeff]. Email Oct 22: annual contract at $100/mo ($1,200/yr), 60 days' notice to terminate.
+- [ ] Ask whether the 5-min ASOS data is Public or Restricted Data Content [Jeff]
+- [ ] Ask whether the 12-month term can start at ASOS launch [Jeff]
+- [ ] Ask Synoptic on the Oct 22 call: more than one token (TestFlight vs production proxy) and rotation without downtime; ~5 min per-station caching and 6 h history fetches OK; peak wind/gust fields and typical station-to-API latency for 5-min ASOS [Jeff]
 - [x] Synoptic confirms (Oct 21): no API call limits on the paid plan; trial latency = paid latency [Jeff]
 - [ ] Trial token received [Jeff]
 - [ ] Validation rerun with the trial token: latency, gust capture, timeouts vs the same METARs (spike harness) [Code]
@@ -179,8 +183,8 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - [ ] `FeatureFlags.asosAvailable = true` [Code]
 - [ ] Old Synoptic token rotated/revoked (exposed in earlier binaries) [Jeff]
 - [ ] Paid plan active before the trial ends [Jeff]
-- [ ] Attribution: "Data aggregated by Synoptic" linking to synopticdata.com wherever 5-min data shows (T&C Att. A item 9); Synoptic named as source on the website and in marketing (T&C 6.2(c)); no rebranding of the data [Code/Jeff]
-- [ ] Annual usage report to Synoptic if our tier requires it (customers, views) [Jeff]
+- [ ] Attribution: "Data aggregated by Synoptic" linking to synopticdata.com wherever 5-min data shows (T&C Att. A item 9); Synoptic named as source on the website and in marketing (T&C 6.2(c)); no rebranding of the data [Code/Jeff]. Wording confirmed by Synoptic (email Oct 22); implementation still open.
+- [x] Annual usage report to Synoptic if our tier requires it (customers, views) [Jeff]. Email Oct 22: not needed.
 
 ## 7. App Store Connect and submission [Jeff]
 
@@ -218,3 +222,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** Synoptic replied: display OK, no API redistribution, no call limits, trial latency = paid. T&C items added to section 6 (written OK for the proxy, commercial-use SOW, 12-month term, attribution).
 - **Oct 22, 2026:** Widget showed KVGT "late · 65 min" correctly at 1558Z. Siri device test at Kingman: prompts for an airport, cached-strip suggestions, "Kingman" ambiguous with 9K8 (KS), "Sky clear" with FEW/SCT, first try went to Apple Weather. Siri items and handoff added (section 4). Density altitude 180 ft low vs ForeFlight (no humidity); fix added to A2.
 - **Oct 22, 2026:** Siri hands-free code done on `feat/siri-hands-free` (`2173fb7`, `5b13947`, `06a87ca`, `a5ce1cb`, `8606c81`); device check pending [Jeff]. App search now also matches city.
+- **Oct 22, 2026:** Synoptic written answers (email): API closed to our authenticated users allowed (redistribution API not); display on a monetized app allowed; annual contract $100/mo ($1,200/yr), 60 days' notice; attribution wording "Data aggregated by Synoptic" → synopticdata.com confirmed (implementation open); no annual usage report. Open [Jeff]: commercial use in the signed quote, Public vs Restricted Data Content for 5-min ASOS, 12-month term starting at ASOS launch, questions for the Oct 22 call (section 6).
