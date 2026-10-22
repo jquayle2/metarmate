@@ -106,105 +106,17 @@ struct FlyingWeatherIntent: AppIntent {
         // 4. Derive trend
         let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
 
-        // 5. Build spoken dialog and snippet
-        let spokenText = buildDialog(airportName: resolvedAirport.name, metar: metar, trend: trend)
-        let detail = buildSummaryLine(metar: metar)
+        // 5. Build spoken dialog and snippet. Report age per D#4: every answer speaks it; over
+        // 75 min there is no category, conditions or trend, in speech or on the card.
+        let now = Date()
+        let spokenText = SiriReportWording.dialog(airportName: resolvedAirport.name, metar: metar, trend: trend, at: now)
+        let detail = SiriReportWording.summaryLine(metar: metar, at: now)
 
         return .result(
             dialog: IntentDialog(stringLiteral: spokenText),
-            view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)", category: metar.flightCategory, detail: detail)
+            view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)",
+                              category: SiriReportWording.cardCategory(metar: metar, at: now), detail: detail)
         )
-    }
-
-    // MARK: - Dialog Builder
-    private func buildDialog(airportName: String, metar: Metar, trend: WeatherTrend) -> String {
-        var parts: [String] = []
-
-        // Category
-        parts.append("\(airportName) is currently \(metar.flightCategory.rawValue).")
-
-        // Ceiling
-        if let ceiling = metar.ceilingFeet {
-            let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-            let coverageWord = layer?.coverage == .overcast ? "overcast" : "broken"
-            parts.append("Ceiling \(coverageWord) at \(ceiling) feet.")
-        } else {
-            parts.append("Ceiling unlimited.")
-        }
-
-        // Visibility — omit the spoken sentence entirely when the station didn't report it
-        // (never voice a fabricated value); still voice present weather if any.
-        let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased())"
-        switch metar.visibility {
-        case .exact(let v):
-            parts.append("Visibility \(String(format: "%.0f", v)) miles\(wxSuffix).")
-        case .greaterThan(let v):
-            parts.append("Visibility \(String(format: "%.0f", v)) or more miles\(wxSuffix).")
-        case .unknown:
-            // Never voice a fabricated value; still voice present weather if any.
-            if !metar.weatherPhenomena.isEmpty {
-                let wx = WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased()
-                parts.append("\(wx.prefix(1).uppercased())\(wx.dropFirst()) observed.")
-            }
-        }
-
-        // Wind
-        parts.append(windPhrase(metar.wind))
-
-        // Trend — use observed if we have enough history, otherwise forecast
-        if trend.observed.overall != .unknown {
-            parts.append("Conditions are \(trend.observed.overall.rawValue.lowercased()).")
-        } else if trend.forecast.overall != .unknown {
-            parts.append("Forecast shows conditions \(trend.forecast.overall.rawValue.lowercased()).")
-        } else {
-            parts.append("No trend data available.")
-        }
-
-        return parts.joined(separator: " ")
-    }
-
-    private func windPhrase(_ wind: Wind) -> String {
-        guard wind.isReported else { return "Wind not reported." }   // nil ≠ calm
-        if wind.speed == 0 && !wind.isVariable {
-            return "Wind calm."
-        }
-        let dir: String
-        if wind.isVariable {
-            dir = "variable"
-        } else if let d = wind.direction {
-            dir = "\(d)"
-        } else {
-            dir = "variable"
-        }
-        var phrase = "Wind \(dir) at \(wind.speed) knots"
-        if let gust = wind.gust {
-            phrase += ", gusting \(gust)"
-        }
-        return phrase + "."
-    }
-
-    private func buildSummaryLine(metar: Metar) -> String {
-        let vis: String
-        switch metar.visibility {
-        case .exact(let v):       vis = String(format: "Vis %.0f sm", v)
-        case .greaterThan(let v): vis = "Vis \(String(format: "%.0f", v))+ sm"
-        case .unknown:            vis = "Vis —"
-        }
-        let ceiling: String
-        if let c = metar.ceilingFeet {
-            ceiling = "Ceil \(c / 100 * 100)ft"
-        } else {
-            ceiling = "Sky clear"
-        }
-        let windStr: String
-        if !metar.wind.isReported {
-            windStr = "—"
-        } else if metar.wind.speed == 0 {
-            windStr = "Calm"
-        } else {
-            windStr = "\(metar.wind.speed)kt"
-        }
-        return "\(ceiling) · \(vis) · Wind \(windStr)"
     }
 
     // MARK: - Spoken identifier lookup

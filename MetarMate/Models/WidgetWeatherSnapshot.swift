@@ -70,11 +70,16 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     static let noCurrentAfterMinutes = 75
 
     func reportAge(at date: Date) -> ReportAge {
+        Self.reportAge(observationTime: observationTime, at: date)
+    }
+
+    // Static so Siri classifies a Metar with the same boundaries and truncation as the widget.
+    static func reportAge(observationTime: Date, at date: Date) -> ReportAge {
         // Whole minutes, truncated: 64:59 is still current, 75:59 still late (D#4 "over 75").
         // A future obs time (clock skew) is current.
         let minutes = Int(date.timeIntervalSince(observationTime) / 60)
-        if minutes > Self.noCurrentAfterMinutes { return .noCurrent(minutes: minutes) }
-        if minutes >= Self.lateAfterMinutes { return .late(minutes: minutes) }
+        if minutes > noCurrentAfterMinutes { return .noCurrent(minutes: minutes) }
+        if minutes >= lateAfterMinutes { return .late(minutes: minutes) }
         return .current
     }
 
