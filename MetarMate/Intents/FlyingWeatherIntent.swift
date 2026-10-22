@@ -166,7 +166,9 @@ struct MetarMateShortcuts: AppShortcutsProvider {
                 "\(.applicationName), how's the flying",
                 "Get the METAR with \(.applicationName)",
                 "Check flying weather at \(\.$airport) with \(.applicationName)",
-                "What's the weather at \(\.$airport) in \(.applicationName)"
+                "What's the weather at \(\.$airport) in \(.applicationName)",
+                "\(.applicationName) METAR at \(\.$airport)",
+                "Get the METAR at \(\.$airport) with \(.applicationName)"
             ],
             shortTitle: "Flying Weather",
             systemImageName: "cloud.sun.fill"
