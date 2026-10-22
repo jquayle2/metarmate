@@ -124,14 +124,19 @@ struct FlyingWeatherIntent: AppIntent {
 
         // 5. Build spoken dialog and snippet. Report age per D#4: every answer speaks it; over
         // 75 min there is no category, conditions or trend, in speech or on the card.
-        let spokenText = SiriReportWording.dialog(airportName: resolvedAirport.name, metar: metar, trend: trend,
-                                                    borrowed: borrowed, at: now)
-        let detail = SiriReportWording.summaryLine(metar: metar, at: now)
+        // SiriReportWording is main-actor isolated (the project default), like the trend above.
+        let borrowedTaf = borrowed
+        let (spokenText, detail, cardCategory) = await MainActor.run {
+            (SiriReportWording.dialog(airportName: resolvedAirport.name, metar: metar, trend: trend,
+                                      borrowed: borrowedTaf, at: now),
+             SiriReportWording.summaryLine(metar: metar, at: now),
+             SiriReportWording.cardCategory(metar: metar, at: now))
+        }
 
         return .result(
             dialog: IntentDialog(stringLiteral: spokenText),
             view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)",
-                              category: SiriReportWording.cardCategory(metar: metar, at: now), detail: detail)
+                              category: cardCategory, detail: detail)
         )
     }
 
