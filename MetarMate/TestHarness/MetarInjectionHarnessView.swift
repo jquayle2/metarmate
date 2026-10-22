@@ -154,7 +154,7 @@ struct MetarInjectionHarnessView: View {
             } header: {
                 Text("④ Widget report age (DEBUG build only)")
             } footer: {
-                Text("Each widget refresh pretends the report is exactly this old, then ages normally. Late from 65 min, no current METAR from 75. Display only; nothing saved changes. Not compiled into Release or TestFlight builds.")
+                Text("Each widget refresh pretends the report is exactly this old, then ages normally. Late from 65 min through 75, no current METAR over 75 (76+). Display only; nothing saved changes. Not compiled into Release or TestFlight builds.")
             }
             #endif
         }
