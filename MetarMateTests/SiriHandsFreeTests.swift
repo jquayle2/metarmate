@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import CoreLocation
 @testable import MetarMate
 
 // Siri hands-free (launch checklist section 4, #25; docs/handoffs/SIRI_HANDS_FREE_handoff.md).
@@ -86,5 +87,31 @@ struct SiriReportWordingTests {
     @Test func freshReportSaysLessThanAMinute() throws {
         let m = try metar(Self.kigm)
         #expect(dialog(m, minutes: 0.5).hasPrefix("As of less than a minute ago, Kingman is VFR."))
+    }
+}
+
+// Airport resolution with no tap: nearest METAR station, and 3-char LIDs.
+@MainActor
+struct SiriAirportResolverTests {
+
+    // Kingman AZ, about 1 nm from KIGM (the Oct 22 device-test position).
+    static let nearKingman = CLLocation(latitude: 35.26, longitude: -113.92)
+
+    @Test func nearestIsAMetarStation() throws {
+        let nearest = try #require(SiriAirportResolver.nearestMetarStation(to: Self.nearKingman))
+        #expect(nearest.icao == "KIGM")
+        #expect(nearest.hasMetar)
+    }
+
+    @Test func threeCharLidResolvesWithKPrefix() async throws {
+        let cma = try #require(await FlyingWeatherIntent.airportForIdent("CMA"))
+        #expect(cma.icao == "KCMA")
+        let k36 = try #require(await FlyingWeatherIntent.airportForIdent("36K"))
+        #expect(k36.icao == "36K")
+        #expect(WeatherService.noaaCandidate(for: k36.icao) == "K36K")
+    }
+
+    @Test func oPrefixedIdentsStillResolve() async throws {
+        #expect(await FlyingWeatherIntent.airportForIdent("OL7")?.icao == "0L7")
     }
 }

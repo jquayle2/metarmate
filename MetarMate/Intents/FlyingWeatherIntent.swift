@@ -5,14 +5,15 @@ import SwiftUI
 // MARK: - Flying Weather Intent
 // "Hey Siri, check flying weather with MetarMate"
 // "Hey Siri, check flying weather at KLAS with MetarMate"
-// If an airport code is provided it is used directly; otherwise falls back to nearest airport.
+// If an airport code is provided it is used directly; otherwise the nearest METAR station, with no
+// prompt and no list (Oct 22 device test: the old "Which airport?" prompt listed cached strips).
 struct FlyingWeatherIntent: AppIntent {
     static var title: LocalizedStringResource = "Check Flying Weather"
     static var description = IntentDescription(
-        "Get current METAR and weather trend. Specify an airport code or use your nearest airport."
+        "Get current METAR and weather trend. Specify an airport code or use your nearest METAR station."
     )
 
-    @Parameter(title: "Airport", description: "ICAO or IATA identifier, e.g. KLAS or LAS. Leave empty to use nearest airport.", requestValueDialog: "Which airport? Spell out the ICAO code, like K-L-A-S.")
+    @Parameter(title: "Airport", description: "ICAO or IATA identifier, e.g. KLAS or LAS. Leave empty to use the nearest METAR station.")
     var airport: AirportEntity?
 
     static var parameterSummary: some ParameterSummary {
@@ -35,13 +36,14 @@ struct FlyingWeatherIntent: AppIntent {
             )
         }
 
-        // 1. Resolve airport — from Shortcuts picker, Siri prompt, or nearest
+        // 1. Resolve airport — from the spoken/picked entity, or the nearest METAR station.
+        // Never prompts: a hands-free pilot can't tap a list.
         let resolvedAirport: Airport
 
         if let entity = airport {
-            let code = entity.id.uppercased()
+            let code = entity.id.components(separatedBy: .whitespaces).joined().uppercased()
             NSLog("FlyingWeatherIntent: entity.id='\(entity.id)' normalized='\(code)'")
-            guard let found = await MainActor.run(body: { AirportService.shared.airport(identifier: code) }) else {
+            guard let found = await Self.airportForIdent(code) else {
                 return .result(
                     dialog: IntentDialog("I couldn't find an airport with the code \(code)."),
                     view: snippetView(label: code, category: .unknown, detail: "Airport not found")
@@ -50,43 +52,34 @@ struct FlyingWeatherIntent: AppIntent {
             resolvedAirport = found
 
         } else {
-            // Siri didn't slot-fill the parameter — prompt once, then give up gracefully
+            let location: CLLocation
             do {
-                let requestedEntity = try await $airport.requestValue("Which airport?")
-                let code = requestedEntity.id.components(separatedBy: .whitespaces).joined().uppercased()
-                NSLog("FlyingWeatherIntent: prompted entity='\(requestedEntity.id)' normalized='\(code)'")
-                if let found = await Self.airportForSpokenCode(code), found.hasMetar {
-                    resolvedAirport = found
-                } else {
-                    return .result(
-                        dialog: IntentDialog("I couldn't find a METAR station for \(code). Try an ICAO code like K-L-A-S."),
-                        view: snippetView(label: code, category: .unknown, detail: "No METAR station found")
-                    )
-                }
+                location = try await IntentLocationHelper.currentLocation()
             } catch {
-                // Cancelled or timed out — fall back to nearest
-                guard let location = try? await IntentLocationHelper.currentLocation() else {
-                    return .result(
-                        dialog: IntentDialog("Location access needed. Please enable it in Settings."),
-                        view: snippetView(label: "Location unavailable", category: .unknown, detail: "Enable location in Settings")
-                    )
-                }
-                // Nearest airport that actually reports a METAR, not just the nearest strip.
-                let nearby = await MainActor.run { AirportService.shared.nearest(to: location, count: 25) }
-                guard let nearest = nearby.first(where: { $0.hasMetar }) else {
-                    return .result(
-                        dialog: IntentDialog("No nearby airport found."),
-                        view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
-                    )
-                }
-                resolvedAirport = nearest
+                let reason = (error as? IntentLocationError) == .notAuthorized
+                    ? "Location is off for MetarMate, so I can't find the nearest METAR station."
+                    : "I couldn't get your location, so I can't find the nearest METAR station."
+                return .result(
+                    dialog: IntentDialog(stringLiteral: "\(reason) Name an airport instead. Say: check flying weather at K-V-G-T with MetarMate."),
+                    view: snippetView(label: "Location unavailable", category: .unknown, detail: "Say \"…at KVGT with MetarMate\"")
+                )
             }
+            guard let nearest = await MainActor.run(body: { SiriAirportResolver.nearestMetarStation(to: location) }) else {
+                return .result(
+                    dialog: IntentDialog("No METAR station within 100 nautical miles. Name an airport instead."),
+                    view: snippetView(label: "No airport found", category: .unknown, detail: "No reporting station nearby")
+                )
+            }
+            resolvedAirport = nearest
         }
+
+        // 3-char LIDs (CMA, 36K) publish under a K-prefixed id on NOAA.
+        let fetchId = WeatherService.noaaCandidate(for: resolvedAirport.icao) ?? resolvedAirport.icao
 
         // 2. Fetch METAR history
         let metarHistory: [Metar]
         do {
-            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: resolvedAirport.icao, hours: 6)
+            metarHistory = try await WeatherService.shared.fetchMetarHistory(for: fetchId, hours: 6)
         } catch {
             return .result(
                 dialog: IntentDialog("No weather data available for \(resolvedAirport.name)."),
@@ -101,7 +94,7 @@ struct FlyingWeatherIntent: AppIntent {
         }
 
         // 3. Fetch TAF (optional)
-        let taf = try? await WeatherService.shared.fetchTaf(for: resolvedAirport.icao)
+        let taf = try? await WeatherService.shared.fetchTaf(for: fetchId)
 
         // 4. Derive trend
         let trend = await MainActor.run { WeatherTrend.derive(metars: metarHistory, taf: taf) }
@@ -117,6 +110,15 @@ struct FlyingWeatherIntent: AppIntent {
             view: snippetView(label: "\(resolvedAirport.icao) · \(resolvedAirport.name)",
                               category: SiriReportWording.cardCategory(metar: metar, at: now), detail: detail)
         )
+    }
+
+    // MARK: - Identifier lookup
+    // Exact ident as heard, with the O/0 swap, then the K-prefixed form of a 3-char LID ("CMA" is
+    // KCMA in the database).
+    static func airportForIdent(_ code: String) async -> Airport? {
+        if let found = await airportForSpokenCode(code) { return found }
+        guard let k = WeatherService.noaaCandidate(for: code) else { return nil }
+        return await MainActor.run { AirportService.shared.airport(identifier: k) }
     }
 
     // MARK: - Spoken identifier lookup
@@ -188,13 +190,13 @@ struct MetarMateShortcuts: AppShortcutsProvider {
 // MARK: - Location Helper for Intents
 // App Intents run outside the normal app lifecycle so we use a one-shot
 // CLLocationManager wrapped in a CheckedContinuation with a timeout.
-private enum IntentLocationError: Error {
+enum IntentLocationError: Error {
     case notAuthorized
     case timeout
-    case failed(Error)
+    case failed
 }
 
-private final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
+final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation, Error>?
     private var timeoutTask: Task<Void, Never>?
@@ -247,6 +249,7 @@ private final class IntentLocationHelper: NSObject, CLLocationManagerDelegate, @
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        finish(with: .failure(IntentLocationError.failed(error)))
+        NSLog("IntentLocationHelper: location failed: \(error)")
+        finish(with: .failure(IntentLocationError.failed))
     }
 }
