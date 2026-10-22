@@ -75,6 +75,7 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [ ] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category)
 - [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts
 - [ ] #20 Gust approach speed = ½ gust factor, one shared function (D#8)
+- [ ] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; the humid calculation gives 4,871 ft
 - [ ] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19)
 - [ ] D#10 symmetric missing-field notes; D#11 F17 hazards in history; D#12 PROB TSRA in headline
 - [ ] F16 present-weather chip off the category red; F18 "Clear" with only FEW/SCT
@@ -105,12 +106,17 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
 - [ ] TestFlight testers get Pro via offer codes (D#20)
 
-Siri (#25):
-- [ ] Use location instead of prompting "Which airport?"
+Siri (#25) — handoff `docs/handoffs/SIRI_HANDS_FREE_handoff.md`, branch `feat/siri-hands-free`:
+- [ ] Use location instead of prompting "Which airport?" (Oct 22 device test: no-airport phrase prompted with a list; location is only used after cancel)
+- [ ] Airport suggestions: favorites, then nearest METAR stations by distance; no non-METAR strips (Oct 22 list was 06NV, 07NV, 0CL3… from the snapshot cache)
+- [ ] Spoken name match: METAR stations only, ranked ident → favorites → distance; one result when clear, so no "Which one?" tap (Oct 22: "Kingman" offered KIGM and 9K8 Kingman, KS)
+- [ ] Result card says "No ceiling", not "Sky clear", when only FEW/SCT are reported (Oct 22, KIGM FEW055 SCT100)
+- [ ] Phrases led by the app name so Siri doesn't route to Apple Weather; favorites registered via `updateAppShortcutParameters()` so "…at KVGT…" matches
 - [x] Nearest fallback picks the nearest airport that reports a METAR (searches 25, not 1). `eadefa0`
 - [ ] 3-character LIDs (CMA, 36K) resolve via `noaaCandidate`
 - [x] `O→0` rewrite replaced: the spoken code is tried as heard, then with the leading O/0 swapped, preferring a METAR station (O22, OK36 and 0L7 all resolve). `eadefa0`
 - [ ] Siri speaks the report age on every answer; "late" at 65–75 min; over 75 min says stale, no category/conditions/verdict (D#4)
+- [ ] Device check, hands-free with no touch: nearest, a favorite by ident, the new app-name phrase, location off [Jeff]
 
 Background task (#26):
 - [ ] Expiry handler stops the work; no save after cancel
@@ -209,3 +215,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** KVGT and KHND now issue their own TAFs (1728Z TAFs seen); KBVU is the new nearby-TAF test field. "Worse" thresholds for the Right-now row decided. TAF time-logic fix moved to step 1 of the nearby-TAF pass.
 - **Oct 21, 2026:** Widget refresh confirmed on device; reload scheduling changed to follow the report cadence (`20aad2a`).
 - **Oct 21, 2026:** Synoptic replied: display OK, no API redistribution, no call limits, trial latency = paid. T&C items added to section 6 (written OK for the proxy, commercial-use SOW, 12-month term, attribution).
+- **Oct 22, 2026:** Widget showed KVGT "late · 65 min" correctly at 1558Z. Siri device test at Kingman: prompts for an airport, cached-strip suggestions, "Kingman" ambiguous with 9K8 (KS), "Sky clear" with FEW/SCT, first try went to Apple Weather. Siri items and handoff added (section 4). Density altitude 180 ft low vs ForeFlight (no humidity); fix added to A2.
