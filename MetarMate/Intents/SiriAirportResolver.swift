@@ -31,9 +31,10 @@ enum SiriAirportResolver {
 
     // MARK: - Spoken name or ident
 
-    /// An exact ident returns just that airport. Otherwise METAR stations whose name or ident
-    /// matches, ranked favorites → distance → search relevance. One result means Siri doesn't
-    /// ask "Which one?"; several (e.g. "Las Vegas": KVGT, KLVS) still do.
+    /// An exact ident returns just that airport. Otherwise METAR stations whose name, city or
+    /// ident matches, ranked favorites → distance → search relevance. When location is known and
+    /// a match is within 50 nm, matches beyond 150 nm are dropped ("Las Vegas" near KVGT loses
+    /// KLVS, Las Vegas NM). One result means Siri doesn't ask "Which one?"; several still do.
     static func matches(_ spoken: String, favorites: [String], location: CLLocation?, limit: Int = 10) -> [Airport] {
         let code = spoken.components(separatedBy: .whitespaces).joined().uppercased()
         if (2...5).contains(code.count), code.allSatisfy({ $0.isLetter || $0.isNumber }),
@@ -42,7 +43,10 @@ enum SiriAirportResolver {
         }
 
         // search() caps before we filter, so ask for enough that strips can't crowd out stations.
-        let found = AirportService.shared.search(query: spoken, limit: 100).filter { $0.hasMetar }
+        var found = AirportService.shared.search(query: spoken, limit: 100).filter { $0.hasMetar }
+        if let location, found.contains(where: { $0.distance(from: location) <= 50 * 1852 }) {
+            found.removeAll { $0.distance(from: location) > 150 * 1852 }
+        }
         let favoriteRank = Dictionary(favorites.enumerated().map { ($1.uppercased(), $0) }, uniquingKeysWith: { a, _ in a })
         let ranked = found.enumerated().sorted { a, b in
             let fa = favoriteRank[a.element.icao.uppercased()] ?? .max

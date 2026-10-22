@@ -64,10 +64,11 @@ class AirportService {
             let name = $0.name.uppercased()
             let icao = $0.icao.uppercased()
             let iata = $0.iata?.uppercased() ?? ""
-            if icao.contains(q) || iata.contains(q) || name.contains(q) { return true }
+            let city = $0.city?.uppercased() ?? ""
+            if icao.contains(q) || iata.contains(q) || name.contains(q) || city.contains(q) { return true }
             if words.count > 1 {
                 return words.allSatisfy { word in
-                    icao.contains(word) || iata.contains(word) || name.contains(word)
+                    icao.contains(word) || iata.contains(word) || name.contains(word) || city.contains(word)
                 }
             }
             return false

@@ -152,15 +152,40 @@ struct SiriAirportResolverTests {
     }
 
     // Several METAR fields share the name: Siri still asks "Which one?" (accepted), favorites first.
-    // search() matches name and ident, not city, so KLAS ("Harry Reid International") isn't here.
-    @Test func ambiguousNameReturnsSeveralRanked() {
-        let list = SiriAirportResolver.matches("Las Vegas", favorites: [], location: Self.nearKingman)
-        #expect(list.map(\.icao) == ["KVGT", "KLVS"])
-        #expect(list.allSatisfy { $0.hasMetar })
-        let distances = list.map { $0.distance(from: Self.nearKingman) }
-        #expect(distances == distances.sorted())
+    // City matching brings in KLAS ("Harry Reid International") and the other Las Vegas fields.
+    static let nearVGT = CLLocation(latitude: 36.21, longitude: -115.19)
 
-        let withFavorite = SiriAirportResolver.matches("Las Vegas", favorites: ["KVGT"], location: Self.nearKingman)
-        #expect(withFavorite.first?.icao == "KVGT")
+    @Test func lasVegasNearbyIsTheFourLocalFieldsByDistance() {
+        let list = SiriAirportResolver.matches("Las Vegas", favorites: [], location: Self.nearVGT)
+        #expect(Set(list.map(\.icao)) == ["KLAS", "KVGT", "KHND", "KLSV"])
+        #expect(list.first?.icao == "KVGT")
+        let distances = list.map { $0.distance(from: Self.nearVGT) }
+        #expect(distances == distances.sorted())
+    }
+
+    @Test func lasVegasNearbyPutsFavoritesFirst() {
+        let list = SiriAirportResolver.matches("Las Vegas", favorites: ["KHND"], location: Self.nearVGT)
+        #expect(list.first?.icao == "KHND")
+        let rest = list.dropFirst().map { $0.distance(from: Self.nearVGT) }
+        #expect(rest == rest.sorted())
+        #expect(!list.contains { $0.icao == "KLVS" })
+    }
+
+    @Test func lasVegasWithoutLocationStillIncludesNewMexico() {
+        let list = SiriAirportResolver.matches("Las Vegas", favorites: [], location: nil)
+        #expect(Set(list.map(\.icao)).isSuperset(of: ["KLAS", "KVGT", "KHND", "KLSV", "KLVS"]))
+    }
+
+    @Test func lasVegasInNewMexicoStillIncludesKlvs() {
+        let nearLVS = CLLocation(latitude: 35.65, longitude: -105.14)
+        let list = SiriAirportResolver.matches("Las Vegas", favorites: [], location: nearLVS)
+        #expect(list.first?.icao == "KLVS")
+    }
+
+    @Test func cityDecodesAndOlderDataWithoutItStillDecodes() throws {
+        let withCity = try JSONDecoder().decode(Airport.self, from: Data(#"{"icao":"KLAS","iata":"LAS","name":"Harry Reid International","latitude":36.08,"longitude":-115.15,"elevation":2181,"hasMetar":true,"city":"Las Vegas"}"#.utf8))
+        #expect(withCity.city == "Las Vegas")
+        let old = try JSONDecoder().decode(Airport.self, from: Data(#"{"icao":"KLAS","iata":"LAS","name":"Harry Reid International","latitude":36.08,"longitude":-115.15,"elevation":2181,"hasMetar":true}"#.utf8))
+        #expect(old.city == nil)
     }
 }

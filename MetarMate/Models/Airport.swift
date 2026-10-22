@@ -12,10 +12,11 @@ struct Airport: Identifiable, Codable, Hashable {
     let longitude: Double
     let elevation: Int
     let hasMetar: Bool  // true = official METAR station → aviationweather.gov; false → Open-Meteo advisory
+    let city: String?   // served city, for name search ("Las Vegas" → KLAS); absent in older data
 
     // MARK: Codable — backward-compatible: defaults true if field absent (e.g. live-resolved airports)
     private enum CodingKeys: String, CodingKey {
-        case icao, iata, name, latitude, longitude, elevation, hasMetar
+        case icao, iata, name, latitude, longitude, elevation, hasMetar, city
     }
 
     init(from decoder: Decoder) throws {
@@ -27,10 +28,11 @@ struct Airport: Identifiable, Codable, Hashable {
         longitude = try c.decode(Double.self, forKey: .longitude)
         elevation = try c.decode(Int.self, forKey: .elevation)
         hasMetar  = try c.decodeIfPresent(Bool.self, forKey: .hasMetar) ?? true
+        city      = try c.decodeIfPresent(String.self, forKey: .city)
     }
 
     init(icao: String, iata: String?, name: String,
-         latitude: Double, longitude: Double, elevation: Int, hasMetar: Bool = true) {
+         latitude: Double, longitude: Double, elevation: Int, hasMetar: Bool = true, city: String? = nil) {
         self.icao      = icao
         self.iata      = iata
         self.name      = name
@@ -38,6 +40,7 @@ struct Airport: Identifiable, Codable, Hashable {
         self.longitude = longitude
         self.elevation = elevation
         self.hasMetar  = hasMetar
+        self.city      = city
     }
 
     var coordinate: CLLocationCoordinate2D {
