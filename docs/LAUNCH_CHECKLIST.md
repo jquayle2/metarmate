@@ -107,15 +107,16 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [ ] TestFlight testers get Pro via offer codes (D#20)
 
 Siri (#25) — handoff `docs/handoffs/SIRI_HANDS_FREE_handoff.md`, branch `feat/siri-hands-free`:
-- [ ] Use location instead of prompting "Which airport?" (Oct 22 device test: no-airport phrase prompted with a list; location is only used after cancel)
-- [ ] Airport suggestions: favorites, then nearest METAR stations by distance; no non-METAR strips (Oct 22 list was 06NV, 07NV, 0CL3… from the snapshot cache)
-- [ ] Spoken name match: METAR stations only, ranked ident → favorites → distance; one result when clear, so no "Which one?" tap (Oct 22: "Kingman" offered KIGM and 9K8 Kingman, KS)
-- [ ] Result card says "No ceiling", not "Sky clear", when only FEW/SCT are reported (Oct 22, KIGM FEW055 SCT100)
-- [ ] Phrases led by the app name so Siri doesn't route to Apple Weather; favorites registered via `updateAppShortcutParameters()` so "…at KVGT…" matches
+- [x] Use location instead of prompting "Which airport?" (Oct 22 device test: no-airport phrase prompted with a list; location is only used after cancel). No prompt; location off or unavailable gives spoken guidance, no list. `5b13947`
+- [x] Airport suggestions: favorites, then nearest METAR stations by distance; no non-METAR strips (Oct 22 list was 06NV, 07NV, 0CL3… from the snapshot cache). `06a87ca`
+- [x] Spoken name match: METAR stations only, ranked ident → favorites → distance; one result when clear, so no "Which one?" tap (Oct 22: "Kingman" offered KIGM and 9K8 Kingman, KS). `06a87ca`
+- [x] Name match includes city ("Las Vegas" finds KLAS); with a match within 50 nm, matches beyond 150 nm are dropped (no KLVS near Las Vegas). Several local fields still ask "Which one?" (accepted). `a5ce1cb`
+- [x] Result card says "No ceiling", not "Sky clear", when only FEW/SCT are reported (Oct 22, KIGM FEW055 SCT100). "Sky clear" only for CLR/SKC; no cloud group says "Sky not reported" (audit #6). `2173fb7`
+- [x] Phrases led by the app name so Siri doesn't route to Apple Weather; favorites registered via `updateAppShortcutParameters()` so "…at KVGT…" matches. `8606c81`
 - [x] Nearest fallback picks the nearest airport that reports a METAR (searches 25, not 1). `eadefa0`
-- [ ] 3-character LIDs (CMA, 36K) resolve via `noaaCandidate`
+- [x] 3-character LIDs (CMA, 36K) resolve via `noaaCandidate` (CMA → KCMA; 36K fetched as K36K). `5b13947`
 - [x] `O→0` rewrite replaced: the spoken code is tried as heard, then with the leading O/0 swapped, preferring a METAR station (O22, OK36 and 0L7 all resolve). `eadefa0`
-- [ ] Siri speaks the report age on every answer; "late" at 65–75 min; over 75 min says stale, no category/conditions/verdict (D#4)
+- [x] Siri speaks the report age on every answer; "late" at 65–75 min; over 75 min says stale, no category/conditions/verdict (D#4). Same boundaries as the widget. `2173fb7`
 - [ ] Device check, hands-free with no touch: nearest, a favorite by ident, the new app-name phrase, location off [Jeff]
 
 Background task (#26):
@@ -216,3 +217,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 21, 2026:** Widget refresh confirmed on device; reload scheduling changed to follow the report cadence (`20aad2a`).
 - **Oct 21, 2026:** Synoptic replied: display OK, no API redistribution, no call limits, trial latency = paid. T&C items added to section 6 (written OK for the proxy, commercial-use SOW, 12-month term, attribution).
 - **Oct 22, 2026:** Widget showed KVGT "late · 65 min" correctly at 1558Z. Siri device test at Kingman: prompts for an airport, cached-strip suggestions, "Kingman" ambiguous with 9K8 (KS), "Sky clear" with FEW/SCT, first try went to Apple Weather. Siri items and handoff added (section 4). Density altitude 180 ft low vs ForeFlight (no humidity); fix added to A2.
+- **Oct 22, 2026:** Siri hands-free code done on `feat/siri-hands-free` (`2173fb7`, `5b13947`, `06a87ca`, `a5ce1cb`, `8606c81`); device check pending [Jeff]. App search now also matches city.
