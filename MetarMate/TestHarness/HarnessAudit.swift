@@ -41,7 +41,7 @@ enum HarnessAudit {
             let wx   = m.weatherPhenomena.isEmpty ? "none" : m.weatherPhenomena.joined(separator: " ")
             out.append("     current: station=\(m.stationId) cat=\(m.flightCategory.rawValue) vis=\(vis) wind=\(windText(m.wind)) ceiling=\(ceil) wx=[\(wx)]")
 
-            let da = DensityAltitude.calculate(temperatureC: m.temperature.map(Double.init), dewpointC: m.dewpoint.map(Double.init),
+            let da = DensityAltitude.calculate(temperatureC: m.temperatureForDensityAltitudeC, dewpointC: m.dewpointForDensityAltitudeC,
                                                altimeterInHg: m.altimeter, fieldElevationFt: fx.airport.elevation)
             func shown<T>(_ v: T?) -> String { v.map { "\($0)" } ?? "not reported" }
             out.append("     temp=\(shown(m.temperature))°C dew=\(shown(m.dewpoint))°C altim=\(m.altimeter.map { String(format: "%.2f inHg", $0) } ?? "not reported")  DA=\(da.map { "\($0.densityAltitudeFt) ft MSL" } ?? "none") (elev \(fx.airport.elevation) ft)")

@@ -98,4 +98,24 @@ struct DensityAltitudeTests {
                                                        stationPressureHpa: p, fieldElevationFt: 3449))
         #expect(a.densityAltitudeFt == b.densityAltitudeFt)
     }
+
+    // MARK: - Tenths (Jeff, Oct 23: DA keeps NOAA's tenths; display stays whole degrees)
+
+    /// Live NOAA shape, KIGM Oct 23 2026: temp 13.3, dewp 2.2 (from T01330022). The Metar
+    /// displays 13/2; DA is computed off 13.3/2.2, not the rounded 13/2.
+    @Test func densityAltitudeUsesTenths() throws {
+        let json = #"{"icaoId":"KIGM","obsTime":1792770660,"rawOb":"METAR KIGM 231551Z AUTO 00000KT 10SM CLR 13/02 A3003 RMK AO2 SLP126 T01330022","temp":13.3,"dewp":2.2,"altim":1017,"wdir":0,"wspd":0,"visib":"10+","clouds":[],"fltCat":"VFR"}"#
+        let m = try MetarParser.parse(raw: JSONDecoder().decode(RawMetar.self, from: Data(json.utf8)))
+        #expect(m.temperature == 13 && m.dewpoint == 2)               // display: whole degrees
+        #expect(m.temperatureForDensityAltitudeC == 13.3 && m.dewpointForDensityAltitudeC == 2.2)
+        let fromTenths = try #require(DensityAltitude.calculate(temperatureC: 13.3, dewpointC: 2.2,
+                                                                altimeterInHg: m.altimeter, fieldElevationFt: 3449))
+        let fromRounded = try #require(DensityAltitude.calculate(temperatureC: 13, dewpointC: 2,
+                                                                 altimeterInHg: m.altimeter, fieldElevationFt: 3449))
+        let used = try #require(DensityAltitude.calculate(temperatureC: m.temperatureForDensityAltitudeC,
+                                                          dewpointC: m.dewpointForDensityAltitudeC,
+                                                          altimeterInHg: m.altimeter, fieldElevationFt: 3449))
+        #expect(used.densityAltitudeFt == fromTenths.densityAltitudeFt)
+        #expect(used.densityAltitudeFt != fromRounded.densityAltitudeFt)
+    }
 }

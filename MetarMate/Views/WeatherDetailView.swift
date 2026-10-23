@@ -130,8 +130,8 @@ struct WeatherDetailView: View {
         let hasRedNote   = notes.contains(where: { $0.severity == .warning || $0.severity == .danger })
 
         let da = DensityAltitude.calculate(
-            temperatureC: metar.temperature.map(Double.init),
-            dewpointC: metar.dewpoint.map(Double.init),
+            temperatureC: metar.temperatureForDensityAltitudeC,   // tenths when NOAA gave them
+            dewpointC: metar.dewpointForDensityAltitudeC,
             altimeterInHg: metar.altimeter,
             fieldElevationFt: airport.elevation
         )

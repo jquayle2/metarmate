@@ -220,6 +220,16 @@ struct Metar: Identifiable, Codable {
     var flightCategory: FlightCategory
     var weatherPhenomena: [String]
     var remarks: String?
+    // NOAA's temperature/dewpoint to the tenth (from the RMK T-group when the station sends one,
+    // e.g. 13.3). Display stays whole degrees (`temperature`/`dewpoint`); density altitude uses
+    // these (Jeff, Oct 23). nil when not reported, or for a Metar not built by the parser.
+    var preciseTemperatureC: Double? = nil
+    var preciseDewpointC: Double? = nil
+
+    /// Temperature/dewpoint for density altitude: the tenths when NOAA gave them, else the
+    /// whole-degree value, else nil (no DA).
+    nonisolated var temperatureForDensityAltitudeC: Double? { preciseTemperatureC ?? temperature.map(Double.init) }
+    nonisolated var dewpointForDensityAltitudeC: Double? { preciseDewpointC ?? dewpoint.map(Double.init) }
 
     /// The report has a sky condition. NOAA sends no layers for a stated clear sky (`10SM CLR` ->
     /// `clouds: []`), so an empty list is clear only when the report body says so; otherwise the

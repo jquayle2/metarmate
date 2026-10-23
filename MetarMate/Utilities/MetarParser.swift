@@ -48,7 +48,9 @@ struct MetarParser {
             dewpoint: dewp,
             altimeter: altimInHg,
             flightCategory: category,
-            weatherPhenomena: phenomena
+            weatherPhenomena: phenomena,
+            preciseTemperatureC: raw.temp,
+            preciseDewpointC: raw.dewp
         )
     }
 
