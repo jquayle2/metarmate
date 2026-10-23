@@ -63,9 +63,12 @@ extension Date {
 // MARK: - Wind - Display string
 extension Wind {
     nonisolated var displayString: String {
+        guard isReported else { return "Not reported" }   // nil ≠ calm
         if speed == 0 { return "Calm" }
-        let dir = isVariable ? "VRB" : "\(direction ?? 0)°"
-        let base = "\(dir) at \(speed)kt"
+        let base: String
+        if isVariable { base = "VRB at \(speed)kt" }
+        else if let direction { base = "\(direction)° at \(speed)kt" }
+        else { base = "Direction not reported, \(speed)kt" }   // never 000° (audit #10)
         if let g = gust { return "\(base) gusting \(g)kt" }
         return base
     }

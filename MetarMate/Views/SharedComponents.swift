@@ -101,7 +101,7 @@ func quickWeatherSummary(metar: Metar) -> String {
     } else if wind.speed == 0 {
         parts.append("Calm")
     } else {
-        let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
+        let dir = wind.directionCode
         if let gust = wind.gust {
             parts.append("\(dir)@\(wind.speed)G\(gust)")
         } else {
@@ -264,7 +264,7 @@ struct AirportRowView: View {
     private func windToken(_ wind: Wind) -> String {
         guard wind.isReported else { return "—" }   // wind not reported (nil ≠ calm)
         if wind.speed == 0 { return "CALM" }
-        let dir = wind.isVariable ? "VRB" : String(format: "%03d", wind.direction ?? 0)
+        let dir = wind.directionCode
         if let gust = wind.gust { return "\(dir)@\(wind.speed)G\(gust)" }
         return "\(dir)@\(wind.speed)"
     }

@@ -126,15 +126,16 @@ struct TafParser {
         guard let wspd = dict["wspd"]?.value as? Int else { return nil }
         let wgst = dict["wgst"]?.value as? Int
 
+        // Speed with no direction: direction unknown (nil, not variable), never 000° (audit #10).
         guard let wdirValue = dict["wdir"]?.value else {
-            return Wind(direction: 0, speed: wspd, gust: wgst, isVariable: false)
+            return Wind(direction: nil, speed: wspd, gust: wgst, isVariable: false)
         }
 
         if let dirString = wdirValue as? String {
             if dirString == "VRB" {
                 return Wind(direction: nil, speed: wspd, gust: wgst, isVariable: true)
             }
-            return Wind(direction: Int(dirString) ?? 0, speed: wspd, gust: wgst, isVariable: false)
+            return Wind(direction: Int(dirString), speed: wspd, gust: wgst, isVariable: false)
         }
 
         if let dirInt = wdirValue as? Int {
@@ -145,7 +146,7 @@ struct TafParser {
             return Wind(direction: Int(dirDouble), speed: wspd, gust: wgst, isVariable: false)
         }
 
-        return Wind(direction: 0, speed: wspd, gust: wgst, isVariable: false)
+        return Wind(direction: nil, speed: wspd, gust: wgst, isVariable: false)
     }
 
     // MARK: - Visibility parsing

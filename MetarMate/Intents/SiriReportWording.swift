@@ -114,7 +114,7 @@ enum SiriReportWording {
         } else if let d = wind.direction {
             dir = "\(d)"
         } else {
-            dir = "variable"
+            return "Wind direction not reported, \(wind.speed) knots" + (wind.gust.map { ", gusting \($0)" } ?? "") + "."
         }
         var phrase = "Wind \(dir) at \(wind.speed) knots"
         if let gust = wind.gust {

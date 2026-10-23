@@ -352,7 +352,7 @@ private struct WatchRow: View {
     private func windString(_ c: AlertConditions) -> String {
         guard let spd = c.windSpeed else { return "—" }   // wind not reported (nil ≠ calm)
         if spd == 0 { return "Calm" }
-        let dir = c.windDirection.map { String(format: "%03d", $0) } ?? "VRB"
+        let dir = c.windIsVariable ? "VRB" : c.windDirection.map { String(format: "%03d", $0) } ?? "///"
         if let gust = c.windGust { return "\(dir)@\(spd)G\(gust)" }
         return "\(dir)@\(spd)"
     }

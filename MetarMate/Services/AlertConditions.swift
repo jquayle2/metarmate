@@ -14,7 +14,8 @@ struct AlertConditions {
         case asos
     }
 
-    var windDirection: Int?          // degrees true; nil = variable / calm
+    var windDirection: Int?          // degrees true; nil = variable (windIsVariable) or not reported
+    var windIsVariable: Bool = false
     var windSpeed: Int?              // knots; nil = not reported (wind criteria are skipped)
     var windGust: Int?               // knots; nil = no gust reported
     var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling
@@ -57,6 +58,7 @@ struct AlertConditions {
                   flightCategory: metar.flightCategory,
                   source: .metar,
                   timestamp: metar.observationTime)
+        windIsVariable = metar.wind.isVariable
     }
 
     // MARK: - ASOS / Synoptic adapter
@@ -75,5 +77,6 @@ struct AlertConditions {
                   flightCategory: obs.estimatedCategory,
                   source: .asos,
                   timestamp: obs.observationTime)
+        windIsVariable = obs.windDirection == nil   // Synoptic: no direction has always read VRB here
     }
 }

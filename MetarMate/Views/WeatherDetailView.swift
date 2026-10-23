@@ -2252,7 +2252,7 @@ struct WeatherDetailView: View {
     private func tafCompactWind(_ wind: Wind?) -> String {
         guard let wind = wind, wind.isReported else { return "—" }   // nil/unreported wind → —
         if wind.speed == 0 { return "CALM" }
-        let dir = wind.isVariable ? "VRB" : String(format: "%03d°", wind.direction ?? 0)
+        let dir = wind.direction == nil ? wind.directionCode : wind.directionCode + "°"
         let gustPart = wind.gust.map { "G\($0)" } ?? ""
         return "\(dir) at \(wind.speed)\(gustPart)"
     }
@@ -3574,8 +3574,10 @@ struct WeatherDetailView: View {
     private func windText(_ wind: Wind) -> String {
         guard wind.isReported else { return "—" }   // wind not reported (nil ≠ calm)
         if wind.speed == 0 { return "Calm" }
-        let dir = wind.isVariable ? "Variable" : String(format: "%03d°", wind.direction ?? 0)
-        var text = "\(dir) at \(wind.speed) kt"
+        var text: String
+        if wind.isVariable { text = "Variable at \(wind.speed) kt" }
+        else if let d = wind.direction { text = String(format: "%03d° at %d kt", d, wind.speed) }
+        else { text = "Direction not reported, \(wind.speed) kt" }   // never 000° (audit #10)
         if let gust = wind.gust { text += ", gusting \(gust) kt" }
         return text
     }

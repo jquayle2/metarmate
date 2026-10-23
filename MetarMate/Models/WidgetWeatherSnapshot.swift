@@ -163,7 +163,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     var windDisplayString: String {
         if windReported == false { return "—" }
         if windSpeed == 0 { return "Calm" }
-        let dir = windIsVariable ? "VRB" : "\(windDirection ?? 0)\u{00B0}"
+        let dir = windIsVariable ? "VRB" : windDirection.map { "\($0)\u{00B0}" } ?? "///"
         let base = "\(dir) \(windSpeed)kt"
         if let g = windGust { return "\(base) G\(g)" }
         return base

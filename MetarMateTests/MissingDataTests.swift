@@ -76,4 +76,47 @@ struct MissingDataTests {
         #expect(snap.dewpoint == nil)
         #expect(snap.altimeter == nil)
     }
+
+    // MARK: - #10: wind direction / speed
+
+    /// `///25KT` (NOAA: no wdir, wspd 25): direction unknown, not 000° and not variable. At a
+    /// north runway, 000° read as a straight headwind, "XW 0 kt".
+    @Test func missingDirectionWithSpeedIsUnknownNotNorth() throws {
+        let m = try Self.metar(#""temp":19,"wspd":25,"visib":"10+","fltCat":"VFR""#,
+                               raw: "METAR KTST 231551Z AUTO ///25KT 10SM CLR 19/13 A2996")
+        #expect(m.wind.isReported)
+        #expect(m.wind.speed == 25)
+        #expect(m.wind.direction == nil)
+        #expect(!m.wind.isVariable)
+        #expect(m.wind.directionCode == "///")
+        #expect(m.wind.displayString == "Direction not reported, 25kt")
+        let c = AlertConditions(from: m)
+        #expect(c.windDirection == nil && !c.windIsVariable && c.windSpeed == 25)
+    }
+
+    /// `wdir:null` with a speed — the shape NOAA sends for a direction sensor dropout.
+    @Test func nullDirectionWithSpeedIsUnknown() throws {
+        let m = try Self.metar(#""wdir":null,"wspd":12,"wgst":20"#)
+        #expect(m.wind.direction == nil && !m.wind.isVariable && m.wind.speed == 12 && m.wind.gust == 20)
+    }
+
+    /// Direction with no speed: the wind can't be evaluated, so it's "not reported", not 0 kt.
+    @Test func directionWithoutSpeedIsNotReported() throws {
+        let m = try Self.metar(#""wdir":270"#)
+        #expect(!m.wind.isReported)
+    }
+
+    @Test func variableWindStillVariable() throws {
+        let m = try Self.metar(#""wdir":"VRB","wspd":22,"wgst":32"#,
+                               raw: "METAR KTST 231551Z VRB22G32KT 10SM CLR 19/13 A2996")
+        #expect(m.wind.isVariable && m.wind.direction == nil && m.wind.directionCode == "VRB")
+        #expect(AlertConditions(from: m).windIsVariable)
+    }
+
+    @Test func tafMissingDirectionIsUnknown() throws {
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"TAF KTST 231120Z 2312/2412 ///15KT P6SM SKC","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wspd":15,"visib":"6+","clouds":[{"cover":"SKC"}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        let wind = try #require(taf.forecasts.first?.wind)
+        #expect(wind.direction == nil && !wind.isVariable && wind.speed == 15)
+    }
 }

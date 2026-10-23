@@ -21,7 +21,7 @@ enum FlightCategory: String, Codable, CaseIterable {
 
 // MARK: - Wind
 struct Wind: Codable {
-    var direction: Int?      // degrees true; nil = variable
+    var direction: Int?      // degrees true; nil = variable (isVariable) or not reported (audit #10)
     var speed: Int           // knots
     var gust: Int?           // knots
     var isVariable: Bool
@@ -32,6 +32,13 @@ struct Wind: Codable {
     var isReported: Bool = true
 
     static let calm = Wind(direction: 0, speed: 0, gust: nil, isVariable: false)
+
+    /// METAR-style direction: "VRB", "270", or "///" when the direction wasn't reported
+    /// (`///25KT`). Never "000": a missing direction is not north.
+    nonisolated var directionCode: String {
+        if isVariable { return "VRB" }
+        return direction.map { String(format: "%03d", $0) } ?? "///"
+    }
 }
 
 // MARK: - Cloud Layer

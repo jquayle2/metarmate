@@ -54,19 +54,23 @@ struct MetarParser {
             return Wind(direction: nil, speed: 0, gust: nil, isVariable: false, isReported: false)
         }
 
-        let speed = wspd ?? 0
+        // A direction with no speed can't be evaluated either: wind not reported.
+        guard let speed = wspd else {
+            return Wind(direction: nil, speed: 0, gust: nil, isVariable: false, isReported: false)
+        }
         let gust = wgst
 
+        // Speed with no direction (`///25KT`): the speed is real, the direction is unknown (nil,
+        // not variable) — never 000°, which read as a straight-down-the-runway wind (audit #10).
         guard let wdirValue = wdir?.value else {
-            return Wind(direction: 0, speed: speed, gust: gust, isVariable: false)
+            return Wind(direction: nil, speed: speed, gust: gust, isVariable: false)
         }
 
         if let dirString = wdirValue as? String {
             if dirString == "VRB" {
                 return Wind(direction: nil, speed: speed, gust: gust, isVariable: true)
             }
-            let dir = Int(dirString) ?? 0
-            return Wind(direction: dir, speed: speed, gust: gust, isVariable: false)
+            return Wind(direction: Int(dirString), speed: speed, gust: gust, isVariable: false)
         }
 
         if let dirInt = wdirValue as? Int {
@@ -77,7 +81,7 @@ struct MetarParser {
             return Wind(direction: Int(dirDouble), speed: speed, gust: gust, isVariable: false)
         }
 
-        return Wind(direction: 0, speed: speed, gust: gust, isVariable: false)
+        return Wind(direction: nil, speed: speed, gust: gust, isVariable: false)
     }
 
     // MARK: - Visibility

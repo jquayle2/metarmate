@@ -65,9 +65,9 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [ ] #5 VRB worst-case crosswind (D#3)
 - [ ] #6 Unknown sky ≠ unlimited ceiling
 - [ ] #7 Staleness gate on verdicts (D#4)
-- [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported"
+- [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported". `48c1a90`
 - [ ] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown
-- [ ] #10 Missing wind direction/speed not reported as 000° / 0 kt
+- [x] #10 Missing wind direction/speed not reported as 000° / 0 kt (METAR and TAF parsers; shown as `///`/"Direction not reported"; verdict handling under #4)
 - [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
 - [ ] #12 Missing cloud base not 0 ft
 - [x] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
