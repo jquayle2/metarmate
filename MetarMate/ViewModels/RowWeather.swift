@@ -47,10 +47,11 @@ enum RowWeather {
 // MARK: - Loader
 /// Loads weather for a list's rows and publishes the whole row map each time it changes:
 /// 1. Rows start from fresh cache, else what they already show, else `.loading`.
-/// 2. METARs for reporting stations and 3-char LIDs (36K→K36K) in one batch request; transient
-///    failures retry 2 s / 5 s / 15 s (only the failing stations), then `.failed(last:)`.
-/// 3. Advisory estimates only for station-less airports, and for a LID only once NOAA confirms its
-///    K-station has no METAR — never because a METAR request failed.
+/// 2. METARs for reporting stations and 3-char LIDs (36K→K36K) in one NOAA request, and estimates
+///    for station-less airports in one Open-Meteo request, side by side; transient failures retry
+///    2 s / 5 s / 15 s (only the failing rows), then `.failed(last:)`.
+/// 3. A LID gets the estimate only once NOAA confirms its K-station has no METAR — never because a
+///    METAR request failed.
 /// Cancellation stops the load and leaves the rows as last published.
 @MainActor
 final class RowWeatherLoader {
@@ -106,76 +107,79 @@ final class RowWeatherLoader {
         guard !airports.isEmpty else { return }
         var rowFor: [String: Airport] = [:]   // NOAA id → row airport (KCMA → CMA)
         for a in airports { rowFor[WeatherService.noaaCandidate(for: a.icao) ?? a.icao.uppercased()] = a }
-        var pending = Array(rowFor.keys)
         var confirmedNoMetar: [Airport] = []   // LIDs whose K-station has no METAR: these get the estimate
-        var retry = 0
-        while true {
-            let outcomes = try await WeatherService.shared.metarOutcomes(for: pending)
-            var failing: [String] = []
-            var retryAfter: TimeInterval?
-            for id in pending {
-                guard let airport = rowFor[id], let outcome = outcomes[id] else { continue }
-                switch outcome {
-                case .loaded(let metar):
-                    rows[airport.icao] = .loaded(.metar(metar))
-                    cache.store(metar: metar, for: airport.icao)
-                case .noProduct:
-                    if airport.hasMetar { rows[airport.icao] = .noProduct } else { confirmedNoMetar.append(airport) }
-                case .failed(let failure):
-                    if failure.isTransient {
-                        failing.append(id)
-                        retryAfter = max(retryAfter ?? 0, failure.retryAfter ?? 0)
-                        rows[airport.icao] = .retrying(last: lastReading(airport))
-                    } else {
-                        rows[airport.icao] = .failed(last: lastReading(airport))
-                    }
-                }
-            }
-            publish(rows)
-            guard !failing.isEmpty else { break }
-            guard let wait = RetryPolicy.delay(beforeRetry: retry, retryAfter: retryAfter) else {
-                for id in failing { if let a = rowFor[id] { rows[a.icao] = .failed(last: lastReading(a)) } }
-                publish(rows)
-                Log.load.warning("[rows] \(self.list, privacy: .public) METAR retries used up for [\(failing.joined(separator: ","), privacy: .public)] — showing last reading + tap to retry")
+        try await batchWithRetries("METAR", ids: Array(rowFor.keys), rowFor: rowFor,
+                                   fetch: { try await WeatherService.shared.metarOutcomes(for: $0) }) { airport, outcome in
+            switch outcome {
+            case .loaded(let metar):
+                self.rows[airport.icao] = .loaded(.metar(metar))
+                self.cache.store(metar: metar, for: airport.icao)
+            case .noProduct:
+                if airport.hasMetar { self.rows[airport.icao] = .noProduct } else { confirmedNoMetar.append(airport) }
+            case .failed:
                 break
             }
-            Log.load.info("[retry] \(self.list, privacy: .public) METAR batch retry \(retry + 1, privacy: .public)/\(RetryPolicy.delays.count, privacy: .public) in \(Int(wait), privacy: .public)s for [\(failing.joined(separator: ","), privacy: .public)]")
-            try await Task.sleep(for: .seconds(wait))
-            retry += 1
-            pending = failing
         }
         try await loadAdvisories(confirmedNoMetar)
     }
 
+    /// Estimates in one Open-Meteo request (was one request per airport — the 429 burst).
     private func loadAdvisories(_ airports: [Airport]) async throws {
         guard !airports.isEmpty else { return }
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for airport in airports {
-                group.addTask { @MainActor in try await self.loadAdvisory(airport) }
+        let rowFor = Dictionary(airports.map { ($0.icao, $0) }, uniquingKeysWith: { a, _ in a })
+        try await batchWithRetries("ADVISORY", ids: Array(rowFor.keys), rowFor: rowFor,
+                                   fetch: { ids in try await OpenMeteoService.shared.advisoryOutcomes(for: ids.compactMap { rowFor[$0] }) }) { airport, outcome in
+            switch outcome {
+            case .loaded(let advisory):
+                self.rows[airport.icao] = .loaded(.advisory(advisory))
+                self.cache.store(advisory: advisory, for: airport.icao)
+            case .noProduct:
+                self.rows[airport.icao] = .noProduct
+            case .failed:
+                break
             }
-            try await group.waitForAll()
         }
     }
 
-    private func loadAdvisory(_ airport: Airport) async throws {
-        let outcome = try await RetryPolicy.run("ADVISORY \(airport.icao)") {
-            let result = try await OpenMeteoService.shared.advisoryOutcome(for: airport)
-            if case .failed(let f) = result, f.isTransient {
-                self.rows[airport.icao] = .retrying(last: self.lastReading(airport))
-                self.publish(self.rows)
+    /// Fetch a batch, then retry only the transiently failing ids per RetryPolicy (2 s / 5 s / 15 s,
+    /// honoring Retry-After). `apply` handles loaded and no-product outcomes; failures become
+    /// `.retrying(last:)` while a retry is pending and `.failed(last:)` once retries are used up.
+    private func batchWithRetries<Value>(_ kind: String, ids: [String], rowFor: [String: Airport],
+                                         fetch: ([String]) async throws -> [String: FetchOutcome<Value>],
+                                         apply: (Airport, FetchOutcome<Value>) -> Void) async throws {
+        var pending = ids
+        var retry = 0
+        while !pending.isEmpty {
+            let outcomes = try await fetch(pending)
+            var failing: [String] = []
+            var retryAfter: TimeInterval = 0
+            for id in pending {
+                guard let airport = rowFor[id], let outcome = outcomes[id] else { continue }
+                if case .failed(let failure) = outcome {
+                    if failure.isTransient {
+                        failing.append(id)
+                        retryAfter = max(retryAfter, failure.retryAfter ?? 0)
+                        rows[airport.icao] = .retrying(last: lastReading(airport))
+                    } else {
+                        rows[airport.icao] = .failed(last: lastReading(airport))
+                    }
+                } else {
+                    apply(airport, outcome)
+                }
             }
-            return result
+            publish(rows)
+            guard !failing.isEmpty else { return }
+            guard let wait = RetryPolicy.delay(beforeRetry: retry, retryAfter: retryAfter) else {
+                for id in failing { if let a = rowFor[id] { rows[a.icao] = .failed(last: lastReading(a)) } }
+                publish(rows)
+                Log.load.warning("[rows] \(self.list, privacy: .public) \(kind, privacy: .public) retries used up for [\(failing.joined(separator: ","), privacy: .public)] — showing last reading + tap to retry")
+                return
+            }
+            Log.load.info("[retry] \(self.list, privacy: .public) \(kind, privacy: .public) batch retry \(retry + 1, privacy: .public)/\(RetryPolicy.delays.count, privacy: .public) in \(Int(wait), privacy: .public)s for [\(failing.joined(separator: ","), privacy: .public)]")
+            try await Task.sleep(for: .seconds(wait))
+            retry += 1
+            pending = failing
         }
-        switch outcome {
-        case .loaded(let advisory):
-            rows[airport.icao] = .loaded(.advisory(advisory))
-            cache.store(advisory: advisory, for: airport.icao)
-        case .failed:
-            rows[airport.icao] = .failed(last: lastReading(airport))
-        case .noProduct:
-            rows[airport.icao] = .noProduct
-        }
-        publish(rows)
     }
 
     /// The last good reading for a row: what it shows now, else the last cached value of any age.

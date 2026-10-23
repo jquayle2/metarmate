@@ -27,31 +27,58 @@ actor OpenMeteoService {
         return buildAdvisory(airport: airport, response: decoded)
     }
 
-    /// One advisory request, classified. Open-Meteo always has a model value for a point, so there
-    /// is no "no product": it's loaded or failed (429 / 5xx transient, with Retry-After when sent).
-    /// Throws only CancellationError.
+    /// One airport's estimate, classified (a batch of one). Throws only CancellationError.
     func advisoryOutcome(for airport: Airport, file: String = #fileID, function: String = #function) async throws -> FetchOutcome<AdvisoryWeather> {
-        guard let url = buildURL(airport: airport) else { return .failed(FetchFailure(OpenMeteoError.badURL)) }
+        try await advisoryOutcomes(for: [airport], file: file, function: function)[airport.icao]
+            ?? .failed(FetchFailure(OpenMeteoError.badResponse))
+    }
+
+    /// Estimates for several airports in ONE request: Open-Meteo takes comma-separated latitude and
+    /// longitude lists and answers with one result per location, in order (a single object when there
+    /// is one location). Open-Meteo always has a model value for a point, so there is no "no product":
+    /// each airport is loaded, or gets the request's failure (429 / 5xx transient, with Retry-After
+    /// when sent). Throws only CancellationError.
+    func advisoryOutcomes(for airports: [Airport], file: String = #fileID, function: String = #function) async throws -> [String: FetchOutcome<AdvisoryWeather>] {
+        guard !airports.isEmpty else { return [:] }
+        func failAll(_ failure: FetchFailure) -> [String: FetchOutcome<AdvisoryWeather>] {
+            Dictionary(airports.map { ($0.icao, FetchOutcome<AdvisoryWeather>.failed(failure)) }, uniquingKeysWith: { a, _ in a })
+        }
+        guard let url = buildURL(airports: airports) else { return failAll(FetchFailure(OpenMeteoError.badURL)) }
         do {
-            let (data, response) = try await FetchLog.request("ADVISORY", ids: airport.icao, caller: FetchLog.caller(file, function)) {
+            let ids = airports.map(\.icao).joined(separator: ",")
+            let (data, response) = try await FetchLog.request("ADVISORY", ids: ids, caller: FetchLog.caller(file, function)) {
                 try await session.data(from: url)
             }
-            guard let http = response as? HTTPURLResponse else { return .failed(FetchFailure(OpenMeteoError.badResponse)) }
+            guard let http = response as? HTTPURLResponse else { return failAll(FetchFailure(OpenMeteoError.badResponse)) }
             guard http.statusCode == 200 else {
                 let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
-                return .failed(FetchFailure(WeatherError.httpStatus(http.statusCode), retryAfter: retryAfter))
+                return failAll(FetchFailure(WeatherError.httpStatus(http.statusCode), retryAfter: retryAfter))
             }
-            let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
-            return .loaded(buildAdvisory(airport: airport, response: decoded))
+            let decoded = airports.count == 1
+                ? [try JSONDecoder().decode(OpenMeteoResponse.self, from: data)]
+                : try JSONDecoder().decode([OpenMeteoResponse].self, from: data)
+            guard decoded.count == airports.count else {
+                return failAll(FetchFailure(WeatherError.parseError("Open-Meteo returned \(decoded.count) of \(airports.count) locations")))
+            }
+            var result: [String: FetchOutcome<AdvisoryWeather>] = [:]
+            for (airport, response) in zip(airports, decoded) {
+                result[airport.icao] = .loaded(buildAdvisory(airport: airport, response: response))
+            }
+            return result
         } catch {
             if FetchErrorKind(error) == .cancelled { throw CancellationError() }
-            return .failed(FetchFailure(error))
+            return failAll(FetchFailure(error))
         }
     }
 
     // MARK: - URL builder
 
     private func buildURL(airport: Airport) -> URL? {
+        buildURL(airports: [airport])
+    }
+
+    /// One URL for every airport's point (comma-separated latitude / longitude lists).
+    private func buildURL(airports: [Airport]) -> URL? {
         let hourlyVars = [
             "temperature_2m", "dewpoint_2m", "wind_speed_10m",
             "wind_gusts_10m", "wind_direction_10m", "cloud_cover",
@@ -67,8 +94,8 @@ actor OpenMeteoService {
 
         var c = URLComponents(string: base)!
         c.queryItems = [
-            .init(name: "latitude",         value: String(airport.latitude)),
-            .init(name: "longitude",        value: String(airport.longitude)),
+            .init(name: "latitude",         value: airports.map { String($0.latitude) }.joined(separator: ",")),
+            .init(name: "longitude",        value: airports.map { String($0.longitude) }.joined(separator: ",")),
             .init(name: "current",          value: currentVars),
             .init(name: "hourly",           value: hourlyVars),
             .init(name: "past_hours",       value: "6"),
