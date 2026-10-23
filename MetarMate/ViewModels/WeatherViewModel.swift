@@ -57,43 +57,48 @@ class WeatherViewModel: ObservableObject {
         }
         let loadStart = DispatchTime.now()
         Log.load.info("[load] \(airport.icao, privacy: .public) START hasMetar=\(airport.hasMetar, privacy: .public)")
+        // What's on screen stays until an outcome replaces it: a failed refresh keeps the last
+        // reading (or the last advisory) instead of blanking it.
         isLoading = true
         error = nil
-        noWeatherReporting = false
-        nearbyReportingAirports = []
-        advisoryWeather = nil
-        isMetarFallback = false
         synopticError = nil
 
         if !airport.hasMetar {
-            // Numeric/short US LIDs (36K→K36K, CMA→KCMA) can still publish a real METAR;
-            // try the K-prefixed ICAO against NOAA before falling back to advisory. Only
-            // fall back after this genuinely misses.
+            // Numeric/short US LIDs (36K→K36K, CMA→KCMA) can still publish a real METAR; try the
+            // K-prefixed ICAO first. Advisory only once NOAA confirms it has no METAR for it — a
+            // failed request is not a miss (L35 showed an estimate while KL35 was reporting).
             if let kIcao = WeatherService.noaaCandidate(for: airport.icao) {
-                await loadMETAR(icao: kIcao, field: airport)
-                if metar != nil {
+                switch await loadMETAR(icao: kIcao, field: airport) {
+                case .loaded, .cancelled:
                     isLoading = false
                     return
+                case .failed:
+                    Log.load.warning("[fallback] \(airport.icao, privacy: .public) none: \(kIcao, privacy: .public) METAR request failed after retries — no advisory on a failure")
+                    isLoading = false
+                    return
+                case .noProduct:
+                    Log.load.info("[fallback] \(airport.icao, privacy: .public) → ADVISORY (no hasMetar; \(kIcao, privacy: .public) has no METAR)")
+                    noWeatherReporting = false
                 }
-                Log.load.info("[fallback] \(airport.icao, privacy: .public) → ADVISORY (no hasMetar; \(kIcao, privacy: .public) noWeatherReporting=\(self.noWeatherReporting, privacy: .public) why=\(self.error.map(FetchLog.classify) ?? "noProduct", privacy: .public))")
-                error = nil
-                noWeatherReporting = false
             }
             await loadAdvisory(airport: airport)
         } else {
             // For 3-char FAA LIDs, use the K-prefixed ICAO for NOAA lookup (CMA → KCMA)
             let icaoForFetch = WeatherService.noaaCandidate(for: airport.icao) ?? airport.icao
-            await loadMETAR(icao: icaoForFetch, field: airport)
-            if noWeatherReporting || (metar == nil && error != nil) {
-                // This is the silent-fallback case: a hasMetar station couldn't return a
-                // real METAR (usually a slow/timed-out fetch), so we drop to advisory.
-                // Log loudly so we can see when it happens and why.
-                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR fallback → ADVISORY (noWeatherReporting=\(self.noWeatherReporting, privacy: .public), metar=\(self.metar != nil, privacy: .public), err=\(self.error != nil ? String(describing: self.error!) : "none", privacy: .public), why=\(self.error.map(FetchLog.classify) ?? "noProduct", privacy: .public))")
+            switch await loadMETAR(icao: icaoForFetch, field: airport) {
+            case .noProduct:
+                // NOAA confirms this reporting station has no METAR right now: show the estimate.
+                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR fallback → ADVISORY (noProduct)")
                 isMetarFallback = true
-                error = nil
                 await loadAdvisory(airport: airport)
-            } else {
+            case .failed:
+                // Never an advisory fallback on a failure: the last reading (if any) stays, and the
+                // detail screen offers Retry when there's nothing to show.
+                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR failed after retries — keeping last reading (\(self.metar != nil, privacy: .public)), no fallback")
+            case .loaded:
                 Log.load.info("[load] \(airport.icao, privacy: .public) METAR OK (\(self.metarHistory.count, privacy: .public) obs)")
+            case .cancelled:
+                break
             }
 
             if StoreManager.shared.isAsosUser {
@@ -108,7 +113,7 @@ class WeatherViewModel: ObservableObject {
         if let airport = AirportService.shared.airport(icao: icao) {
             await load(airport: airport)
         } else {
-            await loadMETAR(icao: icao)
+            _ = await loadMETAR(icao: icao)
         }
     }
 
@@ -143,45 +148,41 @@ class WeatherViewModel: ObservableObject {
     }
 
     // MARK: - METAR path (aviationweather.gov)
-    private func loadMETAR(icao: String, field: Airport? = nil) async {
-        error = nil
-        noWeatherReporting = false
-        nearbyReportingAirports = []
+    private enum MetarLoad { case loaded, noProduct, failed, cancelled }
 
+    /// The field's METARs and TAF, each retried on a transient failure (RetryPolicy). Loaded: shown.
+    /// No product (NOAA confirms no METAR): the field is marked not reporting and nearby reporting
+    /// stations are listed. Failed: nothing on screen changes; `error` is set for the Retry view.
+    /// Cancelled: nothing changes.
+    private func loadMETAR(icao: String, field: Airport? = nil) async -> MetarLoad {
+        let service = weatherService
         do {
-            async let historyResult = weatherService.fetchMetarHistory(for: icao, hours: 6)
-            async let tafResult = weatherService.tafResult(for: icao)
+            async let ownTaf = RetryPolicy.run("TAF \(icao)") { try await service.tafOutcome(for: icao) }
+            var history = try await RetryPolicy.run("METAR \(icao)") { try await service.metarHistoryOutcome(for: icao, hours: 6) }
+            var fetchIcao = icao
+            var tafOutcome: FetchOutcome<Taf>?
 
-            let fetchedHistory = try await historyResult
-            let ownTafResult = await tafResult
-
-            if fetchedHistory.isEmpty {
-                // For 3-char FAA LIDs (CMA, 36K, 1G4, …), try the K-prefixed ICAO (KCMA, K36K)
-                if let kIcao = WeatherService.noaaCandidate(for: icao) {
-                    if let retryHistory = try? await weatherService.fetchMetarHistory(for: kIcao, hours: 6),
-                       !retryHistory.isEmpty {
-                        metarHistory = retryHistory
-                        metar = retryHistory.first
-                        let (retryTaf, retryStatus) = await resolveTaf(await weatherService.tafResult(for: kIcao),
-                                                                       fetchIcao: kIcao, field: field)
-                        await applyTaf(retryTaf, status: retryStatus, history: retryHistory)
-                        lastUpdated = Date()
-                        if let currentMetar = metar {
-                            let snapshot = WidgetWeatherSnapshot.from(
-                                airport: AirportService.shared.airport(icao: icao) ?? Airport(
-                                    icao: icao, iata: nil, name: icao,
-                                    latitude: 0, longitude: 0, elevation: nil
-                                ),
-                                metar: currentMetar,
-                                trend: snapshotTrend,
-                                tafVerification: snapshotVerification
-                            )
-                            WidgetVerdictSync.publishRunways(for: [snapshot.icao])
-                            WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
-                        }
-                        return
-                    }
+            // For 3-char FAA LIDs (CMA, 36K, 1G4, …) without an airport record, try the K-prefixed ICAO.
+            if history.isNoProduct, let kIcao = WeatherService.noaaCandidate(for: icao) {
+                history = try await RetryPolicy.run("METAR \(kIcao)") { try await service.metarHistoryOutcome(for: kIcao, hours: 6) }
+                if history.value != nil {
+                    fetchIcao = kIcao
+                    tafOutcome = try await RetryPolicy.run("TAF \(kIcao)") { try await service.tafOutcome(for: kIcao) }
                 }
+            }
+
+            switch history {
+            case .loaded(let fetched):
+                let ownTafOutcome: FetchOutcome<Taf>
+                if let tafOutcome { ownTafOutcome = tafOutcome } else { ownTafOutcome = try await ownTaf }
+                await show(history: fetched, ownTaf: ownTafOutcome, airportIcao: icao, fetchIcao: fetchIcao, field: field)
+                return .loaded
+            case .failed(let failure):
+                Log.load.error("[load] \(icao, privacy: .public) METAR load failed: \(FetchLog.classify(failure), privacy: .public)")
+                error = failure.underlying
+                return .failed
+            case .noProduct:
+                error = nil
                 noWeatherReporting = true
                 metar = nil
                 metarHistory = []
@@ -191,38 +192,40 @@ class WeatherViewModel: ObservableObject {
                 trend = nil
                 tafVerification = nil
                 await loadNearbyReporting(icao: icao)
-            } else {
-                metarHistory = fetchedHistory
-                metar = fetchedHistory.first
-                let (resolvedTaf, status) = await resolveTaf(ownTafResult, fetchIcao: icao, field: field)
-                await applyTaf(resolvedTaf, status: status, history: fetchedHistory)
+                return .noProduct
             }
-
-            lastUpdated = Date()
-
-            // Write widget snapshot for this airport
-            if let currentMetar = metar {
-                let snapshot = WidgetWeatherSnapshot.from(
-                    airport: AirportService.shared.airport(icao: icao) ?? Airport(
-                        icao: icao, iata: nil, name: icao,
-                        latitude: 0, longitude: 0, elevation: nil
-                    ),
-                    metar: currentMetar,
-                    trend: snapshotTrend,
-                    tafVerification: snapshotVerification
-                )
-                WidgetVerdictSync.publishRunways(for: [snapshot.icao])   // before save: its reload carries them
-                WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
-            }
-        } catch is CancellationError {
-            // User navigated away mid-load. Not a failure — don't set error (which would
-            // otherwise trip the METAR→advisory fallback for a load we abandoned anyway).
-            Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
-        } catch let err as URLError where err.code == .cancelled {
-            Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
         } catch {
-            Log.load.error("[load] \(icao, privacy: .public) METAR load failed: \(FetchLog.classify(error), privacy: .public)")
-            self.error = error
+            // Navigated away mid-load. Not a failure: nothing changes, and no fallback.
+            Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
+            return .cancelled
+        }
+    }
+
+    /// Publish a loaded METAR history and its TAF, and write the widget snapshot.
+    private func show(history: [Metar], ownTaf: FetchOutcome<Taf>, airportIcao: String, fetchIcao: String, field: Airport?) async {
+        error = nil
+        noWeatherReporting = false
+        nearbyReportingAirports = []
+        advisoryWeather = nil
+        isMetarFallback = false
+        metarHistory = history
+        metar = history.first
+        let (resolvedTaf, status) = await resolveTaf(ownTaf, fetchIcao: fetchIcao, field: field)
+        await applyTaf(resolvedTaf, status: status, history: history)
+        lastUpdated = Date()
+
+        if let currentMetar = metar {
+            let snapshot = WidgetWeatherSnapshot.from(
+                airport: AirportService.shared.airport(icao: airportIcao) ?? Airport(
+                    icao: airportIcao, iata: nil, name: airportIcao,
+                    latitude: 0, longitude: 0, elevation: nil
+                ),
+                metar: currentMetar,
+                trend: snapshotTrend,
+                tafVerification: snapshotVerification
+            )
+            WidgetVerdictSync.publishRunways(for: [snapshot.icao])   // before save: its reload carries them
+            WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
         }
     }
 
@@ -230,7 +233,7 @@ class WeatherViewModel: ObservableObject {
     /// The field's own TAF when it has a current one; otherwise (204 / empty / expired) the nearest
     /// current TAF within 50 nm. A failed request never borrows. The nearby lookup is cached ~10 min
     /// per field; the field's own TAF is requested on every refresh, so one that appears wins at once.
-    private func resolveTaf(_ ownResult: Result<Taf, Error>, fetchIcao: String, field: Airport?) async -> (Taf?, TafStatus) {
+    private func resolveTaf(_ ownResult: FetchOutcome<Taf>, fetchIcao: String, field: Airport?) async -> (Taf?, TafStatus) {
         let field = field ?? AirportService.shared.airport(icao: fetchIcao)
         let position = field.map { f in
             (ids: Set([fetchIcao.uppercased(), f.icao.uppercased()]), latitude: f.latitude, longitude: f.longitude, elevationFt: f.elevation)
@@ -285,21 +288,22 @@ class WeatherViewModel: ObservableObject {
     }
 
     // MARK: - Advisory weather path (Open-Meteo, for non-METAR airports)
+    /// The estimate, retried on a transient failure. A failure keeps the last advisory on screen.
     private func loadAdvisory(airport: Airport) async {
         do {
-            advisoryWeather = try await OpenMeteoService.shared.fetchAdvisory(for: airport)
-            lastUpdated = Date()
-
-            // Write advisory widget snapshot
-            if let advisory = advisoryWeather {
-                let snapshot = WidgetWeatherSnapshot.fromAdvisory(
-                    airport: airport,
-                    advisory: advisory
-                )
-                WidgetDataManager.save(snapshot: snapshot)
+            switch try await RetryPolicy.run("ADVISORY \(airport.icao)", { try await OpenMeteoService.shared.advisoryOutcome(for: airport) }) {
+            case .loaded(let advisory):
+                advisoryWeather = advisory
+                lastUpdated = Date()
+                WidgetDataManager.save(snapshot: WidgetWeatherSnapshot.fromAdvisory(airport: airport, advisory: advisory))
+            case .failed(let failure):
+                Log.load.error("[load] \(airport.icao, privacy: .public) advisory failed: \(FetchLog.classify(failure), privacy: .public)")
+                error = failure.underlying
+            case .noProduct:
+                break
             }
         } catch {
-            self.error = error
+            Log.load.info("[load] \(airport.icao, privacy: .public) advisory cancelled (navigated away)")
         }
     }
 

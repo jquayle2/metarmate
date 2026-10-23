@@ -135,11 +135,12 @@ nonisolated enum FetchLog {
         }
     }
 
-    /// The outcome words for a Result (e.g. the field's own TAF request).
-    static func classify<T>(_ result: Result<T, Error>) -> String {
-        switch result {
-        case .success: return "ok"
-        case .failure(let error): return classify(error)
+    /// The outcome words for a fetch outcome (e.g. the field's own TAF request).
+    static func classify<T>(_ outcome: FetchOutcome<T>) -> String {
+        switch outcome {
+        case .loaded: return "ok"
+        case .noProduct: return "noProduct"
+        case .failed(let failure): return classify(failure)
         }
     }
 
