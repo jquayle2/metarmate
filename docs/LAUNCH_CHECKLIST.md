@@ -88,6 +88,10 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown (level arrow for steady/mixed, level slate mark without a head for unknown; VoiceOver "Trend steady/mixed/unknown"). `c7c34b5`
 - [x] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken" (detail, ASOS row, Siri "Indefinite ceiling, vertical visibility N feet"). `c7c34b5`
 - [x] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`). `c7c34b5`
+- [x] Fallback (non-bundled) airport elevation: NOAA meters converted to feet at the source (DA, nearby-TAF elevation caution). `9025643`
+- [x] DA uses NOAA's temperature/dewpoint tenths; display stays whole degrees. `6f3d066`
+- [x] TAF validity from NOAA or the TAF's own DDHH/DDHH group; never an assumed 24 h; no validity → TAF not used. `ad9b24f`
+- [ ] Favorites of non-bundled airports saved before `9025643` keep the meter elevation until re-added (repair needs SwiftData: A3 / Jeff)
 - [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
 - [x] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases): A2 suites DensityAltitudeTests, MissingDataTests, VerdictTests, DisplayUnknownTests, P3IntegrityTests; `currentForecast`/BECMG/verification in TafTimeLogicTests (nearby-TAF). 230/230 on `c7c34b5`
 - [ ] Merge A2 [Jeff]
