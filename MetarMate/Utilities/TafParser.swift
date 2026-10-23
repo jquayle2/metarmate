@@ -17,8 +17,12 @@ struct TafParser {
             throw WeatherError.parseError("Missing TAF issue time")
         }
 
-        let validFrom = raw.validTimeFrom.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? issueTime
-        let validTo = raw.validTimeTo.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? issueTime.addingTimeInterval(86400)
+        // Validity: NOAA's fields, else the TAF's own validity group ("2318/2424"). Never an assumed
+        // 24 h or "valid from issue" (Jeff, Oct 23); with neither, the TAF isn't used.
+        let stated = validityGroup(in: rawText, issueTime: issueTime)
+        guard let validFrom = raw.validTimeFrom.map({ Date(timeIntervalSince1970: TimeInterval($0)) }) ?? stated?.from,
+              let validTo = raw.validTimeTo.map({ Date(timeIntervalSince1970: TimeInterval($0)) }) ?? stated?.to
+        else { throw WeatherError.parseError("Missing TAF validity") }
 
         let forecasts = parseForecastPeriods(raw.fcsts ?? [], rawText: rawText)
 
@@ -220,6 +224,37 @@ struct TafParser {
             previous = token
         }
         return groups
+    }
+
+    /// The TAF's validity group, the first DDHH/DDHH token ("2318/2424"; hour 24 is midnight at
+    /// the end of that day), placed in time against the issue time: the issue time's month, or
+    /// the next month when the day has wrapped (issued on the 31st, valid 0100/0124).
+    nonisolated static func validityGroup(in rawText: String, issueTime: Date) -> (from: Date, to: Date)? {
+        guard let token = rawText.split(separator: " ").first(where: { t in
+            t.count == 9 && t.dropFirst(4).first == "/" && t.filter(\.isNumber).count == 8
+        }) else { return nil }
+        let digits = token.compactMap(\.wholeNumberValue)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        func date(day: Int, hour: Int) -> Date? {
+            guard (1...31).contains(day), (0...24).contains(hour) else { return nil }
+            for monthsAhead in 0...1 {
+                guard let month = utc.date(byAdding: .month, value: monthsAhead,
+                                           to: utc.date(from: utc.dateComponents([.year, .month], from: issueTime))!)
+                else { continue }
+                var parts = utc.dateComponents([.year, .month], from: month)
+                parts.day = day; parts.hour = 0
+                // Reject a day the month doesn't have (date(from:) would roll it over).
+                guard let midnight = utc.date(from: parts), utc.component(.day, from: midnight) == day else { continue }
+                let d = midnight.addingTimeInterval(TimeInterval(hour * 3600))
+                if d >= issueTime.addingTimeInterval(-86400) { return d }   // not before the issue day
+            }
+            return nil
+        }
+        guard let from = date(day: digits[0] * 10 + digits[1], hour: digits[2] * 10 + digits[3]),
+              let to = date(day: digits[4] * 10 + digits[5], hour: digits[6] * 10 + digits[7]),
+              to > from else { return nil }
+        return (from, to)
     }
 
     nonisolated private static func parseDate(_ str: String) -> Date? {

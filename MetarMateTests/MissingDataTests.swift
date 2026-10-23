@@ -344,4 +344,36 @@ struct MissingDataTests {
         #expect(WeatherDecoder.hazards(["+FC"]) == ["Tornado/Waterspout"])
         #expect(WeatherDecoder.hazards(["SQ", "GR", "-FZRA", "FZFG", "RA"]) == ["Squall", "Hail", "Light Freezing Rain"])
     }
+
+    // MARK: - TAF validity (Jeff, Oct 23): never an assumed 24 h
+
+    private func tafJSON(_ validity: String, raw: String) -> String {
+        #"{"icaoId":"KTST","issueTime":"2026-10-23T17:20:00.000Z",\#(validity)"rawTAF":"\#(raw)","fcsts":[{"timeFrom":1792778400,"timeTo":1792800000,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SKC"}]}]}"#
+    }
+
+    /// NOAA without validTimeTo: the end comes from the TAF's own 2318/2424 group (a 30-h TAF;
+    /// the old default was issue + 24 h). Hour 24 is midnight ending the 24th.
+    @Test func tafValidityFromRawGroup() throws {
+        let json = tafJSON(#""validTimeFrom":1792778400,"#, raw: "TAF KTST 231720Z 2318/2424 20008KT P6SM SKC TEMPO 2320/2322 BKN030")
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(identifier: "UTC")!
+        #expect(taf.validTo == utc.date(from: DateComponents(year: 2026, month: 10, day: 25, hour: 0)))
+        #expect(taf.validFrom == utc.date(from: DateComponents(year: 2026, month: 10, day: 23, hour: 18)))
+    }
+
+    @Test func tafValidityGroupWrapsMonth() throws {
+        var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(identifier: "UTC")!
+        let issue = try #require(utc.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 23, minute: 40)))
+        let v = try #require(TafParser.validityGroup(in: "TAF KTST 312340Z 0100/0124 20008KT P6SM SKC", issueTime: issue))
+        #expect(v.from == utc.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 0)))
+        #expect(v.to == utc.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 0)))
+    }
+
+    /// No NOAA validity and no group in the text: the TAF isn't used.
+    @Test func tafWithoutAnyValidityIsDropped() {
+        let json = tafJSON("", raw: "TAF KTST 231720Z 20008KT P6SM SKC")
+        #expect(throws: (any Error).self) {
+            try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        }
+    }
 }
