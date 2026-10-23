@@ -22,10 +22,14 @@ struct LimitingFactor {
     let kind: LimitingFactorKind
     let category: FlightCategory   // == period.flightCategory verbatim, never re-derived
     let windDirectionDeg: Int?     // nil if variable/calm
-    let windSpeedKt: Int
+    let windSpeedKt: Int?          // nil = wind not forecast (never "Calm")
     let windGustKt: Int?
-    let ceilingFeet: Int?          // nil = unlimited
+    let ceilingFeet: Int?          // nil = no ceiling or not forecast — see `ceiling`
+    let ceiling: CeilingStatus
     let visibility: Visibility
+    /// Compact ceiling value: feet, "CLR" only for a stated clear sky, "NO CIG" with FEW/SCT
+    /// (F18), "—" when the sky isn't forecast (audit #16).
+    let ceilingText: String
 }
 
 enum ForecastRules {
@@ -73,10 +77,18 @@ enum ForecastRules {
             kind: winner,
             category: period.flightCategory,
             windDirectionDeg: (period.wind?.isVariable == true) ? nil : period.wind?.direction,
-            windSpeedKt: period.wind?.speed ?? 0,
+            windSpeedKt: period.wind?.speed,
             windGustKt: period.wind?.gust,
             ceilingFeet: ceilFt,
-            visibility: vis
+            ceiling: period.ceiling,
+            visibility: vis,
+            ceilingText: {
+                switch period.ceiling {
+                case .feet(let f):  return f.formatted()
+                case .none:         return period.clouds.contains { $0.coverage == .few || $0.coverage == .scattered } ? "NO CIG" : "CLR"
+                case .notReported:  return "—"
+                }
+            }()
         )
     }
 }

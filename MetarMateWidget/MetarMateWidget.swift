@@ -843,7 +843,11 @@ struct HomeScreenMediumView: View {
                         )
                     }
                 }
-            } else if snap.tafAccuracyPct != nil {
+            } else if snap.tafAccuracyPct != nil,
+                      snap.forecastWindDivergenceKt != nil || snap.forecastCeilingDivergenceFt != nil
+                        || snap.forecastVisibilityDivergenceSM != nil {
+                // "On target" only when a deviation was actually measured (audit #16), never when
+                // there's no deviation data at all.
                 HStack(spacing: 3) {
                     Image(systemName: "checkmark.circle")
                         .font(.caption2)

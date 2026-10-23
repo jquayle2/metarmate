@@ -786,7 +786,8 @@ struct WeatherDetailView: View {
         let hasFZ = phenomena.contains(where: { $0.contains("FZ") })
         let hasSQ = phenomena.contains(where: { $0.contains("SQ") })
         let hasFC = phenomena.contains(where: { $0.contains("FC") })
-        if hasTS || hasFZ || hasSQ || hasFC { return Brand.valueRed }
+        // Hazard red (alert chrome), not the category/value red: a red chip mustn't read as "IFR" (F16).
+        if hasTS || hasFZ || hasSQ || hasFC { return Brand.dangerRed }
         return Brand.cautionOrange
     }
 
@@ -1477,6 +1478,31 @@ struct WeatherDetailView: View {
         return "\(hrs) HR"
     }
 
+    /// The history brief's trend sentence after the category lead. Internal + static for tests.
+    static func historyTrendTail(_ metars: [Metar], window: String) -> String {
+        guard let latest = metars.first, let oldest = metars.last else { return "" }
+        let tail: String
+        // Only describe a wind change when both endpoints reported wind — an unreported endpoint
+        // (0-kt placeholder) would fake a change to/from calm.
+        let windChanged = oldest.wind.isReported && latest.wind.isReported
+            && (oldest.wind.speed != latest.wind.speed || oldest.wind.gust != latest.wind.gust)
+        let windClause = "Wind \(Self.compactWind(oldest.wind)) to \(Self.compactWind(latest.wind))"
+        if oldest.flightCategory != latest.flightCategory,
+           oldest.flightCategory != .unknown, latest.flightCategory != .unknown {
+            // A category change leads; it's never summarized as "Steady" off the wind (audit #16).
+            tail = "\(oldest.flightCategory.rawValue) to \(latest.flightCategory.rawValue) over the last \(window)."
+                + (windChanged ? " \(windClause)." : "")
+        } else if windChanged {
+            tail = "\(windClause) over the last \(window)."
+        } else if oldest.wind.isReported, latest.wind.isReported,
+                  ObservedTrend.derive(from: metars).overall == .steady {
+            tail = "Steady over the last \(window)."
+        } else {
+            tail = ""   // not enough reported to call it steady
+        }
+        return tail
+    }
+
     // Plain-English recent-trend lead: a falling-pressure lead (amber, or red if rapid) takes
     // priority since it's the earliest hint of deterioration; otherwise a neutral category
     // lead. The worst-recent extreme folds in as a trailing clause only when the current
@@ -1494,15 +1520,7 @@ struct WeatherDetailView: View {
             lead = Text("\(latest.flightCategory.rawValue). ").foregroundColor(Brand.cloud)
         }
 
-        var tail: String
-        // Only describe a wind change when both endpoints reported wind — an unreported endpoint
-        // (0-kt placeholder) would fake a change to/from calm.
-        if let oldest = metars.last, oldest.wind.isReported, latest.wind.isReported,
-           oldest.wind.speed != latest.wind.speed || oldest.wind.gust != latest.wind.gust {
-            tail = "Wind \(tafCompactWind(oldest.wind)) to \(tafCompactWind(latest.wind)) over the last \(historyWindowPhrase(metars))."
-        } else {
-            tail = "Steady over the last \(historyWindowPhrase(metars))."
-        }
+        var tail = Self.historyTrendTail(metars, window: historyWindowPhrase(metars))
 
         if let stats = worstRecentStats(metars), stats.hasRed || stats.hasAmber {
             let stillCurrent = latest.wind.gust == stats.maxGust && latest.wind.speed == stats.maxSustained
@@ -1520,7 +1538,7 @@ struct WeatherDetailView: View {
             }
         }
 
-        return lead + Text(tail).foregroundColor(Brand.slate)
+        return lead + Text(tail.trimmingCharacters(in: .whitespaces)).foregroundColor(Brand.slate)
     }
 
     private func historyWindowPhrase(_ metars: [Metar]) -> String {
@@ -2095,13 +2113,17 @@ struct WeatherDetailView: View {
         @ViewBuilder private var valueText: some View {
             switch factor.kind {
             case .wind:
-                if factor.windSpeedKt == 0 {
-                    Text("Calm")
+                if let speed = factor.windSpeedKt {
+                    if speed == 0 {
+                        Text("Calm")
+                    } else {
+                        Text(factor.windGustKt.map { "\(speed)G\($0)" } ?? "\(speed)")
+                    }
                 } else {
-                    Text(factor.windGustKt.map { "\(factor.windSpeedKt)G\($0)" } ?? "\(factor.windSpeedKt)")
+                    Text("—")   // wind not forecast: never "Calm" (audit #16)
                 }
             case .ceiling:
-                Text(factor.ceilingFeet.map { "\($0.formatted())" } ?? "CLR")
+                Text(factor.ceilingText)
             case .visibility:
                 Text(factor.visibility.displayNumber ?? "—")   // .exact(6)->"6", .greaterThan(6)->"6+"
             }
@@ -2115,7 +2137,9 @@ struct WeatherDetailView: View {
         switch period.flightCategory {
         case .vfr, .unknown:
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Rectangle().fill(Brand.vfrGreen.opacity(0.5)).frame(width: 3).clipShape(Capsule())
+                // Unknown gets a neutral rail, never the VFR green (audit #16).
+                Rectangle().fill(period.flightCategory == .unknown ? Brand.slate.opacity(0.5) : Brand.vfrGreen.opacity(0.5))
+                    .frame(width: 3).clipShape(Capsule())
                 HStack(alignment: .firstTextBaseline) {
                     HStack(spacing: 6) {
                         Text(tafLocalClock(period.fromTime)).font(.avenir(14.5, .heavy)).foregroundColor(Brand.fog)
@@ -2254,7 +2278,9 @@ struct WeatherDetailView: View {
     }
 
     // Compact METAR-style wind token, e.g. "190° at 11G18", "CALM", "VRB at 6".
-    private func tafCompactWind(_ wind: Wind?) -> String {
+    private func tafCompactWind(_ wind: Wind?) -> String { Self.compactWind(wind) }
+
+    static func compactWind(_ wind: Wind?) -> String {
         guard let wind = wind, wind.isReported else { return "—" }   // nil/unreported wind → —
         if wind.speed == 0 { return "CALM" }
         let dir = wind.direction == nil ? wind.directionCode : wind.directionCode + "°"
