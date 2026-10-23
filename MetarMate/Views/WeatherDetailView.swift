@@ -18,7 +18,7 @@ struct WeatherDetailView: View {
     @State private var showLayoutSettings = false
     @State private var showNearbyAirports = false
     @State private var showProUpgrade = false     // ASOS paywall
-    @State private var showProSheet = false       // Pro paywall (favorites/widgets/Siri)
+    @State private var showProSheet = false       // Pro paywall (layout customization)
 
     private var isFavorite: Bool {
         favorites.contains(where: { $0.icao == airport.icao })
@@ -69,7 +69,12 @@ struct WeatherDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                         Button {
-                            showLayoutSettings = true
+                            // Layout customization is Pro (D#20).
+                            if ProGate.allows(.layout, isPro: store.isProForUI) {
+                                showLayoutSettings = true
+                            } else {
+                                showProSheet = true
+                            }
                         } label: {
                             Image(systemName: "slider.horizontal.3")
                                 .foregroundColor(.secondary)
