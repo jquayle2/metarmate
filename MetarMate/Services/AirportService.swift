@@ -141,16 +141,23 @@ class AirportService {
               let raw = raws.first,
               let stationId = raw.icaoId ?? (raws.first != nil ? id : nil) else { return nil }
 
-        let airport = Airport(
+        let airport = Self.liveAirport(from: raw, stationId: stationId)
+        cacheLiveAirport(airport)
+        return airport
+    }
+
+    /// An Airport from NOAA METAR station metadata. NOAA's `elev` is in METERS (KDEN: 1656);
+    /// Airport.elevation is feet, so convert here, once, for every consumer (density altitude,
+    /// the nearby-TAF elevation caution). It was stored as feet: ~2,000 ft low at a 1,000 m field.
+    nonisolated static func liveAirport(from raw: RawMetar, stationId: String) -> Airport {
+        Airport(
             icao: stationId,
             iata: nil,
             name: raw.name ?? stationId,
             latitude: raw.lat ?? 0,
             longitude: raw.lon ?? 0,
-            elevation: raw.elev ?? 0
+            elevation: raw.elev.map(NearbyTaf.feet(fromMeters:)) ?? 0
         )
-        cacheLiveAirport(airport)
-        return airport
     }
 
     // MARK: - Nearby
