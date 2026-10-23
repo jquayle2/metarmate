@@ -187,28 +187,56 @@ struct MetarMateEntry: TimelineEntry {
 private enum WidgetFetcher {
     static let baseURL = "https://aviationweather.gov/api/data"
 
+    /// The same classes as the app's FetchOutcome (that file isn't in this target): only `noProduct`
+    /// says the station has nothing; a failure says nothing about the station.
+    enum Kind { case loaded, noProduct, transient, failed, cancelled }
+
+    /// One fetch, plus one retry after 2 s on a transient failure (timeout, offline, 429 / 5xx) —
+    /// the extension's run time is too short for the app's full backoff. Either way the provider
+    /// falls back to the cached snapshot, whose own observation age decides what it shows.
     static func fetchSnapshot(icao: String) async -> (snapshot: WidgetWeatherSnapshot?, outcome: String, reportIntervalMinutes: Int?) {
-        guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return (nil, "bad URL", nil) }
+        let first = await attempt(icao: icao)
+        guard first.kind == .transient else { return (first.snapshot, first.outcome, first.interval) }
+        try? await Task.sleep(for: .seconds(2))
+        let retry = await attempt(icao: icao)
+        return (retry.snapshot, "\(first.outcome), retry \(retry.outcome)", retry.interval)
+    }
+
+    private static func attempt(icao: String) async -> (snapshot: WidgetWeatherSnapshot?, outcome: String, interval: Int?, kind: Kind) {
+        guard let url = URL(string: "\(baseURL)/metar?ids=\(icao)&format=json&hours=2") else { return (nil, "failed(bad URL)", nil, .failed) }
         do {
             // Bypass the URL cache (a refresh must hit NOAA) and fail fast instead of the 60 s
             // default — the extension's run time is limited.
             let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return (nil, "no HTTP response", nil) }
-            guard http.statusCode == 200 else { return (nil, "HTTP \(http.statusCode)", nil) }
+            guard let http = response as? HTTPURLResponse else { return (nil, "failed(no HTTP response)", nil, .failed) }
+            switch http.statusCode {
+            case 200: break
+            case 204: return (nil, "noProduct(204)", nil, .noProduct)
+            case 429, 500...599: return (nil, "transient(http \(http.statusCode))", nil, .transient)
+            default: return (nil, "failed(http \(http.statusCode))", nil, .failed)
+            }
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
-            guard let raw = raws.first else { return (nil, "no reports", nil) }
+            guard let raw = raws.first else { return (nil, "noProduct(empty)", nil, .noProduct) }
             // Snapshot builder lives on WidgetWeatherSnapshot (shared + unit-testable); nil = the
-            // observation couldn't be parsed, propagated the same as a fetch/decode failure.
+            // observation couldn't be parsed: a failure, not "no product".
             guard let snapshot = WidgetWeatherSnapshot.from(rawMetar: raw, icao: icao) else {
-                return (nil, "unparseable: \(raw.rawOb ?? "no rawOb")", nil)
+                return (nil, "failed(unparseable: \(raw.rawOb ?? "no rawOb"))", nil, .failed)
             }
             let interval = WidgetWeatherSnapshot.reportIntervalMinutes(from: raws)
-            return (snapshot, "ok obs \(WidgetDiag.zulu(snapshot.observationTime)) every \(interval.map { "\($0)m" } ?? "?")", interval)
+            return (snapshot, "ok obs \(WidgetDiag.zulu(snapshot.observationTime)) every \(interval.map { "\($0)m" } ?? "?")", interval, .loaded)
         } catch let error as URLError {
-            return (nil, "URLError \(error.code.rawValue)", nil)
+            switch error.code {
+            case .cancelled:
+                return (nil, "cancelled", nil, .cancelled)
+            case .timedOut, .networkConnectionLost, .cannotConnectToHost, .notConnectedToInternet,
+                 .dnsLookupFailed, .resourceUnavailable, .cannotFindHost, .secureConnectionFailed:
+                return (nil, "transient(urlerr \(error.code.rawValue))", nil, .transient)
+            default:
+                return (nil, "failed(urlerr \(error.code.rawValue))", nil, .failed)
+            }
         } catch {
-            return (nil, "error: \(error.localizedDescription)", nil)
+            return (nil, "failed(\(error.localizedDescription))", nil, .failed)
         }
     }
 
