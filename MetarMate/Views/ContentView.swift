@@ -10,6 +10,9 @@ struct ContentView: View {
     // Mirrored for Siri, which must not open the store (SiriFavorites), and registered as the
     // airport values for "…at KVGT…" phrases.
     @Query private var favorites: [AirportFavorite]
+    // Store-open notice (audit #23): shown once when this launch runs on an in-memory store or
+    // had to start a fresh one.
+    @State private var storeNotice: StoreNotice? = StoreNotice(ModelStore.appOutcome)
 
     init() {
         _selectedTab = State(initialValue: LayoutPreferences.shared.startingTab.tabIndex)
@@ -90,8 +93,33 @@ struct ContentView: View {
         }
         // initial: true also covers launch.
         .onChange(of: AirportFavorite.ordered(favorites).map(\.icao), initial: true) { _, icaos in
+            // An in-memory session has no favorites; don't overwrite Siri's copy of the real list.
+            if case .inMemory = ModelStore.appOutcome { return }
             SiriFavorites.save(icaos)
             MetarMateShortcuts.updateAppShortcutParameters()
+        }
+        .alert(item: $storeNotice) { notice in
+            Alert(title: Text(notice.title), message: Text(notice.message), dismissButton: .default(Text("OK")))
+        }
+    }
+}
+
+// MARK: - StoreNotice
+private struct StoreNotice: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+
+    init?(_ outcome: ModelStore.Outcome) {
+        switch outcome {
+        case .opened:
+            return nil
+        case .inMemory:
+            title = "Saved data couldn't open"
+            message = "Your favorites, profiles and alerts are still on this iPhone; nothing was lost. Changes you make now won't be saved. Close and reopen MetarMate to try again."
+        case .movedAside:
+            title = "Saved data was reset"
+            message = "MetarMate couldn't open your saved favorites, profiles and alerts after several tries, so it started fresh. The old data is kept on this iPhone."
         }
     }
 }

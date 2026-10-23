@@ -53,7 +53,8 @@ enum AlertScheduler {
             // moment the work finishes, BEFORE we report completion and iOS suspends the process.
             // A long-lived container held across suspension is what triggers RunningBoard
             // 0xdead10cc. runChecks saves internally, so nothing is lost when the container goes.
-            let container = ModelStore.makeContainer(for: "bgtask")
+            // nil: the store won't open. Skip the run; never recover from the background (#23).
+            guard let container = ModelStore.makeBackgroundContainer() else { return }
             await AlertPipeline.runChecks(in: container.mainContext)
             // container + its mainContext go out of scope here → connection closed, lock released.
         }
