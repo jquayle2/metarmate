@@ -102,24 +102,8 @@ enum TafHeroBrief {
         // current period, rather than reading only as "<category> by <end of the window>".
         let inProgress = Set((taf.forecast(at: now)?.overlays ?? []).filter { $0.type == .becmg }.map(\.id))
         let firstSeverity = TafFormat.categorySeverity(first.flightCategory)
-        if let overlay = taf.remainingOverlays(at: now).first(where: {
-            TafFormat.hasConvectiveOrHeavy($0)
-                || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
-                    && TafFormat.categorySeverity($0.flightCategory) > worstBaseSeverity)
-                || (inProgress.contains($0.id) && TafFormat.categorySeverity($0.flightCategory) > firstSeverity)
-        }) {
-            // Plain English: "becoming …", "temporary …"; PROB keeps its probability ("PROB30 …").
-            let label = overlay.type == .becmg ? "becoming" : (overlay.type == .tempo ? "temporary" : overlay.type.rawValue)
-            let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
-            let convective = TafFormat.hasConvectiveOrHeavy(overlay)
-            let what = (low || !convective)
-                ? categoryText(overlay, capitalized: false)
-                : (overlay.weatherPhenomena.isEmpty ? "convective activity" : plainWeather(overlay.weatherPhenomena))
-            let color = low ? Brand.valueRed : (convective ? Brand.cautionOrange : Brand.mvfrBlue)
-            // A BECMG's window is its change window (NOAA's toTime runs to the next change).
-            let windowEnd = overlay.type == .becmg ? (overlay.becomingTime ?? overlay.toTime) : overlay.toTime
-            let phrase = "\(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: windowEnd))"
-            let overlayClause = HeroSegment(text: " \(phrase).", color: color)
+        func overlayStory(_ overlay: TafForecast) -> [HeroSegment] {
+            let (phrase, color, overlayClause) = overlayPhrase(overlay)
             let basesWorsen = worst.map { TafFormat.categorySeverity($0.flightCategory) > firstSeverity } ?? false
             let overlayIsWorstUnderWay = inProgress.contains(overlay.id) && worst?.id == overlay.id
             if basesWorsen, let w = worst, !overlayIsWorstUnderWay {
@@ -139,6 +123,48 @@ enum TafHeroBrief {
                     HeroSegment(text: " but", color: Brand.slate),
                     overlayClause]
         }
+
+        // "temporary IFR 2–5 PM", "PROB30 thunderstorms with rain 2–5 PM", and with both a low
+        // category and thunderstorms "PROB30 IFR in thunderstorms with rain 2–5 PM" (D#12: the
+        // thunderstorm is never hidden behind the category).
+        func overlayPhrase(_ overlay: TafForecast) -> (phrase: String, color: Color, clause: HeroSegment) {
+            // Plain English: "becoming …", "temporary …"; PROB keeps its probability ("PROB30 …").
+            let label = overlay.type == .becmg ? "becoming" : (overlay.type == .tempo ? "temporary" : overlay.type.rawValue)
+            let low = overlay.flightCategory == .ifr || overlay.flightCategory == .lifr
+            let convective = TafFormat.hasConvectiveOrHeavy(overlay)
+            let what: String
+            if low || !convective {
+                what = categoryText(overlay, capitalized: false)
+                    + (hasThunderstorm(overlay) ? " in \(plainWeather(overlay.weatherPhenomena))" : "")
+            } else {
+                what = overlay.weatherPhenomena.isEmpty ? "convective activity" : plainWeather(overlay.weatherPhenomena)
+            }
+            let color = low ? Brand.valueRed : (convective ? Brand.cautionOrange : Brand.mvfrBlue)
+            // A BECMG's window is its change window (NOAA's toTime runs to the next change).
+            let windowEnd = overlay.type == .becmg ? (overlay.becomingTime ?? overlay.toTime) : overlay.toTime
+            let phrase = "\(label) \(what) \(TafFormat.windowLabel(from: overlay.fromTime, to: windowEnd))"
+            return (phrase, color, HeroSegment(text: " \(phrase).", color: color))
+        }
+
+        let overlays = taf.remainingOverlays(at: now)
+        // D#12: thunderstorms reach the headline at any probability; a PROB group without them
+        // stays in the detail (Pilot Notes), whatever its category.
+        let headlineOverlays = overlays.filter { !isProb($0) || hasThunderstorm($0) }
+        if let overlay = headlineOverlays.first(where: {
+            TafFormat.hasConvectiveOrHeavy($0)
+                || (($0.flightCategory == .ifr || $0.flightCategory == .lifr)
+                    && TafFormat.categorySeverity($0.flightCategory) > worstBaseSeverity)
+                || (inProgress.contains($0.id) && TafFormat.categorySeverity($0.flightCategory) > firstSeverity)
+        }) {
+            // If the hazard that leads isn't the thunderstorm one, the thunderstorm still makes the
+            // headline: "… Plus PROB30 thunderstorms with rain 2–5 PM." (D#12).
+            let laterThunder = headlineOverlays.first { $0.id != overlay.id && hasThunderstorm($0) }
+            let thunderTail = laterThunder.map {
+                [HeroSegment(text: " Plus", color: Brand.slate), overlayPhrase($0).clause]
+            } ?? []
+            return overlayStory(overlay) + thunderTail
+        }
+
 
         // No significant overlay — the base trend logic. Nothing worse than the first period?
         guard let worst, TafFormat.categorySeverity(worst.flightCategory) > TafFormat.categorySeverity(first.flightCategory) else {
@@ -170,6 +196,13 @@ enum TafHeroBrief {
 
         // Bases worsen with no significant overlay — the full worst-base story (lead + limiting tail).
         return worstBaseStory(worst, leading: capitalize)
+    }
+
+    private static func isProb(_ p: TafForecast) -> Bool { p.type == .prob30 || p.type == .prob40 }
+
+    /// Thunderstorms in the period (TS, TSRA, VCTS, TSRA OMTNS…).
+    private static func hasThunderstorm(_ p: TafForecast) -> Bool {
+        p.weatherPhenomena.contains { $0.uppercased().contains("TS") }
     }
 
     /// "IFR", or "At least IFR" when the category rests on the one axis that was forecast (the other

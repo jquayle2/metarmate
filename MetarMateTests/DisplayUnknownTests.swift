@@ -65,4 +65,44 @@ struct DisplayUnknownTests {
         #expect(ForecastRules.notableWind(Wind(direction: 300, speed: 35, gust: 50, isVariable: false))?.isWarning == true)
         #expect(ForecastRules.notableWind(Wind(direction: 300, speed: 10, gust: 14, isVariable: false)) == nil)
     }
+
+    // MARK: - D#12: PROB thunderstorms in the headline
+
+    private func heroTaf(_ fcsts: [String]) throws -> (Taf, Date) {
+        let start = MissingDataTests.obs - 1800
+        let body = fcsts.map { $0.replacingOccurrences(of: "S+", with: "\(start)")
+            .replacingOccurrences(of: "H2", with: "\(start + 7200)").replacingOccurrences(of: "H4", with: "\(start + 14400)")
+            .replacingOccurrences(of: "H6", with: "\(start + 21600)").replacingOccurrences(of: "H8", with: "\(start + 28800)")
+            .replacingOccurrences(of: "END", with: "\(start + 86400)") }.joined(separator: ",")
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":\#(start),"validTimeTo":\#(start + 86400),"rawTAF":"synthetic","fcsts":[\#(body)]}"#
+        return (try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8))),
+                Date(timeIntervalSince1970: TimeInterval(MissingDataTests.obs)))
+    }
+
+    private let vfrBase = #"{"timeFrom":S+,"timeTo":END,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SCT","base":5000}]}"#
+
+    /// A PROB30 TSRA with IFR visibility read "PROB30 IFR 2–4 PM": the thunderstorm was hidden
+    /// behind the category.
+    @Test func probIfrThunderstormNamesTheThunderstorm() throws {
+        let (taf, now) = try heroTaf([vfrBase, #"{"timeFrom":H2,"timeTo":H4,"fcstChange":"PROB","probability":30,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3000,"type":"CB"}]}"#])
+        let hero = TafHeroBrief.build(taf, now: now).map(\.text).joined()
+        #expect(hero.contains("PROB30 IFR in thunderstorms with rain "))
+    }
+
+    /// An earlier IFR TEMPO led and the later PROB30 TSRA never reached the headline.
+    @Test func laterProbThunderstormStillInHeadline() throws {
+        let (taf, now) = try heroTaf([vfrBase,
+            #"{"timeFrom":H2,"timeTo":H4,"fcstChange":"TEMPO","visib":2,"wxString":"BR","clouds":[{"cover":"OVC","base":800}]}"#,
+            #"{"timeFrom":H6,"timeTo":H8,"fcstChange":"PROB","probability":30,"visib":"6+","wxString":"TSRA","clouds":[{"cover":"BKN","base":5000,"type":"CB"}]}"#])
+        let hero = TafHeroBrief.build(taf, now: now).map(\.text).joined()
+        #expect(hero.contains("temporary IFR "))
+        #expect(hero.contains("Plus PROB30 thunderstorms with rain "))
+    }
+
+    /// A non-convective PROB group stays in the detail, not the headline.
+    @Test func nonConvectiveProbStaysOutOfHeadline() throws {
+        let (taf, now) = try heroTaf([vfrBase, #"{"timeFrom":H2,"timeTo":H4,"fcstChange":"PROB","probability":30,"visib":2,"wxString":"BR","clouds":[{"cover":"OVC","base":800}]}"#])
+        let hero = TafHeroBrief.build(taf, now: now).map(\.text).joined()
+        #expect(!hero.contains("PROB30"))
+    }
 }
