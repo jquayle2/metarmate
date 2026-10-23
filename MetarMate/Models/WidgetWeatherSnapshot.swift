@@ -34,6 +34,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // render "6+" vs "6". Defaulted + decode-safe, same idiom as windReported/visibilityReported —
     // the persisted snapshot stays a Double; this bit carries the parsed Visibility's distinction.
     var visibilityIsGreaterThan: Bool = false
+    var visibilityIsLessThan: Bool? = nil   // M1/4SM; optional so snapshots already on disk still decode
     let ceilingFeet: Int?           // AGL; nil = no ceiling
     let temperature: Int?           // Celsius
     let dewpoint: Int?              // Celsius
@@ -174,7 +175,8 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // "+" for a greater-than-10 or fake a "+" onto an exact 10).
     var visibilityDisplay: String {
         if visibilityReported == false { return "—" }
-        let n = visibility == Double(Int(visibility)) ? "\(Int(visibility))" : String(format: "%.1f", visibility)
+        if visibilityIsLessThan == true { return "<" + Visibility.milesText(visibility) }   // "<1/4"
+        let n = String(format: "%g", visibility)   // 0.25 -> "0.25" (was "%.1f": "0.2")
         return visibilityIsGreaterThan ? "\(n)+" : n
     }
 
@@ -200,6 +202,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             visibility: metar.visibility.lowerBoundSM ?? 0,
             visibilityReported: metar.visibility.isKnown,
             visibilityIsGreaterThan: metar.visibility.isGreaterThan,
+            visibilityIsLessThan: metar.visibility.isLessThan,
             ceilingFeet: metar.ceilingFeet,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
@@ -275,6 +278,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             visibility: metar.visibility.lowerBoundSM ?? 0,
             visibilityReported: metar.visibility.isKnown,
             visibilityIsGreaterThan: metar.visibility.isGreaterThan,
+            visibilityIsLessThan: metar.visibility.isLessThan,
             ceilingFeet: metar.ceilingFeet,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
@@ -315,6 +319,7 @@ extension WidgetWeatherSnapshot {
             visibility: live.visibility,
             visibilityReported: live.visibilityReported,
             visibilityIsGreaterThan: live.visibilityIsGreaterThan,
+            visibilityIsLessThan: live.visibilityIsLessThan,
             ceilingFeet: live.ceilingFeet,
             temperature: live.temperature,
             dewpoint: live.dewpoint,
@@ -344,7 +349,8 @@ extension WidgetWeatherSnapshot {
             windDirection: windDirection, windSpeed: windSpeed, windGust: windGust,
             windIsVariable: windIsVariable, windReported: windReported,
             visibility: visibility, visibilityReported: visibilityReported,
-            visibilityIsGreaterThan: visibilityIsGreaterThan, ceilingFeet: ceilingFeet,
+            visibilityIsGreaterThan: visibilityIsGreaterThan, visibilityIsLessThan: visibilityIsLessThan,
+            ceilingFeet: ceilingFeet,
             temperature: temperature, dewpoint: dewpoint, altimeter: altimeter,
             trendDirection: trendDirection, trendHeadline: trendHeadline,
             tafAccuracyPct: tafAccuracyPct, forecastWindDivergenceKt: forecastWindDivergenceKt,

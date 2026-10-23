@@ -75,6 +75,10 @@ enum TrendThresholds {
             return n <= o ? visibilityTrend(old: o, new: n) : .unknown
         case (.exact, .greaterThan):
             return o <= n ? visibilityTrend(old: o, new: n) : .unknown
+        case (.lessThan, .exact), (.lessThan, .greaterThan):
+            return n >= o ? visibilityTrend(old: o, new: n) : .unknown   // up from under o
+        case (.exact, .lessThan), (.greaterThan, .lessThan):
+            return n <= o ? visibilityTrend(old: o, new: n) : .unknown   // down to under n
         default:
             return .unknown
         }
@@ -397,9 +401,16 @@ struct WeatherTrend: Codable {
     /// direction worse, never better.
     static func derive(metars: [Metar], taf: Taf?, forecastMetar: Metar? = nil, forecastStation: String? = nil,
                        now: Date = Date()) -> WeatherTrend {
-        let currentMetar = metars.first ?? metars[0]
         let observed = ObservedTrend.derive(from: metars)
-        let forecast = ForecastTrend.derive(metar: forecastMetar ?? currentMetar, taf: taf, now: now, station: forecastStation)
+        // No METAR to compare against (empty history, e.g. a DEBUG injection with no reports): the
+        // forecast trend is unknown. `metars.first ?? metars[0]` trapped here (P3).
+        let forecast: ForecastTrend
+        if let compareMetar = forecastMetar ?? metars.first {
+            forecast = ForecastTrend.derive(metar: compareMetar, taf: taf, now: now, station: forecastStation)
+        } else {
+            forecast = ForecastTrend(visibility: .unknown, ceiling: .unknown, wind: .unknown, overall: .unknown,
+                                     forecastCategory: nil, summaryText: "No current observation to compare.")
+        }
 
         if let station = forecastStation {
             return WeatherTrend(

@@ -23,6 +23,9 @@ struct TafForecast: Identifiable, Codable {
         case becmg = "BECMG"
         case prob30 = "PROB30"
         case prob40 = "PROB40"
+        case prob = "PROB"       // a PROB group whose percentage NOAA didn't give: never assumed 30 (P3)
+
+        var isProbability: Bool { self == .prob30 || self == .prob40 || self == .prob }
     }
 
     /// The one axis this period doesn't forecast ("visibility" / "clouds") when the other is known,
@@ -73,7 +76,7 @@ struct Taf: Identifiable, Codable {
         else { return nil }
         let overlays = forecasts.filter {
             switch $0.type {
-            case .tempo, .prob30, .prob40: return $0.fromTime <= t && t < $0.toTime
+            case .tempo, .prob30, .prob40, .prob: return $0.fromTime <= t && t < $0.toTime
             case .becmg:                   return $0.fromTime <= t && t < $0.effectiveFrom
             case .base, .fm:               return false
             }
@@ -135,6 +138,6 @@ struct Taf: Identifiable, Codable {
 
     // TEMPO/BECMG/PROB change groups — surfaced in TAF Pilot Notes, not in the period blocks.
     var overlayForecasts: [TafForecast] {
-        forecasts.filter { $0.type == .tempo || $0.type == .becmg || $0.type == .prob30 || $0.type == .prob40 }
+        forecasts.filter { $0.type == .tempo || $0.type == .becmg || $0.type.isProbability }
     }
 }

@@ -56,8 +56,11 @@ enum SiriReportWording {
         // Ceiling
         switch metar.ceiling {
         case .feet(let ceiling):
-            let coverageWord = metar.clouds.ceilingLayer?.coverage == .overcast ? "overcast" : "broken"
-            parts.append("Ceiling \(coverageWord) at \(ceiling) feet.")
+            switch metar.clouds.ceilingLayer?.coverage {
+            case .overcast:           parts.append("Ceiling overcast at \(ceiling) feet.")
+            case .verticalVisibility: parts.append("Indefinite ceiling, vertical visibility \(ceiling) feet.")
+            default:                  parts.append("Ceiling broken at \(ceiling) feet.")
+            }
         case .notReported:
             // No sky group is sky not reported, never unlimited (audit #6). NOAA sends no layers
             // for CLR, so an empty list alone isn't "not reported" (Metar.skyReported).
@@ -71,7 +74,10 @@ enum SiriReportWording {
         let wxSuffix = metar.weatherPhenomena.isEmpty ? "" : " in \(WeatherDecoder.decodeAll(metar.weatherPhenomena).lowercased())"
         switch metar.visibility {
         case .exact(let v):
-            parts.append("Visibility \(String(format: "%.0f", v)) miles\(wxSuffix).")
+            // Fractions as written ("1/4"), never rounded to "0 miles".
+            parts.append("Visibility \(v < 3 ? Visibility.milesText(v) : String(format: "%.0f", v)) miles\(wxSuffix).")
+        case .lessThan(let v):
+            parts.append("Visibility less than \(Visibility.milesText(v)) mile\(wxSuffix).")
         case .greaterThan(let v):
             parts.append("Visibility \(String(format: "%.0f", v)) or more miles\(wxSuffix).")
         case .unknown:
@@ -149,7 +155,8 @@ enum SiriReportWording {
     static func conditionsLine(metar: Metar) -> String {
         let vis: String
         switch metar.visibility {
-        case .exact(let v):       vis = String(format: "Vis %.0f sm", v)
+        case .exact(let v):       vis = "Vis \(v < 3 ? Visibility.milesText(v) : String(format: "%.0f", v)) sm"
+        case .lessThan(let v):    vis = "Vis <\(Visibility.milesText(v)) sm"
         case .greaterThan(let v): vis = "Vis \(String(format: "%.0f", v))+ sm"
         case .unknown:            vis = "Vis —"
         }

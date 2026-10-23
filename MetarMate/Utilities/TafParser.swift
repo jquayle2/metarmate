@@ -60,7 +60,7 @@ struct TafParser {
             let prob = dict["probability"]?.value as? Int
             let type: TafForecast.ForecastType
             if typeStr == "PROB" || (typeStr == "TEMPO" && prob != nil) {
-                type = (prob == 40) ? .prob40 : .prob30
+                type = prob == 40 ? .prob40 : prob == 30 ? .prob30 : .prob   // no number: not assumed PROB30
             } else if let typeStr, let parsed = TafForecast.ForecastType(rawValue: typeStr) {
                 type = parsed
             } else {

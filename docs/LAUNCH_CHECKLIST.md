@@ -80,14 +80,14 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; now 4,887 ft (NWS virtual-temperature method). Missing temp or altimeter → no DA. Table-driven ForeFlight test ready for more samples (`DensityAltitudeTests.foreFlightSamples`). `1e5a761`
 - [x] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19): Alerts rows and notifications. `1be5294`
 - [x] D#10 symmetric missing-field notes (wind, wind direction, visibility, ceiling/sky, temperature/dewpoint, altimeter: same "not reported" caution note); D#11 F17 hazards (TS, SQ, FC/+FC, GR, freezing precip) in both history lines. `e6105af`
-- [x] D#12 PROB TSRA in headline: thunderstorms always reach the TAF hero with probability and time ("PROB30 IFR in thunderstorms with rain 2–4 PM"; a later one follows as "Plus PROB30 thunderstorms …"); non-convective PROB groups stay in the detail
+- [x] D#12 PROB TSRA in headline: thunderstorms always reach the TAF hero with probability and time ("PROB30 IFR in thunderstorms with rain 2–4 PM"; a later one follows as "Plus PROB30 thunderstorms …"); non-convective PROB groups stay in the detail. `62c503d`
 - [x] F16 present-weather chip off the category red (now `Brand.dangerRed`, alert chrome); F18 "Clear" with only FEW/SCT ("No ceiling" / "NO CIG" / "FEW 55" everywhere). `c0a4837`
 - [x] P3 Ceiling is the lowest BKN/OVC/VV layer (`.min()`), never `.first`, everywhere (one shared rule). `246dc2c`
-- [ ] P3 `M1/4SM` is less than ¼ SM, shown "<1/4 SM"
-- [ ] P3 PROB group with no number isn't PROB30 (PROB30 TEMPO keeping its probability: already fixed on nearby-TAF)
-- [ ] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown
-- [ ] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken"
-- [ ] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`)
+- [x] P3 `M1/4SM` is less than ¼ SM, shown "<1/4 SM" (NOAA sends 0.25, so it's read from the report group; app, widget, Siri). Also: Siri spoke ¼ SM as "0 miles" and the widget showed "0.2"; both now "1/4"
+- [x] P3 PROB group with no number isn't PROB30 (new `.prob`, shown "PROB") (PROB30 TEMPO keeping its probability: already fixed on nearby-TAF)
+- [x] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown (level arrow for steady/mixed, level slate mark without a head for unknown; VoiceOver "Trend steady/mixed/unknown")
+- [x] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken" (detail, ASOS row, Siri "Indefinite ceiling, vertical visibility N feet")
+- [x] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`)
 - [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
 - [ ] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases)
 - [ ] Merge A2 [Jeff]

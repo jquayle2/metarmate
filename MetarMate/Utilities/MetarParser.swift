@@ -20,8 +20,10 @@ struct MetarParser {
         }
 
         let wind = parseWind(wdir: raw.wdir, wspd: raw.wspd, wgst: raw.wgst)
-        // .unknown when absent/unrecognized — never a fabricated number (see Visibility).
-        let visibility = parseVisibility(raw.visib)
+        // .unknown when absent/unrecognized — never a fabricated number (see Visibility). NOAA
+        // sends M1/4SM as plain 0.25, so "less than" comes from the report's own group (P3).
+        let parsedVisibility = parseVisibility(raw.visib)
+        let visibility = lessThanGroup(in: rawText) ?? parsedVisibility
         let clouds = parseClouds(raw.clouds, vertVis: raw.vertVis)
         let phenomena = parseWeatherPhenomena(raw.wxString, rawOb: rawText)
 
@@ -135,9 +137,17 @@ struct MetarParser {
             if s == "10+" || s == "P10SM" { return .greaterThan(10) }
             if s == "6+"  || s == "P6SM"  { return .greaterThan(6) }
             if let d = Double(s) { return .exact(d) }
-            if let f = parseFractionalSM(s) { return .exact(f) }
+            if let f = parseFractionalSM(s) { return s.hasPrefix("M") ? .lessThan(f) : .exact(f) }
         }
         return .unknown
+    }
+
+    /// The report's "M1/4SM"-style group (less than), if it has one.
+    nonisolated private static func lessThanGroup(in rawText: String) -> Visibility? {
+        let body = rawText.components(separatedBy: " RMK").first ?? rawText
+        guard let token = body.split(separator: " ").first(where: { $0.hasPrefix("M") && $0.hasSuffix("SM") }),
+              let v = parseFractionalSM(String(token)) else { return nil }
+        return .lessThan(v)
     }
 
     // Defensive fractional visibility: "1/2", "1 1/4SM", "M1/4SM" -> Double; nil if not a fraction.

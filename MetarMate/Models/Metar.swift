@@ -141,6 +141,7 @@ extension Array where Element == CloudLayer {
 enum Visibility: Codable, Equatable {
     case exact(Double)
     case greaterThan(Double)   // true value is strictly greater than the associated SM value
+    case lessThan(Double)      // true value is strictly less (METAR "M1/4SM"; P3: was .exact(0.25))
     case unknown
 
     var isKnown: Bool {
@@ -156,13 +157,30 @@ enum Visibility: Codable, Equatable {
     // Lower bound in statute miles, for category thresholds and "is it below X" checks.
     // For .greaterThan the true value is > n, so n is the conservative (worst-case) floor:
     // reading a threshold off n can only under-state the visibility, never over-state it.
+    // .lessThan(n) reads off n too: the only less-than a METAR carries is M1/4SM, which is LIFR
+    // under every category boundary and below any realistic visibility minimum either way.
     // .unknown has no bound. Do NOT use this for orderings/deltas between two known values — a
     // .greaterThan can't be ordered against another value off its floor without fabricating one.
     var lowerBoundSM: Double? {
         switch self {
-        case .exact(let v), .greaterThan(let v): return v
+        case .exact(let v), .greaterThan(let v), .lessThan(let v): return v
         case .unknown: return nil
         }
+    }
+
+    var isLessThan: Bool {
+        if case .lessThan = self { return true }
+        return false
+    }
+
+    /// 0.25 -> "1/4", 1.5 -> "1 1/2", 6 -> "6": how a METAR writes statute miles.
+    static func milesText(_ v: Double) -> String {
+        let whole = Int(v)
+        let frac = v - Double(whole)
+        let fracText = [0.125: "1/8", 0.25: "1/4", 0.375: "3/8", 0.5: "1/2", 0.625: "5/8", 0.75: "3/4"]
+            .first { abs($0.key - frac) < 0.001 }?.value
+        guard let fracText else { return String(format: "%g", v) }
+        return whole == 0 ? fracText : "\(whole) \(fracText)"
     }
 
     // The exact reported value, ONLY when it is exact. nil for .greaterThan (a range) and .unknown.
@@ -179,6 +197,7 @@ enum Visibility: Codable, Equatable {
         switch self {
         case .exact(let v):       return String(format: "%g", v)
         case .greaterThan(let v): return String(format: "%g", v) + "+"
+        case .lessThan(let v):    return "<" + Self.milesText(v)   // "<1/4"
         case .unknown:            return nil
         }
     }

@@ -210,11 +210,12 @@ enum ColorRules {
 
     /// trendStyle(direction, severity) → (arrowDirection, color).
     /// Up/orange for improving or stable; down/red for deteriorating.
-    static func trendStyle(_ direction: TrendDirection) -> (up: Bool, color: Color) {
+    static func trendStyle(_ direction: TrendDirection) -> (heading: TrendArrowView.Heading, color: Color) {
         switch direction {
-        case .deteriorating: return (false, Brand.dangerRed)
-        case .improving, .steady: return (true, Brand.accentOrange)
-        case .unknown: return (true, Brand.slate)
+        case .deteriorating: return (.down, Brand.dangerRed)
+        case .improving:     return (.up, Brand.accentOrange)
+        case .steady:        return (.level, Brand.accentOrange)
+        case .unknown:       return (.unknown, Brand.slate)
         }
     }
 }

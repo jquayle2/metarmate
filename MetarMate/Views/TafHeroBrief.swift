@@ -198,7 +198,7 @@ enum TafHeroBrief {
         return worstBaseStory(worst, leading: capitalize)
     }
 
-    private static func isProb(_ p: TafForecast) -> Bool { p.type == .prob30 || p.type == .prob40 }
+    private static func isProb(_ p: TafForecast) -> Bool { p.type.isProbability }
 
     /// Thunderstorms in the period (TS, TSRA, VCTS, TSRA OMTNS…).
     private static func hasThunderstorm(_ p: TafForecast) -> Bool {

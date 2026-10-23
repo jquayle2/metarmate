@@ -582,7 +582,7 @@ struct WeatherDetailView: View {
 
             if let ceiling = obs.ceilingAGL {
                 let ceilingLayer = obs.cloudLayers.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-                let coverage = ceilingLayer?.coverage == .overcast ? "Overcast" : "Broken"
+                let coverage = ceilingCoverageName(ceilingLayer?.coverage)   // VV is "Vertical visibility" (P3)
                 conditionRow("cloud.fill", "Ceiling", "\(coverage) at \(ceiling.formatted()) ft", color: ceilingConditionColor(.feet(ceiling)))
             }
 
@@ -1263,15 +1263,14 @@ struct WeatherDetailView: View {
         // Forecast divergence is called out separately in the summary text.
         let observedOverall = trend.observed.overall
         let isMixed = trend.headline.hasPrefix("Mixed")
-        let direction = isMixed ? TrendDirection.steady : (observedOverall == .unknown ? trend.overall : observedOverall)
+        let direction = observedOverall == .unknown ? trend.overall : observedOverall
         let roc = trend.observed.rateOfChange
         let isDeteriorating = observedOverall == .deteriorating && !isMixed
-        let style = ColorRules.trendStyle(direction)
         let headlineColor = isDeteriorating ? Brand.valueRed : Brand.cloud
 
         return HStack(spacing: 16) {
             // Signature trend mark — up/orange for improving-stable, down/red for deteriorating.
-            TrendArrowView(up: style.up, color: style.color)
+            TrendArrowView(direction: direction, mixed: isMixed)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(borrowedStation.map { trend.headline.hasSuffix("Forecast") ? "\(trend.headline) · \($0) TAF" : trend.headline }
@@ -1880,10 +1879,9 @@ struct WeatherDetailView: View {
 
                     CategoryRibbon(segments: periods.map { period in
                         let duration = max(period.toTime.timeIntervalSince(period.fromTime), 60)
-                        // Ribbon collapses to 3 colors (green/blue/red) — LIFR folds into IFR red.
-                        let ribbonCategory: FlightCategory = period.flightCategory == .lifr ? .ifr : period.flightCategory
+                        // LIFR keeps its own magenta; it no longer folds into IFR red (P3).
                         return CategoryRibbon.Segment(
-                            color: ColorRules.flightCategoryColor(ribbonCategory),
+                            color: ColorRules.flightCategoryColor(period.flightCategory),
                             weight: duration,
                             isCurrent: period.id == currentID
                         )
@@ -2378,7 +2376,7 @@ struct WeatherDetailView: View {
         //    in any base period OR overlay — strong steady wind and TEMPO/PROB gusts too (audit #19).
         for p in ForecastRules.windNotePeriods(taf, now: now) {
             guard let wind = p.wind, let notable = ForecastRules.notableWind(wind) else { continue }
-            let isOverlay = p.type == .tempo || p.type == .becmg || p.type == .prob30 || p.type == .prob40
+            let isOverlay = p.type == .tempo || p.type == .becmg || p.type.isProbability
             let when: String
             if isOverlay {
                 let label = p.type == .becmg ? "becoming" : (p.type == .tempo ? "temporary" : p.type.rawValue)
