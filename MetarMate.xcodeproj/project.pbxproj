@@ -71,6 +71,8 @@
 		CDD069522F575C1600A16FDE /* Exceptions for "MetarMate" folder in "MetarMateWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				BuildChannel.swift,
+				FeatureFlags.swift,
 				Intents/SelectAirportIntent.swift,
 				Models/AdvisoryWeather.swift,
 				Models/Airport.swift,

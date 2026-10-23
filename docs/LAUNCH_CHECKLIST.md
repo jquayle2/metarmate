@@ -97,6 +97,7 @@ App Review blockers (required regardless of section 0):
 - [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. `27a04d6`. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
+- [x] One switch, `FeatureFlags.proGatingEnabled`: off in TestFlight builds, on in Release (App Store) and Debug. `FeatureFlags.swift` is compiled into the app and the widget; `TESTFLIGHT` is set on the TestFlight configuration of every target. Verified in the simulator: the widget's diag line reads gating=off from a TestFlight build and gating=on from Debug, matching the app
 - [ ] #24 Siri waits for entitlements before reading `isProUser`
 - [ ] #24 Lock-screen widgets gated
 - [ ] #24 StoreKit listener started in `App.init`

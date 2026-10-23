@@ -170,7 +170,8 @@ private enum WidgetFetcher {
 // MARK: - Run diagnostics
 // Every provider run appends one line to an App Group ring buffer (WidgetDataManager.appendDiag),
 // readable off the device, so a stuck widget shows whether WidgetKit stopped calling us or the
-// fetch is failing. Line: "<run time Z> <kind> <ICAO> <configured|fallback> <outcome>".
+// fetch is failing. Line: "<run time Z> <kind> <ICAO> <configured|fallback> <outcome> gating=<on|off>",
+// where gating is FeatureFlags.proGatingEnabled as compiled into the widget.
 
 enum WidgetDiag {
     private static let formatter: DateFormatter = {
@@ -191,7 +192,7 @@ enum WidgetDiag {
     static func zulu(_ date: Date) -> String { zuluFormatter.string(from: date) }
 
     static func record(kind: String, icao: String?, configured: Bool, outcome: String) {
-        let line = "\(formatter.string(from: .now)) \(kind) \(icao ?? "-") \(configured ? "configured" : "fallback") \(outcome)"
+        let line = "\(formatter.string(from: .now)) \(kind) \(icao ?? "-") \(configured ? "configured" : "fallback") \(outcome) gating=\(FeatureFlags.proGatingEnabled ? "on" : "off")"
         WidgetDataManager.appendDiag(line)
     }
 }
