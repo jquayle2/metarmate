@@ -93,7 +93,7 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] TAF validity from NOAA or the TAF's own DDHH/DDHH group; never an assumed 24 h; no validity → TAF not used. `ad9b24f`
 - [x] Favorites of non-bundled airports saved before `9025643` keep the meter elevation: handed to A3 (#27 below)
 - [ ] Full suite stopped once mid-run in the SwiftData store tests (no failing assertion); recheck after A2+A3 integration and capture the crash log if it recurs
-- [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
+- [ ] Free starter verdict on the detail screen and widget (D-19/20): not built. Handoff `docs/handoffs/VERDICT_SURFACES_handoff.md`, branch `feat/verdict-surfaces` (off A2)
 - [x] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases): A2 suites DensityAltitudeTests, MissingDataTests, VerdictTests, DisplayUnknownTests, P3IntegrityTests; `currentForecast`/BECMG/verification in TafTimeLogicTests (nearby-TAF). 230/230 on `c7c34b5`
 - [ ] Merge A2 [Jeff]
 
@@ -167,14 +167,15 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 
 - [ ] Green outside category/verdict (calm wind, steady wind, `ForecastStripColumn`, `TrendDirection.color`, accuracy colors, `spreadColor`, widget `trendColor`)
 - [ ] Crosswind calculator: tiers unused, tailwind limit text, tailwind uses sustained only, gust carries over between sessions
-- [ ] Trend arrow up for steady/unknown; VoiceOver "improving or stable" for unknown; LIFR folded into IFR on TAF ribbon; VV labelled "Broken"
+- [x] Trend arrow up for steady/unknown; VoiceOver "improving or stable" for unknown; LIFR folded into IFR on TAF ribbon; VV labelled "Broken". Done in A2 step 5 (`c7c34b5`)
 - [ ] Accessibility: airport rows show category by color rail only, no text, no age
 - [ ] Performance: `DateFormatter` in view bodies; `pilotNotes()` and density altitude computed twice per render
 - [x] UI test target: template tests removed (`16f53c0`); full suite runs clean with `-parallel-testing-enabled NO` (parallel clones were refused launch); simulator `iPhone 17` re-created on iOS 26.1 after it went missing
 - [ ] Nearby-TAF bbox near the 180° meridian is clamped, not wrapped (western Aleutians search a narrower box)
 - [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
 - [ ] Post-launch: a non-bundled airport with no NOAA elevation is stored as 0 ft (`AirportService.liveAirport`); left as is for launch (Jeff, Oct 23)
-- [ ] Misc: search race, layout prefs wiped on unknown `SectionID`, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache, `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, two DA formulas, PROB defaults
+- [x] Misc, data items: `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, PROB defaults (A2 `c7c34b5`, `246dc2c`); two DA formulas (A2 `1e5a761`)
+- [ ] Misc, still open: search race, layout prefs wiped on unknown `SectionID` (being fixed in the verdict-surfaces pass), Open-Meteo timeouts/cancellation, alert `force` vs METAR cache
 
 ## 6. ASOS Updates — Synoptic (launch-blocking only if section 0 says so)
 
