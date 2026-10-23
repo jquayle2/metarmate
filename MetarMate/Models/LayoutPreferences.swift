@@ -153,13 +153,13 @@ class LayoutPreferences: ObservableObject {
     // MARK: - Migration-aware loader
     // Tries each key in order (newest first). Takes the first valid saved data found,
     // then merges in any new sections from defaults so nothing is lost on update.
-    private static func loadAndMigrate(keys: [String], defaults: [SectionConfig]) -> [SectionConfig] {
-        let ud = UserDefaults.standard
+    static func loadAndMigrate(keys: [String], defaults: [SectionConfig],
+                               from ud: UserDefaults = .standard) -> [SectionConfig] {
 
         var saved: [SectionConfig]? = nil
         for key in keys {
             if let data = ud.data(forKey: key),
-               let decoded = try? JSONDecoder().decode([SectionConfig].self, from: data) {
+               let decoded = decodeSkippingUnknown(data) {
                 saved = decoded
                 break
             }
@@ -177,6 +177,21 @@ class LayoutPreferences: ObservableObject {
         merged.append(contentsOf: newSections)
 
         return merged
+    }
+
+    /// Saved sections, dropping any entry this build doesn't know (a section from a newer build,
+    /// or one since removed) instead of failing the whole array and wiping the user's layout.
+    /// nil only when the data isn't a section list at all.
+    static func decodeSkippingUnknown(_ data: Data) -> [SectionConfig]? {
+        guard let entries = try? JSONDecoder().decode([LossySectionConfig].self, from: data) else { return nil }
+        return entries.compactMap(\.config)
+    }
+
+    private struct LossySectionConfig: Decodable {
+        let config: SectionConfig?
+        init(from decoder: Decoder) throws {
+            config = try? SectionConfig(from: decoder)
+        }
     }
 
     // MARK: - Persistence
