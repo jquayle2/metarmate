@@ -166,10 +166,12 @@ struct DensityAltitude {
 // include this one.
 extension AdvisoryWeather {
     /// Density altitude in feet. Open-Meteo `surface_pressure` is station pressure at field elevation.
+    /// nil when the field elevation isn't reported (advisory airports are bundled, so it always is).
     var densityAltitudeFt: Double? {
-        DensityAltitude.calculate(temperatureC: temperatureC, dewpointC: dewpointC,
-                                  stationPressureHpa: pressureHpa,
-                                  fieldElevationFt: airport.elevation)
+        guard let elevationFt = airport.elevation else { return nil }
+        return DensityAltitude.calculate(temperatureC: temperatureC, dewpointC: dewpointC,
+                                         stationPressureHpa: pressureHpa,
+                                         fieldElevationFt: elevationFt)
             .map { Double($0.densityAltitudeFt) }
     }
 }

@@ -11,8 +11,12 @@ struct TafSource: Codable, Equatable {
     let name: String?
     let distanceNm: Int              // rounded once; distance tiers and text both use this number
     let bearing: String              // 8-point compass from the field to the TAF station ("W")
-    let elevationDifferenceFt: Int?  // TAF station minus field; nil when the station's elevation is unknown
+    let elevationDifferenceFt: Int?  // TAF station minus field; nil when either elevation is unknown
     let isBorrowed: Bool
+    // The field's own elevation wasn't reported, so there is no comparison (the caution says so
+    // rather than going quiet). Optional for the same persisted-JSON reason as the snapshot's
+    // flags: nil = false.
+    var fieldElevationNotReported: Bool? = nil
 }
 
 /// A TAF from the `taf?bbox=` lookup, with the station position NOAA returns alongside it.
@@ -93,7 +97,7 @@ enum NearbyTaf {
     /// replaces a borrowed one on the next refresh); `candidates` (the bbox lookup) runs only when
     /// borrowing is needed and the field's position is known.
     static func resolve(own: OwnTaf,
-                        field: (ids: Set<String>, latitude: Double, longitude: Double, elevationFt: Int)?,
+                        field: (ids: Set<String>, latitude: Double, longitude: Double, elevationFt: Int?)?,
                         at now: Date,
                         candidates: () async throws -> [NearbyTafCandidate]) async -> (taf: Taf?, status: TafStatus) {
         if case .found(let taf) = own, taf.currentForecast(at: now) != nil { return (taf, .own) }
@@ -180,7 +184,9 @@ enum NearbyTaf {
         case ...25:  lines.append("TAF site \(source.distanceNm) nm away. Local conditions may differ.")
         default:     lines.append("TAF site \(source.distanceNm) nm away. Conditions here may be quite different.")
         }
-        if let diff = source.elevationDifferenceFt, abs(diff) >= 1000 {
+        if source.fieldElevationNotReported == true {
+            lines.append("Elevation comparison not available: field elevation not reported.")
+        } else if let diff = source.elevationDifferenceFt, abs(diff) >= 1000 {
             let rounded = Int((Double(abs(diff)) / 100).rounded()) * 100
             lines.append("TAF site is \(rounded.formatted()) ft \(diff > 0 ? "higher" : "lower").")
         }
@@ -192,7 +198,7 @@ enum NearbyTaf {
     /// The nearest station within 50 nm whose TAF is current at `now` (same rule as the field's own:
     /// starting within 2 hours counts), excluding the field itself. nil when there is none.
     static func select(from candidates: [NearbyTafCandidate],
-                       fieldLatitude: Double, fieldLongitude: Double, fieldElevationFt: Int,
+                       fieldLatitude: Double, fieldLongitude: Double, fieldElevationFt: Int?,
                        excluding fieldIds: Set<String>, at now: Date) -> (taf: Taf, source: TafSource)? {
         // One TAF per station: the latest issued.
         var latest: [String: NearbyTafCandidate] = [:]
@@ -214,8 +220,11 @@ enum NearbyTaf {
             name: c.name,
             distanceNm: Int(best.nm.rounded()),
             bearing: compass8(bearingDegrees(fieldLatitude, fieldLongitude, c.latitude, c.longitude)),
-            elevationDifferenceFt: c.elevationMeters.map { feet(fromMeters: $0) - fieldElevationFt },
-            isBorrowed: true
+            elevationDifferenceFt: fieldElevationFt.flatMap { field in
+                c.elevationMeters.map { feet(fromMeters: $0) - field }
+            },
+            isBorrowed: true,
+            fieldElevationNotReported: fieldElevationFt == nil ? true : nil   // nil = reported
         )
         return (c.taf, source)
     }

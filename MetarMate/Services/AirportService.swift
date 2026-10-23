@@ -41,6 +41,11 @@ class AirportService {
         return icaoIndex[key] ?? liveResolvedCache[key]
     }
 
+    /// In the bundled airports.json (as opposed to resolved live from NOAA).
+    func isBundled(icao: String) -> Bool {
+        icaoIndex[icao.uppercased()] != nil
+    }
+
     func airport(iata: String) -> Airport? {
         iataIndex[iata.uppercased()]
     }
@@ -156,7 +161,7 @@ class AirportService {
             name: raw.name ?? stationId,
             latitude: raw.lat ?? 0,
             longitude: raw.lon ?? 0,
-            elevation: raw.elev.map(NearbyTaf.feet(fromMeters:)) ?? 0
+            elevation: raw.elev.map(NearbyTaf.feet(fromMeters:))   // nil = not reported, never 0 ft
         )
     }
 
@@ -172,5 +177,18 @@ class AirportService {
             .sorted { $0.1 < $1.1 }
             .prefix(count)
             .map { $0.0 }
+    }
+}
+
+// MARK: - Favorite -> Airport
+extension AirportFavorite {
+    /// A stored 0 for an airport that isn't in the bundled database is "not reported": favorites
+    /// stored a missing NOAA elevation as 0 ft (A3's one-time NOAA refetch fixes stored values). A
+    /// bundled airport keeps its stored value, including a real 0 ft field.
+    @MainActor var asAirport: Airport {
+        let reported = elevation != 0 || AirportService.shared.isBundled(icao: icao)
+        return Airport(icao: icao, iata: iata, name: name,
+                       latitude: latitude, longitude: longitude,
+                       elevation: reported ? elevation : nil, hasMetar: hasMetar)
     }
 }

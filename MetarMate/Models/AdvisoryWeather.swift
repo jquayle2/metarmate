@@ -105,8 +105,9 @@ struct AdvisoryWeather: Codable {
 
     /// Altimeter setting (inHg) estimated from station pressure, corrected to sea level.
     nonisolated var altimeterInHg: Double? {
-        guard let hpa = pressureHpa else { return nil }
-        let elevM = Double(airport.elevation) * 0.3048
+        // No field elevation, no sea-level correction: nil, never a pressure assumed at 0 ft.
+        guard let hpa = pressureHpa, let elevationFt = airport.elevation else { return nil }
+        let elevM = Double(elevationFt) * 0.3048
         // P₀ = P_station × (1 + 2.25577×10⁻⁵ × h)^5.25588
         let corrected = hpa * pow(1.0 + 0.0000225577 * elevM, 5.25588)
         return corrected * 0.02953

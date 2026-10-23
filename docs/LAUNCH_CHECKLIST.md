@@ -89,6 +89,7 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken" (detail, ASOS row, Siri "Indefinite ceiling, vertical visibility N feet"). `c7c34b5`
 - [x] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`). `c7c34b5`
 - [x] Fallback (non-bundled) airport elevation: NOAA meters converted to feet at the source (DA, nearby-TAF elevation caution). `9025643`
+- [x] Missing field elevation is "not reported", never 0 ft (moved from section 5; Jeff, Oct 23): `Airport.elevation` is optional in memory, nil when NOAA sends no `elev`; a favorite of a non-bundled airport with a stored 0 reads as nil (no SwiftData change; A3's NOAA refetch fixes stored values); bundled airports keep their value, including real 0 ft fields. Density altitude shows "Density altitude can't be calculated: field elevation not reported"; the nearby-TAF caution says "Elevation comparison not available: field elevation not reported." (verdict-surfaces pass)
 - [x] DA uses NOAA's temperature/dewpoint tenths; display stays whole degrees. `6f3d066`
 - [x] TAF validity from NOAA or the TAF's own DDHH/DDHH group; never an assumed 24 h; no validity → TAF not used. `ad9b24f`
 - [x] Favorites of non-bundled airports saved before `9025643` keep the meter elevation: handed to A3 (#27 below)
@@ -173,7 +174,6 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [x] UI test target: template tests removed (`16f53c0`); full suite runs clean with `-parallel-testing-enabled NO` (parallel clones were refused launch); simulator `iPhone 17` re-created on iOS 26.1 after it went missing
 - [ ] Nearby-TAF bbox near the 180° meridian is clamped, not wrapped (western Aleutians search a narrower box)
 - [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
-- [ ] Post-launch: a non-bundled airport with no NOAA elevation is stored as 0 ft (`AirportService.liveAirport`); left as is for launch (Jeff, Oct 23)
 - [x] Misc, data items: `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, PROB defaults (A2 `c7c34b5`, `246dc2c`); two DA formulas (A2 `1e5a761`)
 - [x] "METAR late" is neutral, not orange, on Alerts rows and every widget family (amber is for wind and pressure only; Jeff, Oct 23)
 - [x] Layout prefs no longer wiped by an unknown `SectionID` or visibility: unknown entries are dropped, the rest of the saved order and visibility kept (verdict-surfaces pass; the verdict card is not a layout section)

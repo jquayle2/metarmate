@@ -234,7 +234,7 @@ struct MetarInjectionHarnessView: View {
                 injection = SimulatedInjection(metars: [scaffold], taf: taf)
             }
             let airport = Airport(icao: ident, iata: nil, name: "Free-text paste (SIM)",
-                                  latitude: 39.0, longitude: -104.6, elevation: 0, hasMetar: true)
+                                  latitude: 39.0, longitude: -104.6, elevation: nil, hasMetar: true)   // no elevation in a paste: not reported
             simPayload = SimPayload(id: "FREE", title: "Free-text \(freeKind.rawValue)", airport: airport, injection: injection)
         } catch {
             errorMessage = "Could not parse pasted \(freeKind.rawValue): \(error.localizedDescription)"

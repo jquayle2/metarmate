@@ -134,12 +134,18 @@ struct WeatherDetailView: View {
         let hasAmberNote = !notes.isEmpty
         let hasRedNote   = notes.contains(where: { $0.severity == .warning || $0.severity == .danger })
 
-        let da = DensityAltitude.calculate(
-            temperatureC: metar.temperatureForDensityAltitudeC,   // tenths when NOAA gave them
-            dewpointC: metar.dewpointForDensityAltitudeC,
-            altimeterInHg: metar.altimeter,
-            fieldElevationFt: airport.elevation
-        )
+        let da = airport.elevation.flatMap { elevationFt in
+            DensityAltitude.calculate(
+                temperatureC: metar.temperatureForDensityAltitudeC,   // tenths when NOAA gave them
+                dewpointC: metar.dewpointForDensityAltitudeC,
+                altimeterInHg: metar.altimeter,
+                fieldElevationFt: elevationFt
+            )
+        }
+        // Temperature and altimeter reported but no field elevation: say DA can't be calculated
+        // instead of computing it at 0 ft or dropping the section silently.
+        let daNeedsElevation = airport.elevation == nil
+            && metar.temperatureForDensityAltitudeC != nil && metar.altimeter != nil
         // Gate on ABSOLUTE density altitude via the single source of truth (DensityAltitude.swift),
         // NOT HP-loss. Keeps the section's "Red only"/"Amber+" gate in lockstep with the colors.
         // nil (temperature or altimeter not reported) -> no Performance section at all.
@@ -185,7 +191,12 @@ struct WeatherDetailView: View {
                     default:             return false
                     }
                 }()
-                if showDA, let da { densityAltitudeSection(da) }
+                if showDA, let da {
+                    densityAltitudeSection(da)
+                } else if daNeedsElevation, config.visibility != .hidden {
+                    // Unknown can't be ranked amber/red, so any visible mode shows it.
+                    densityAltitudeUnavailableSection
+                }
             case .trend:
                 if let trend = vm.trend {
                     let showTrend: Bool = {
@@ -254,8 +265,8 @@ struct WeatherDetailView: View {
                 Spacer(minLength: 0)
             }
             .padding(.top, 14)
-            if airport.elevation != 0 {
-                Text("Elev \(airport.elevation.formatted()) ft MSL")
+            if let elevation = airport.elevation {
+                Text("Elev \(elevation.formatted()) ft MSL")
                     .font(.avenir(12, .demibold))
                     .foregroundColor(Brand.slate)
                     .padding(.top, 8)
@@ -1139,6 +1150,22 @@ struct WeatherDetailView: View {
                 }
             }
         }
+        .padding()
+        .background(cardBackground)
+    }
+
+    private var densityAltitudeUnavailableSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("PERFORMANCE")
+                .font(.caption.bold())
+                .foregroundColor(.secondary)
+                .tracking(1)
+            Text("Density altitude can't be calculated: field elevation not reported")
+                .font(.subheadline.bold())
+                .foregroundColor(Brand.slate)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(cardBackground)
     }
@@ -2834,8 +2861,8 @@ struct WeatherDetailView: View {
             .padding(.vertical, 6)
             .advisoryStyle()
 
-            if airport.elevation != 0 {
-                Text("Elev \(airport.elevation.formatted()) ft MSL")
+            if let elevation = airport.elevation {
+                Text("Elev \(elevation.formatted()) ft MSL")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -3018,8 +3045,8 @@ struct WeatherDetailView: View {
 
     // MARK: - Advisory Density Altitude Card
     private func advisoryDensityAltitudeCard(_ wx: AdvisoryWeather) -> some View {
-        guard let daFt = wx.densityAltitudeFt else { return AnyView(EmptyView()) }
-        let elevFt  = Double(airport.elevation)
+        guard let daFt = wx.densityAltitudeFt, let elevation = airport.elevation else { return AnyView(EmptyView()) }
+        let elevFt  = Double(elevation)
         let penalty = daFt - elevFt
         let hpLoss  = max(0, daFt / 1000.0 * 3.0)   // NA power-loss estimate vs sea level, informational
 
@@ -3077,8 +3104,8 @@ struct WeatherDetailView: View {
         var notes: [AdvisoryNote] = []
 
         // High density altitude
-        if let da = wx.densityAltitudeFt {
-            let elevFt = Double(airport.elevation)
+        if let da = wx.densityAltitudeFt, let elevation = airport.elevation {
+            let elevFt = Double(elevation)
             let penalty = da - elevFt
             let hpLoss = max(0, penalty / 1000.0 * 3.0)
             if hpLoss >= 20 {

@@ -169,7 +169,7 @@ class WeatherViewModel: ObservableObject {
                             let snapshot = WidgetWeatherSnapshot.from(
                                 airport: AirportService.shared.airport(icao: icao) ?? Airport(
                                     icao: icao, iata: nil, name: icao,
-                                    latitude: 0, longitude: 0, elevation: 0
+                                    latitude: 0, longitude: 0, elevation: nil
                                 ),
                                 metar: currentMetar,
                                 trend: snapshotTrend,
@@ -204,7 +204,7 @@ class WeatherViewModel: ObservableObject {
                 let snapshot = WidgetWeatherSnapshot.from(
                     airport: AirportService.shared.airport(icao: icao) ?? Airport(
                         icao: icao, iata: nil, name: icao,
-                        latitude: 0, longitude: 0, elevation: 0
+                        latitude: 0, longitude: 0, elevation: nil
                     ),
                     metar: currentMetar,
                     trend: snapshotTrend,

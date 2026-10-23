@@ -10,7 +10,10 @@ struct Airport: Identifiable, Codable, Hashable {
     let name: String
     let latitude: Double
     let longitude: Double
-    let elevation: Int
+    // Feet MSL. nil = not reported (a non-bundled airport whose NOAA record has no `elev`), never
+    // 0: a real 0 ft field (bundled) keeps 0. Density altitude and the nearby-TAF elevation
+    // comparison say they can't be computed rather than using a made-up elevation.
+    let elevation: Int?
     let hasMetar: Bool  // true = official METAR station → aviationweather.gov; false → Open-Meteo advisory
     let city: String?   // served city, for name search ("Las Vegas" → KLAS); absent in older data
 
@@ -26,13 +29,13 @@ struct Airport: Identifiable, Codable, Hashable {
         name      = try c.decode(String.self, forKey: .name)
         latitude  = try c.decode(Double.self, forKey: .latitude)
         longitude = try c.decode(Double.self, forKey: .longitude)
-        elevation = try c.decode(Int.self, forKey: .elevation)
+        elevation = try c.decodeIfPresent(Int.self, forKey: .elevation)
         hasMetar  = try c.decodeIfPresent(Bool.self, forKey: .hasMetar) ?? true
         city      = try c.decodeIfPresent(String.self, forKey: .city)
     }
 
     init(icao: String, iata: String?, name: String,
-         latitude: Double, longitude: Double, elevation: Int, hasMetar: Bool = true, city: String? = nil) {
+         latitude: Double, longitude: Double, elevation: Int?, hasMetar: Bool = true, city: String? = nil) {
         self.icao      = icao
         self.iata      = iata
         self.name      = name
@@ -72,7 +75,7 @@ final class AirportFavorite {
         self.name      = airport.name
         self.latitude  = airport.latitude
         self.longitude = airport.longitude
-        self.elevation = airport.elevation
+        self.elevation = airport.elevation ?? 0   // storage unchanged (no schema change); see asAirport
         self.hasMetar  = airport.hasMetar
         self.addedDate = Date()
         self.sortOrder = sortOrder
@@ -92,9 +95,6 @@ final class AirportFavorite {
         }
     }
 
-    var asAirport: Airport {
-        Airport(icao: icao, iata: iata, name: name,
-                latitude: latitude, longitude: longitude,
-                elevation: elevation, hasMetar: hasMetar)
-    }
+    // asAirport: an extension in AirportService.swift (it needs the bundled database, which the
+    // widget target, sharing this file, doesn't have).
 }
