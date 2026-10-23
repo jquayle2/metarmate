@@ -92,6 +92,46 @@ nonisolated enum WidgetDataManager {
         return (try? JSONDecoder().decode([String: WidgetAirportConfig].self, from: data)) ?? [:]
     }
 
+    // MARK: - Verdict inputs (written by the main app, read by the widget extension)
+    // The widget can't open SwiftData or the bundled runways.json, so the app writes the profile a
+    // verdict is judged against (VerdictProfile.current()) and each relevant airport's runway ends.
+    // The widget runs the shared VerdictEngine on them. Save functions return whether anything
+    // changed, so the app reloads timelines only when it must.
+    private static let verdictProfileKey = "widget.verdictProfile"
+    private static let runwaysPrefix = "widget.runways."
+
+    @discardableResult
+    nonisolated static func saveVerdictProfile(_ profile: VerdictProfileSnapshot) -> Bool {
+        saveIfChanged(profile, key: verdictProfileKey)
+    }
+
+    nonisolated static func loadVerdictProfile() -> VerdictProfileSnapshot? {
+        guard let data = sharedDefaults?.data(forKey: verdictProfileKey) else { return nil }
+        return try? JSONDecoder().decode(VerdictProfileSnapshot.self, from: data)
+    }
+
+    /// An empty list is stored too: "no runway data for this field" (crosswind CHECK when the
+    /// wind is over the limit), as opposed to never written.
+    @discardableResult
+    nonisolated static func saveRunways(_ ends: [RunwayEnd], icao: String) -> Bool {
+        saveIfChanged(ends, key: runwaysPrefix + icao.uppercased())
+    }
+
+    nonisolated static func loadRunways(icao: String) -> [RunwayEnd] {
+        guard let data = sharedDefaults?.data(forKey: runwaysPrefix + icao.uppercased()) else { return [] }
+        return (try? JSONDecoder().decode([RunwayEnd].self, from: data)) ?? []
+    }
+
+    private nonisolated static func saveIfChanged<T: Encodable>(_ value: T, key: String) -> Bool {
+        guard let defaults = sharedDefaults else { return false }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        guard let data = try? encoder.encode(value) else { return false }
+        if defaults.data(forKey: key) == data { return false }
+        defaults.set(data, forKey: key)
+        return true
+    }
+
     // MARK: - Pro status (written by main app, read by widget extension)
 
     nonisolated static func saveProStatus(_ isPro: Bool) {

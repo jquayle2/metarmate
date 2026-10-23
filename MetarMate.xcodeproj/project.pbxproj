@@ -79,6 +79,8 @@
 				Models/TafVerification.swift,
 				Models/WeatherTrend.swift,
 				Models/WidgetWeatherSnapshot.swift,
+				Services/AlertConditions.swift,
+				Services/VerdictEngine.swift,
 				Services/WidgetDataManager.swift,
 				Utilities/Extensions.swift,
 				Utilities/MetarParser.swift,

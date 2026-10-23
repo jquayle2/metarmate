@@ -65,6 +65,28 @@ struct AlertConditions {
         skyCode = metar.skyCode
     }
 
+    // MARK: - Widget snapshot adapter
+    // The widget's verdict input. Same fields as the METAR adapter, from the flat snapshot: an
+    // unreported wind or visibility stays nil (never 0 kt / 0 SM), and a missing ceiling is "no
+    // ceiling" only when the snapshot says the sky was reported.
+    init(snapshot s: WidgetWeatherSnapshot) {
+        let windKnown = s.windReported != false
+        self.init(windDirection: windKnown ? s.windDirection : nil,
+                  windSpeed: windKnown ? s.windSpeed : nil,
+                  windGust: windKnown ? s.windGust : nil,
+                  ceilingFeet: s.ceilingFeet,
+                  visibilitySM: s.visibilityReported == false ? nil : s.visibility,
+                  flightCategory: s.flightCategory,
+                  source: .metar,
+                  timestamp: s.observationTime)
+        windIsVariable = s.windIsVariable
+        if let ft = s.ceilingFeet {
+            ceiling = .feet(ft)
+        } else {
+            ceiling = s.ceilingReported == true ? .none : .notReported
+        }
+    }
+
     // The ASOS / Synoptic adapter is an extension in SynopticService.swift, so this file can be
     // shared with the widget extension (which has no Synoptic code).
 }

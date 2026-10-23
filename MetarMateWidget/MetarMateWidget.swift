@@ -111,6 +111,52 @@ private extension WidgetWeatherSnapshot {
     }
 }
 
+// MARK: - Go/no-go verdict (D#20)
+// The shared VerdictEngine on the snapshot, the profile and runways the app wrote to the App Group,
+// at the entry's date: the timeline's future entries turn it late at obs+65 and remove it after
+// obs+75. Same wording and color rule as the app (VerdictDisplay): green/red only for a current
+// GO/NO-GO. METAR only: nil for an advisory, before the app has written a profile, and with no
+// current report (each family already shows that state).
+
+private extension WidgetWeatherSnapshot {
+    func verdict(at date: Date) -> VerdictDisplay? {
+        guard !isAdvisory, let profile = WidgetDataManager.loadVerdictProfile() else { return nil }
+        let v = VerdictEngine.evaluate(profile.limits, AlertConditions(snapshot: self),
+                                       runways: WidgetDataManager.loadRunways(icao: icao), now: date)
+        guard v.outcome != .noCurrent else { return nil }
+        return VerdictDisplay(v, profile: profile)
+    }
+}
+
+private func verdictColor(_ tone: VerdictDisplay.Tone) -> Color {
+    switch tone {
+    case .go:      return .green
+    case .noGo:    return .red
+    case .neutral: return .primary
+    }
+}
+
+/// "NO-GO  vs VFR day starter": the verdict always names its profile (D#19).
+private struct VerdictLine: View {
+    let verdict: VerdictDisplay
+    var headlineFont: Font = .system(.caption, design: .rounded, weight: .heavy)
+    var labelFont: Font = .system(size: 9, weight: .medium)
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(verdict.headline)
+                .font(headlineFont)
+                .foregroundStyle(verdictColor(verdict.tone))
+                .fixedSize()
+            Text(verdict.against)
+                .font(labelFont)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+    }
+}
+
 /// Deep link opened by MetarMateApp.onOpenURL to jump straight to this airport's detail page —
 /// a tap outside the widget's interactive buttons follows this instead of just opening the app
 /// to wherever it was last left.
@@ -382,7 +428,7 @@ struct LockScreenRectangularView: View {
                             }
                         }
 
-                        // Bottom row: wind + trend
+                        // Middle row: wind + trend
                         HStack(spacing: 4) {
                             Text(snap.windDisplayString)
                                 .font(.system(.caption, design: .monospaced))
@@ -392,6 +438,11 @@ struct LockScreenRectangularView: View {
                                     .foregroundStyle(trendColor(snap.trendDirection))
                             }
                             Spacer()
+                        }
+
+                        // Bottom row: go/no-go
+                        if let verdict = snap.verdict(at: date) {
+                            VerdictLine(verdict: verdict, labelFont: .system(.caption2, weight: .medium))
                         }
                     }
                 }
@@ -486,6 +537,9 @@ struct HomeScreenSmallView: View {
                         Spacer(minLength: 0)
                     } else {
                         smallConditions(snap)
+                        if let verdict = snap.verdict(at: date) {
+                            VerdictLine(verdict: verdict)
+                        }
                     }
 
                     // Observation time centered at bottom; replaced by the warning when late.
@@ -693,6 +747,19 @@ struct HomeScreenMediumView: View {
                                 .foregroundStyle(.orange)
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let verdict = snap.verdict(at: date) {
+                            VerdictLine(verdict: verdict,
+                                        headlineFont: .system(.callout, design: .rounded, weight: .heavy),
+                                        labelFont: .system(.caption2, weight: .medium))
+                            // The main reason: first failing value vs limit, or what couldn't be checked.
+                            if let reason = verdict.lines.first {
+                                Text(reason)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
                         }
                     }
 

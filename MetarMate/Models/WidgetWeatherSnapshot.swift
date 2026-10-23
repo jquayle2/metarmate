@@ -35,7 +35,11 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
     // the persisted snapshot stays a Double; this bit carries the parsed Visibility's distinction.
     var visibilityIsGreaterThan: Bool = false
     var visibilityIsLessThan: Bool? = nil   // M1/4SM; optional so snapshots already on disk still decode
-    let ceilingFeet: Int?           // AGL; nil = no ceiling
+    let ceilingFeet: Int?           // AGL; nil = no ceiling, or not reported (see ceilingReported)
+    // Whether the report had a sky condition, so a nil ceilingFeet can be told apart: true = no
+    // ceiling (clear/FEW/SCT), false = not reported (audit #6). Snapshots written before this field
+    // decode nil and are treated as NOT reported: the verdict says CHECK rather than a false GO.
+    var ceilingReported: Bool? = nil
     let temperature: Int?           // Celsius
     let dewpoint: Int?              // Celsius
     let altimeter: Double?          // inHg
@@ -204,6 +208,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             visibilityIsGreaterThan: metar.visibility.isGreaterThan,
             visibilityIsLessThan: metar.visibility.isLessThan,
             ceilingFeet: metar.ceilingFeet,
+            ceilingReported: metar.ceiling != .notReported,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
             altimeter: metar.altimeter,
@@ -280,6 +285,7 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             visibilityIsGreaterThan: metar.visibility.isGreaterThan,
             visibilityIsLessThan: metar.visibility.isLessThan,
             ceilingFeet: metar.ceilingFeet,
+            ceilingReported: metar.ceiling != .notReported,
             temperature: metar.temperature,
             dewpoint: metar.dewpoint,
             altimeter: metar.altimeter,
@@ -321,6 +327,7 @@ extension WidgetWeatherSnapshot {
             visibilityIsGreaterThan: live.visibilityIsGreaterThan,
             visibilityIsLessThan: live.visibilityIsLessThan,
             ceilingFeet: live.ceilingFeet,
+            ceilingReported: live.ceilingReported,
             temperature: live.temperature,
             dewpoint: live.dewpoint,
             altimeter: live.altimeter,
@@ -350,7 +357,7 @@ extension WidgetWeatherSnapshot {
             windIsVariable: windIsVariable, windReported: windReported,
             visibility: visibility, visibilityReported: visibilityReported,
             visibilityIsGreaterThan: visibilityIsGreaterThan, visibilityIsLessThan: visibilityIsLessThan,
-            ceilingFeet: ceilingFeet,
+            ceilingFeet: ceilingFeet, ceilingReported: ceilingReported,
             temperature: temperature, dewpoint: dewpoint, altimeter: altimeter,
             trendDirection: trendDirection, trendHeadline: trendHeadline,
             tafAccuracyPct: tafAccuracyPct, forecastWindDivergenceKt: forecastWindDivergenceKt,

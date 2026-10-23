@@ -55,6 +55,8 @@ struct MetarMateApp: App {
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
                     MinimumsProfile.seedBuiltInsIfNeeded(in: Self.sharedModelContainer.mainContext)
+                    // Widget verdict inputs: active profile + runways for widget/favorite airports.
+                    await WidgetVerdictSync.syncAll(in: Self.sharedModelContainer.mainContext)
                     // Submit an initial background alert-check request.
                     AlertScheduler.schedule()
                 }
@@ -67,6 +69,10 @@ struct MetarMateApp: App {
                     // Pro flag is rewritten and timelines reloaded — guards against a missed
                     // reload leaving the widget stuck on "Pro Required".
                     if phase == .active { Task { await StoreManager.shared.checkEntitlements() } }
+                    // A widget's airport may have been changed while the app was away.
+                    if phase == .active {
+                        Task { await WidgetVerdictSync.syncAll(in: Self.sharedModelContainer.mainContext) }
+                    }
                 }
                 .onOpenURL { url in
                     // metarmate://airport/<ICAO> — sent by the home screen widget's widgetURL.
@@ -85,6 +91,7 @@ struct MetarMateApp: App {
                             }
                     }
                 }
+                .modifier(WidgetVerdictSyncModifier())
                 // On the window content, not the Scene: a Scene modifier's argument is evaluated
                 // whenever `body` is, which would open the App Group store on background launches.
                 .modelContainer(Self.sharedModelContainer)

@@ -175,6 +175,7 @@ class WeatherViewModel: ObservableObject {
                                 trend: snapshotTrend,
                                 tafVerification: snapshotVerification
                             )
+                            WidgetVerdictSync.publishRunways(for: [snapshot.icao])
                             WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
                         }
                         return
@@ -209,6 +210,7 @@ class WeatherViewModel: ObservableObject {
                     trend: snapshotTrend,
                     tafVerification: snapshotVerification
                 )
+                WidgetVerdictSync.publishRunways(for: [snapshot.icao])   // before save: its reload carries them
                 WidgetDataManager.save(snapshot: withBorrowedTaf(snapshot))
             }
         } catch is CancellationError {
