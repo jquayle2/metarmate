@@ -61,6 +61,21 @@ final class ProGatesUITests: XCTestCase {
     }
 
     @MainActor
+    func testNewWatchIsPro() throws {
+        let app = launch()
+        app.tabBars.buttons["Alerts"].firstMatch.tap()
+        let add = app.buttons["addWatchButton"].firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        add.tap()
+        if gated {
+            XCTAssertTrue(paywall(app).waitForExistence(timeout: 5), "gated build: + didn't open the paywall")
+        } else {
+            XCTAssertTrue(app.navigationBars["Add Airport"].waitForExistence(timeout: 5), "TestFlight build: + didn't open Add Airport")
+            XCTAssertFalse(paywall(app).exists)
+        }
+    }
+
+    @MainActor
     func testStarterOpensReadOnlyForEveryone() throws {
         let app = launch()
         openProfiles(app)

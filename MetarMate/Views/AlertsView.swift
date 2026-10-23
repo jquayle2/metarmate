@@ -29,6 +29,14 @@ struct AlertsView: View {
     @State private var showProSheet = false
 
     private var canCustomize: Bool { ProGate.allows(.customProfiles, isPro: store.isProForUI) }
+    /// Alerts are Pro (D#20). A lapsed or refunded user's watches stay stored, but nothing is
+    /// evaluated or checked until Pro returns.
+    private var alertsAllowed: Bool { ProGate.allows(.alerts, isPro: store.isProForUI) }
+
+    private func refresh(force: Bool = false) async {
+        guard alertsAllowed else { vm.displays = [:]; return }
+        await vm.refresh(watches, in: context, force: force)
+    }
 
     private var activeProfile: MinimumsProfile? {
         profiles.first { $0.activeToken == activeProfileID }
@@ -53,6 +61,15 @@ struct AlertsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("lapsedProfilesNotice")
                 }
+                if !alertsAllowed, !watches.isEmpty {
+                    Text("Alerts are paused. Your watches are saved and resume with MetarMate Pro.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("alertsPausedNotice")
+                }
                 Group {
                     if watches.isEmpty {
                         emptyState
@@ -66,7 +83,8 @@ struct AlertsView: View {
                                 let airport = AirportService.shared.airport(icao: watch.icao)
                                 let row = WatchRow(watch: watch,
                                                    display: vm.displays[watch.icao],
-                                                   airport: airport)
+                                                   airport: airport,
+                                                   paused: !alertsAllowed)
                                 Group {
                                     if let airport {
                                         NavigationLink(destination: WeatherDetailView(airport: airport)) {
@@ -83,7 +101,7 @@ struct AlertsView: View {
                         }
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
-                        .refreshable { await vm.refresh(watches, in: context, force: true) }   // pull-to-refresh: bypass cache freshness
+                        .refreshable { await refresh(force: true) }   // pull-to-refresh: bypass cache freshness
                     }
                 }
             }
@@ -92,13 +110,14 @@ struct AlertsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showAddSheet = true } label: { Image(systemName: "plus") }
+                    Button { alertsAllowed ? (showAddSheet = true) : (showProSheet = true) } label: { Image(systemName: "plus") }
+                        .accessibilityIdentifier("addWatchButton")
                 }
             }
             .sheet(isPresented: $showAddSheet) { AddWatchView() }
             .sheet(isPresented: $showProfiles, onDismiss: {
                 // Edits to the active profile should show immediately on return.
-                Task { await vm.refresh(watches, in: context) }
+                Task { await refresh() }
             }) {
                 ProfilesListView()
             }
@@ -109,17 +128,17 @@ struct AlertsView: View {
         .task(id: watches.map(\.icao)) {
             MinimumsProfile.backfillBuiltInKeys(in: context)   // assign stable starter keys (once)
             MinimumsProfile.ensureUniqueUUIDs(in: context)     // then de-dup, preserving the active choice
-            await vm.refresh(watches, in: context)
+            await refresh()
             // 5-min auto-refresh, same pattern as the detail view. Read-only — never fires.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(300))
                 guard !Task.isCancelled else { break }
-                await vm.refresh(watches, in: context)
+                await refresh()
             }
         }
         .onChange(of: activeProfileID) {
             // Switching the active profile re-evaluates every visible watch.
-            Task { await vm.refresh(watches, in: context) }
+            Task { await refresh() }
         }
     }
 
@@ -183,7 +202,7 @@ struct AlertsView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             Button {
-                showAddSheet = true
+                if alertsAllowed { showAddSheet = true } else { showProSheet = true }
             } label: {
                 Label("Add Airport", systemImage: "plus")
                     .fontWeight(.semibold)
@@ -216,6 +235,7 @@ private struct WatchRow: View {
     let watch: AirportWatch
     let display: AlertPipeline.WatchDisplay?
     let airport: Airport?
+    var paused = false   // alerts are Pro and Pro has lapsed: nothing is being checked
 
     private var conditions: AlertConditions? { display?.conditions }
     private var verdict: Verdict? { display?.verdict }
@@ -274,6 +294,10 @@ private struct WatchRow: View {
                         } else if isAdvisoryOnly {
                             Text("Advisory weather only")
                                 .font(.avenir(12.5, .bold))
+                                .foregroundColor(Brand.slate)
+                        } else if paused {
+                            Text("Paused")
+                                .font(.brandMono(13, weight: .medium))
                                 .foregroundColor(Brand.slate)
                         } else if display == nil {
                             Text("Checking…")

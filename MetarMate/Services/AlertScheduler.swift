@@ -48,6 +48,12 @@ enum AlertScheduler {
         schedule()
 
         let work = Task { @MainActor in
+            // Alerts are Pro (D#20). A lapsed or refunded user's watches stop here, with nothing
+            // deleted. Entitlements are awaited first, so a payer's checks never stop on a cold launch.
+            guard ProGate.allows(.alerts, isPro: await StoreManager.shared.isProWhenLoaded()) else {
+                print("[AlertScheduler] skipped: alerts need MetarMate Pro")
+                return
+            }
             // Build a dedicated, short-lived container for THIS run. Scoping it to this closure
             // means its SQLite connection — and the App Group store's WAL lock — is released the
             // moment the work finishes, BEFORE we report completion and iOS suspends the process.
