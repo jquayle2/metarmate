@@ -135,6 +135,8 @@ actor WeatherService {
                 let parsed = try await attempt("METAR-history(retry)")
                 let ms2 = Double(DispatchTime.now().uptimeNanoseconds - retryStart.uptimeNanoseconds) / 1_000_000
                 Log.net.info("[net] METAR history \(icao, privacy: .public) RETRY OK - \(String(format: "%.0f", ms2), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
+                // Same as a first-try success: cache the newest obs for the lists.
+                if let newest = parsed.first { store(newest, for: icao) }
                 return parsed
             } catch {
                 let ms2 = Double(DispatchTime.now().uptimeNanoseconds - retryStart.uptimeNanoseconds) / 1_000_000
