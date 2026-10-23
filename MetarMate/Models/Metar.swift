@@ -274,7 +274,16 @@ struct Metar: Identifiable, Codable {
         }
     }
 
+    /// Over 60 min: the detail screen's red age text, an early "next report is late" warning
+    /// (WidgetWeatherSnapshot.oldReportWarningMinutes). Changes no color or verdict.
     var isOld: Bool {
-        Date().timeIntervalSince(observationTime) > 3600
+        Date().timeIntervalSince(observationTime) > TimeInterval(WidgetWeatherSnapshot.oldReportWarningMinutes * 60)
+    }
+
+    /// Over 75 min from observation (D#4, WidgetWeatherSnapshot.noCurrentAfterMinutes): not
+    /// current, so its flight category is never shown in color.
+    func isNoCurrent(at date: Date) -> Bool {
+        if case .noCurrent = WidgetWeatherSnapshot.reportAge(observationTime: observationTime, at: date) { return true }
+        return false
     }
 }

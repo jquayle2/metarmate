@@ -256,7 +256,10 @@ struct WeatherDetailView: View {
                 .foregroundColor(Brand.cloud)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 12) {
-                StatusPill(category: vm.flightCategory)
+                // Re-judged every 30 s so the pill goes neutral when the report passes 75 min.
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    StatusPill(category: vm.flightCategory, isNoCurrent: vm.metar?.isNoCurrent(at: context.date) ?? false)
+                }
                 if let metar = vm.metar {
                     observationTimeView(metar)
                         .lineLimit(1)
@@ -2020,7 +2023,8 @@ struct WeatherDetailView: View {
             if let metar {
                 Text(metar.flightCategory.rawValue)
                     .font(.avenir(12, .heavy))
-                    .foregroundColor(ColorRules.flightCategoryColor(metar.flightCategory))
+                    // Not current (over 75 min): no category color.
+                    .foregroundColor(metar.isNoCurrent(at: Date()) ? Brand.slate : ColorRules.flightCategoryColor(metar.flightCategory))
                 Text(RightNow.summary(metar))
                     .font(.avenir(12, .medium))
                     .foregroundColor(Brand.fog)

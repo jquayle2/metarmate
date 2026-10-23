@@ -375,11 +375,13 @@ struct SectionFrontHeader: View {
 /// VFR / IFR status pill. VFR = translucent green outline; IFR = solid danger fill.
 struct StatusPill: View {
     let category: FlightCategory
+    /// A report that isn't current (over 75 min, D#4): neutral, never the category color.
+    var isNoCurrent = false
 
     var body: some View {
-        let color = ColorRules.flightCategoryColor(category)
+        let color = isNoCurrent ? Brand.slate : ColorRules.flightCategoryColor(category)
         // IFR/LIFR get a solid alarming pill; VFR/MVFR a translucent outline.
-        let solid = (category == .ifr || category == .lifr)
+        let solid = !isNoCurrent && (category == .ifr || category == .lifr)
         return HStack(spacing: 6) {
             Circle().frame(width: 6, height: 6)
             Text(category.displayName)

@@ -75,6 +75,13 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
         case noCurrent(minutes: Int)   // over 75 min (76+ whole minutes): conditions withheld
     }
 
+    // The report-age limits, all from observation time:
+    // - oldReportWarningMinutes (60): the detail screen's age text turns red, an early "the next
+    //   report is late" warning. It changes no color, category or verdict.
+    // - lateAfterMinutes (65): "late" (D#4): warn, conditions still shown.
+    // - noCurrentAfterMinutes (75): over this the report is not current (D#4): no flight-category
+    //   color anywhere, no conditions or verdict as current.
+    static let oldReportWarningMinutes = 60
     static let lateAfterMinutes = 65
     static let noCurrentAfterMinutes = 75
 
