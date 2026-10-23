@@ -332,7 +332,9 @@ private struct WatchRow: View {
 
     private func skyVisString(_ c: AlertConditions) -> String {
         var parts: [String] = []
-        if let ceiling = c.ceilingFeet {
+        if let sky = c.skyCode {
+            parts.append(sky)   // METAR: shared token ("BKN 25" / "FEW 55" / "CLR" / "Sky —")
+        } else if let ceiling = c.ceilingFeet {
             // Show the TRUE coverage code from the observation (OVC vs BKN is operationally
             // meaningful). If coverage is genuinely unavailable, show height alone rather than
             // guessing a prefix.

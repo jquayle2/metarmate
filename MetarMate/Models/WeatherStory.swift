@@ -33,10 +33,7 @@ enum ForecastRules {
     /// Ceiling in feet AGL for a TAF period — lowest BKN/OVC/VV layer, nil if none.
     /// Mirrors the existing tafCeilingFeet in WeatherDetailView.swift exactly.
     static func ceilingFeet(_ period: TafForecast) -> Int? {
-        period.clouds
-            .filter { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility }
-            .map { $0.altitude * 100 }
-            .min()
+        period.ceiling.feet
     }
 
     /// Which of wind/ceiling/visibility is this period's limiting factor — whichever is

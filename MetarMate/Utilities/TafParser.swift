@@ -182,7 +182,7 @@ struct TafParser {
             let coverKey = (coverStr == "OVX") ? "VV" : coverStr
             guard let coverage = CloudCoverage(rawValue: coverKey) else { return nil }
 
-            var altitudeHundreds = 0
+            var altitudeHundreds: Int?   // nil = base not forecast, never 0 ft (audit #12)
             if let base = cloud["base"] as? Int {
                 altitudeHundreds = base / 100
             } else if let base = cloud["base"] as? Double {
@@ -230,11 +230,9 @@ struct TafParser {
     nonisolated private static func calculateFlightCategory(visibility: Visibility, clouds: [CloudLayer]) -> FlightCategory {
         // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count). The sky axis is known only
         // when clouds were forecast: no layers at all means "not forecast", while a stated clear sky
-        // (SKC/NSC) or FEW/SCT only is a known "no ceiling".
-        let skyKnown = !clouds.isEmpty
-        let ceilingFeet: Int? = clouds
-            .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-            .map { $0.altitude * 100 }
+        // (SKC/NSC) or FEW/SCT only is a known "no ceiling". A ceiling layer with no base leaves the
+        // sky axis unknown (shared rule: CloudLayer.ceilingStatus).
+        let ceiling = clouds.ceilingStatus(skyReported: !clouds.isEmpty)
 
         // .exact(n) and .greaterThan(n) both threshold on n: for .greaterThan the true value is > n,
         // so n is the conservative floor (NOAA emits it only at 6/10, both VFR). .unknown -> nil.
@@ -243,12 +241,10 @@ struct TafParser {
         // Each known axis on its own. Thresholds: LIFR ceiling < 500 / vis < 1; IFR ceiling < 1000 /
         // vis < 3; MVFR ceiling <= 3000 / vis <= 5; otherwise VFR.
         var axes: [FlightCategory] = []
-        if skyKnown {
-            if let ceil = ceilingFeet {
-                axes.append(ceil < 500 ? .lifr : ceil < 1000 ? .ifr : ceil <= 3000 ? .mvfr : .vfr)
-            } else {
-                axes.append(.vfr)
-            }
+        switch ceiling {
+        case .feet(let ceil): axes.append(ceil < 500 ? .lifr : ceil < 1000 ? .ifr : ceil <= 3000 ? .mvfr : .vfr)
+        case .none:           axes.append(.vfr)
+        case .notReported:    break
         }
         if let vis {
             axes.append(vis < 1.0 ? .lifr : vis < 3.0 ? .ifr : vis <= 5.0 ? .mvfr : .vfr)

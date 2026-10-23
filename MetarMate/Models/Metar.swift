@@ -55,8 +55,50 @@ enum CloudCoverage: String, Codable {
 
 struct CloudLayer: Codable {
     var coverage: CloudCoverage
-    var altitude: Int        // hundreds of feet AGL
+    var altitude: Int?       // hundreds of feet AGL; nil = base not reported (BKN///), never 0 ft (audit #12)
     var isCumulonimbus: Bool
+
+    /// BKN, OVC or VV: a layer that can be a ceiling.
+    nonisolated var isCeilingLayer: Bool {
+        coverage == .broken || coverage == .overcast || coverage == .verticalVisibility
+    }
+
+    nonisolated var baseFeet: Int? { altitude.map { $0 * 100 } }
+}
+
+// MARK: - Ceiling
+/// The ceiling as reported: a height, no ceiling (clear sky or only FEW/SCT), or not reported.
+/// "Not reported" is never "no ceiling" (audit #6) and never 0 ft (audit #12).
+enum CeilingStatus: Equatable {
+    case feet(Int)
+    case none
+    case notReported
+
+    nonisolated var feet: Int? {
+        if case .feet(let f) = self { return f }
+        return nil
+    }
+}
+
+extension Array where Element == CloudLayer {
+    /// The ceiling layer: the LOWEST BKN/OVC/VV layer with a known base (by height, never list
+    /// position — P3 ".first vs .min()").
+    nonisolated var ceilingLayer: CloudLayer? {
+        filter { $0.isCeilingLayer && $0.altitude != nil }.min { $0.altitude! < $1.altitude! }
+    }
+
+    /// One ceiling rule for METAR and TAF. `skyReported`: the report has a sky condition at all.
+    /// A BKN/OVC/VV layer with no base leaves the ceiling unknown unless a known ceiling layer is
+    /// listed before it (layers are reported in ascending order, so it's above that one).
+    nonisolated func ceilingStatus(skyReported: Bool) -> CeilingStatus {
+        guard skyReported else { return .notReported }
+        guard let lowest = ceilingLayer, let lowestFt = lowest.baseFeet else {
+            return contains(where: \.isCeilingLayer) ? .notReported : .none
+        }
+        let lowestIndex = firstIndex { $0.isCeilingLayer && $0.altitude == lowest.altitude }!
+        let unknownBaseBelow = self[..<lowestIndex].contains { $0.isCeilingLayer && $0.altitude == nil }
+        return unknownBaseBelow ? .notReported : .feet(lowestFt)
+    }
 }
 
 // MARK: - Visibility
@@ -128,15 +170,47 @@ struct Metar: Identifiable, Codable {
     var weatherPhenomena: [String]
     var remarks: String?
 
-    nonisolated var ceilingFeet: Int? {
-        clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-               .map { $0.altitude * 100 }
+    /// The report has a sky condition. NOAA sends no layers for a stated clear sky (`10SM CLR` ->
+    /// `clouds: []`), so an empty list is clear only when the report body says so; otherwise the
+    /// sky group is missing and the ceiling is unknown, not unlimited (audit #6).
+    nonisolated var skyReported: Bool {
+        if !clouds.isEmpty { return true }
+        let body = rawText.components(separatedBy: " RMK").first ?? rawText
+        let tokens = Set(body.split(separator: " ").map(String.init))
+        return !tokens.isDisjoint(with: ["CLR", "SKC", "NCD", "NSC", "CAVOK"])
     }
+
+    nonisolated var ceiling: CeilingStatus { clouds.ceilingStatus(skyReported: skyReported) }
+
+    /// Height of a KNOWN ceiling. nil is "no ceiling" OR "not reported": use `ceiling` wherever the
+    /// difference matters.
+    nonisolated var ceilingFeet: Int? { ceiling.feet }
 
     /// Coverage code (BKN/OVC/VV) of the ceiling layer — the same layer that produces ceilingFeet.
     nonisolated var ceilingCoverage: String? {
-        clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })?
-              .coverage.rawValue
+        ceilingFeet == nil ? nil : clouds.ceilingLayer?.coverage.rawValue
+    }
+
+    /// The sky when there's no known ceiling, in words: "Clear" only for a stated clear sky,
+    /// "No ceiling" with FEW/SCT (F18), "Sky not reported" when there's no sky group (audit #6).
+    nonisolated var noCeilingWords: String {
+        if ceiling == .notReported { return "Sky not reported" }
+        return clouds.contains { $0.coverage == .few || $0.coverage == .scattered } ? "No ceiling" : "Clear"
+    }
+
+    /// Compact sky token for list rows: "BKN 25" (hundreds of feet), the lowest FEW/SCT layer when
+    /// there's no ceiling ("FEW 55"), "CLR" only for a stated clear sky, "Sky —" when not reported.
+    nonisolated var skyCode: String {
+        switch ceiling {
+        case .feet(let f):
+            return "\(ceilingCoverage ?? "BKN") \(f / 100)"
+        case .none:
+            let partial = clouds.filter { $0.coverage == .few || $0.coverage == .scattered }
+            guard let low = partial.min(by: { ($0.altitude ?? .max) < ($1.altitude ?? .max) }) else { return "CLR" }
+            return "\(low.coverage.rawValue) \(low.altitude.map(String.init) ?? "///")"
+        case .notReported:
+            return "Sky —"
+        }
     }
 
     var isOld: Bool {

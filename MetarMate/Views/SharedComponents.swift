@@ -84,13 +84,7 @@ struct TrendIndicator: View {
 func quickWeatherSummary(metar: Metar) -> String {
     var parts: [String] = []
 
-    if let ceiling = metar.ceilingFeet {
-        let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
-        let cov = layer?.coverage.rawValue ?? "BKN"
-        parts.append("\(cov) \(ceiling / 100)")
-    } else {
-        parts.append("CLR")
-    }
+    parts.append(metar.skyCode)   // never "CLR" for FEW/SCT or a missing sky group
 
     let vis = metar.visibility.displayNumber.map { "\($0)SM" } ?? "—"   // .exact(6)->"6SM", .greaterThan(6)->"6+SM", .unknown->"—"
     parts.append(vis)
@@ -248,13 +242,7 @@ struct AirportRowView: View {
 
     private func skyVisString(metar: Metar) -> String {
         var parts: [String] = []
-        if let ceiling = metar.ceilingFeet {
-            let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
-            let cov = layer?.coverage.rawValue ?? "BKN"
-            parts.append("\(cov) \(ceiling / 100)")
-        } else {
-            parts.append("CLR")
-        }
+        parts.append(metar.skyCode)   // never "CLR" for FEW/SCT or a missing sky group
         let vis = metar.visibility.displayNumber.map { "\($0)SM" } ?? "—"   // .exact(6)->"6SM", .greaterThan(6)->"6+SM", .unknown->"—"
         parts.append(vis)
         return parts.joined(separator: " · ")

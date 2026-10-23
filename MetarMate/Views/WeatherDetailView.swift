@@ -583,7 +583,7 @@ struct WeatherDetailView: View {
             if let ceiling = obs.ceilingAGL {
                 let ceilingLayer = obs.cloudLayers.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
                 let coverage = ceilingLayer?.coverage == .overcast ? "Overcast" : "Broken"
-                conditionRow("cloud.fill", "Ceiling", "\(coverage) at \(ceiling.formatted()) ft", color: ceilingConditionColor(ceiling))
+                conditionRow("cloud.fill", "Ceiling", "\(coverage) at \(ceiling.formatted()) ft", color: ceilingConditionColor(.feet(ceiling)))
             }
 
             if !obs.cloudLayers.isEmpty {
@@ -683,7 +683,7 @@ struct WeatherDetailView: View {
             conditionRow("eye.fill", "Visibility",
                          visibilityText(metar.visibility),
                          color: visibilityConditionColor(metar.visibility))
-            conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceilingFeet))
+            conditionRow("cloud.fill", "Ceiling", ceilingText(metar), color: ceilingConditionColor(metar.ceiling))
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
             }
@@ -755,8 +755,9 @@ struct WeatherDetailView: View {
     }
 
     // Ceiling: < 1000 IFR danger; < 3000 marginal; clear/high = good.
-    private func ceilingConditionColor(_ ceilingFt: Int?) -> Color {
-        ColorRules.ceilingColor(ceilingFt)
+    private func ceilingConditionColor(_ ceiling: CeilingStatus) -> Color {
+        if ceiling == .notReported { return Brand.slate }   // unknown is neutral, never green
+        return ColorRules.ceilingColor(ceiling.feet)
     }
 
     // Temp/dewpoint spread: tight spread = fog risk.
@@ -820,8 +821,8 @@ struct WeatherDetailView: View {
 
     // Cloud layer: per-layer color based on coverage + altitude + CB
     private func cloudLayerColor(_ layer: CloudLayer) -> Color {
-        let altFt = layer.altitude * 100
         if layer.isCumulonimbus { return Brand.cautionOrange }
+        guard let altFt = layer.baseFeet else { return Brand.slate }   // base not reported: neutral
         switch layer.coverage {
         case .few, .scattered:
             if altFt < 3000 { return Brand.cautionOrange }  // low FEW/SCT — caution
@@ -861,9 +862,9 @@ struct WeatherDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(layers.indices, id: \.self) { i in
                     let layer = layers[i]
-                    let alt = (layer.altitude * 100).formatted()
+                    let alt = layer.baseFeet.map { "\($0.formatted()) ft" } ?? "base not reported"
                     let layerColor = cloudLayerColor(layer)
-                    Text("\(layer.coverage.rawValue) \(alt) ft\(layer.isCumulonimbus ? " CB" : "")")
+                    Text("\(layer.coverage.rawValue) \(alt)\(layer.isCumulonimbus ? " CB" : "")")
                         .font(.subheadline)
                         .foregroundColor(layerColor)
                         .fontWeight(layerColor == .green || layerColor == .primary ? .regular : .semibold)
@@ -1506,7 +1507,7 @@ struct WeatherDetailView: View {
             if !stillCurrent {
                 if let gust = stats.maxGust, gust >= 15 {
                     tail += " Gusts to \(gust) kt earlier."
-                } else if let ceil = stats.minCeilingFt, ceil < (latest.ceilingFeet ?? Int.max) {
+                } else if let ceil = stats.minCeilingFt, latest.ceilingFeet.map({ ceil < $0 }) ?? true {
                     tail += " Ceiling as low as \(ceil.formatted()) ft earlier."
                 } else if let minV = stats.minVisSM,
                           minV < (latest.visibility.exactSM ?? .greatestFiniteMagnitude) {
@@ -1715,11 +1716,10 @@ struct WeatherDetailView: View {
     // Full decoded line for the latest observation: ceiling · vis · wind · altimeter.
     private func historyConditionLine(_ metar: Metar) -> String {
         var parts: [String] = []
-        if let ceil = metar.ceilingFeet {
-            let cov = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })?.coverage.rawValue ?? "BKN"
+        if let ceil = metar.ceilingFeet, let cov = metar.ceilingCoverage {
             parts.append("\(cov) \(ceil.formatted()) ft")
         } else {
-            parts.append("Clear")
+            parts.append(metar.noCeilingWords)   // "Clear" / "No ceiling" / "Sky not reported"
         }
         parts.append("Vis \(visibilityText(metar.visibility))")
         parts.append(tafCompactWind(metar.wind))
@@ -2205,7 +2205,10 @@ struct WeatherDetailView: View {
         let prevCeilingFt = previous.flatMap { ForecastRules.ceilingFeet($0) }
 
         var parts: [String] = []
-        if ceilingFt != prevCeilingFt {
+        // Only when both periods forecast the sky: a period that doesn't (e.g. a TEMPO with only
+        // visibility) is not "Ceiling clears" or "Ceiling forms" (audit #6).
+        let skyComparable = period.ceiling != .notReported && previous.map { $0.ceiling != .notReported } ?? true
+        if skyComparable, ceilingFt != prevCeilingFt {
             if let c = ceilingFt {
                 if let prev = prevCeilingFt {
                     parts.append("Ceiling \(prev > c ? "drops to" : "lifts to") \(c.formatted()) ft")
@@ -3587,10 +3590,23 @@ struct WeatherDetailView: View {
     }
 
     private func ceilingText(_ metar: Metar) -> String {
-        guard let ceiling = metar.ceilingFeet else { return "Clear / No ceiling" }
-        let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast })
-        let coverage = layer?.coverage == .overcast ? "Overcast" : "Broken"
-        return "\(coverage) at \(ceiling.formatted()) ft"
+        switch metar.ceiling {
+        case .notReported:
+            return "Not reported"
+        case .none:
+            return metar.noCeilingWords   // "Clear" only for a stated clear sky (F18)
+        case .feet(let ceiling):
+            return "\(ceilingCoverageName(metar.clouds.ceilingLayer?.coverage)) at \(ceiling.formatted()) ft"
+        }
+    }
+
+    // BKN/OVC/VV in words. VV is an indefinite ceiling, not a broken layer (P3).
+    private func ceilingCoverageName(_ coverage: CloudCoverage?) -> String {
+        switch coverage {
+        case .overcast:           return "Overcast"
+        case .verticalVisibility: return "Vertical visibility"
+        default:                  return "Broken"
+        }
     }
 
     private func periodTimeLabel(_ period: TafForecast) -> String {
@@ -3611,10 +3627,10 @@ struct WeatherDetailView: View {
     }
 
     private func cloudLayerText(_ layer: CloudLayer) -> String {
-        if layer.coverage == .clear || layer.coverage == .skyClear || layer.coverage == .noSignificantCloud || layer.altitude == 0 {
+        if layer.coverage == .clear || layer.coverage == .skyClear || layer.coverage == .noSignificantCloud {
             return layer.coverage.rawValue
         }
-        return "\(layer.coverage.rawValue) \((layer.altitude * 100).formatted())"
+        return "\(layer.coverage.rawValue) \(layer.baseFeet.map { $0.formatted() } ?? "///")"
     }
 
     private func quickWeatherSummary(metar: Metar) -> String {

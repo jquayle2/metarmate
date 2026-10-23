@@ -8,8 +8,11 @@ struct TafVerificationPoint: Identifiable, Codable {
     var observationTime: Date
     var actualCategory: FlightCategory
     var forecastCategory: FlightCategory
-    var actualCeilingFt: Int?
+    var actualCeilingFt: Int?       // nil = no ceiling, or not reported (see ceilingReported)
     var forecastCeilingFt: Int?
+    // Both the METAR and the TAF period stated a sky condition. When false, nil ceilings are
+    // unknown, not "clear": no "Ceiling cleared/formed", no "on target", not scored (audit #6/#16).
+    var ceilingReported: Bool = true
     var actualVisibilitySM: Double?    // nil = the METAR didn't report visibility (omit from scoring)
     var forecastVisibilitySM: Double?
     var actualWindKt: Int?          // sustained; nil = the METAR didn't report wind (omit from scoring)
@@ -51,9 +54,9 @@ struct TafVerificationPoint: Identifiable, Codable {
         if let ceilDiv = ceilingDivergenceFt, abs(ceilDiv) >= 300 {
             let sign = ceilDiv > 0 ? "+" : ""
             parts.append("Ceiling \(sign)\(ceilDiv.formatted()) ft vs fcst")
-        } else if actualCeilingFt == nil && forecastCeilingFt != nil {
+        } else if ceilingReported && actualCeilingFt == nil && forecastCeilingFt != nil {
             parts.append("Ceiling cleared (fcst \(forecastCeilingFt!.formatted()) ft)")
-        } else if actualCeilingFt != nil && forecastCeilingFt == nil {
+        } else if ceilingReported && actualCeilingFt != nil && forecastCeilingFt == nil {
             parts.append("Ceiling formed (fcst clear)")
         }
 
@@ -123,9 +126,7 @@ struct TafVerification: Codable {
             // expired period. Observations outside the TAF's validity aren't scored.
             guard let period = taf.forecast(at: metar.observationTime)?.prevailing else { continue }
 
-            let forecastCeiling = period.clouds
-                .first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-                .map { $0.altitude * 100 }
+            let forecastCeiling = period.ceiling.feet
 
             let point = TafVerificationPoint(
                 observationTime: metar.observationTime,
@@ -133,6 +134,7 @@ struct TafVerification: Codable {
                 forecastCategory: period.flightCategory,
                 actualCeilingFt: metar.ceilingFeet,
                 forecastCeilingFt: forecastCeiling,
+                ceilingReported: metar.ceiling != .notReported && period.ceiling != .notReported,
                 // .exactSM: nil for .greaterThan (a >6 actual has no honest divergence magnitude —
                 // omit from scoring) and .unknown; the exact value otherwise. (Finding 15 / Flag 5.)
                 actualVisibilitySM: metar.visibility.exactSM,
@@ -159,7 +161,7 @@ struct TafVerification: Codable {
         let windN = Double(windPoints.count)
 
         // Ceiling: only score periods where at least one side had a ceiling; ±300ft threshold
-        let ceilPoints = points.filter { $0.actualCeilingFt != nil || $0.forecastCeilingFt != nil }
+        let ceilPoints = points.filter { $0.ceilingReported && ($0.actualCeilingFt != nil || $0.forecastCeilingFt != nil) }
         let ceilClose = ceilPoints.isEmpty ? nil : Double(ceilPoints.filter {
             guard let div = $0.ceilingDivergenceFt else {
                 return false

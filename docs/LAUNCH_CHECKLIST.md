@@ -63,13 +63,13 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 
 - [ ] #4 Go/no-go tri-state: unevaluated minimum → CHECK, never GO; no "back within minimums" alert (D#2)
 - [ ] #5 VRB worst-case crosswind (D#3)
-- [ ] #6 Unknown sky ≠ unlimited ceiling
+- [x] #6 Unknown sky ≠ unlimited ceiling: shared `CeilingStatus` (feet / none / not reported); NOAA sends no layers for CLR, so "sky reported" reads the report body. Go/no-go, trends, TAF verification, Siri, list rows, history (verdict CHECK under #4)
 - [ ] #7 Staleness gate on verdicts (D#4)
 - [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported". `48c1a90`
 - [ ] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown
-- [x] #10 Missing wind direction/speed not reported as 000° / 0 kt (METAR and TAF parsers; shown as `///`/"Direction not reported"; verdict handling under #4)
+- [x] #10 Missing wind direction/speed not reported as 000° / 0 kt (METAR and TAF parsers; shown as `///`/"Direction not reported"; verdict handling under #4). `45821c9`
 - [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
-- [ ] #12 Missing cloud base not 0 ft
+- [x] #12 Missing cloud base not 0 ft (METAR and TAF; TAF sky axis unknown)
 - [x] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
 - [x] #14 TAF category with one axis unknown; clouds into overlays
 - [ ] #15 Missing `obsTime` not `Date()`
@@ -81,6 +81,13 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [ ] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19)
 - [ ] D#10 symmetric missing-field notes; D#11 F17 hazards in history; D#12 PROB TSRA in headline
 - [ ] F16 present-weather chip off the category red; F18 "Clear" with only FEW/SCT
+- [x] P3 Ceiling is the lowest BKN/OVC/VV layer (`.min()`), never `.first`, everywhere (one shared rule)
+- [ ] P3 `M1/4SM` is less than ¼ SM, shown "<1/4 SM"
+- [ ] P3 PROB group with no number isn't PROB30 (PROB30 TEMPO keeping its probability: already fixed on nearby-TAF)
+- [ ] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown
+- [ ] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken"
+- [ ] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`)
+- [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
 - [ ] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases)
 - [ ] Merge A2 [Jeff]
 

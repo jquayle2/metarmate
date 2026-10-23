@@ -119,4 +119,93 @@ struct MissingDataTests {
         let wind = try #require(taf.forecasts.first?.wind)
         #expect(wind.direction == nil && !wind.isVariable && wind.speed == 15)
     }
+
+    // MARK: - #12 / #6: cloud base and sky condition
+
+    /// `BKN///` (NOAA: cover BKN, no base). Was 0 ft: LIFR, a "Ceiling 0 ft" note, "Ceiling Falling".
+    @Test(arguments: [#"[{"cover":"BKN"}]"#, #"[{"cover":"BKN","base":null}]"#])
+    func missingCloudBaseIsNotZeroFeet(_ clouds: String) throws {
+        let m = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":\#(clouds)"#),
+                               raw: "METAR KTST 231551Z AUTO 20008KT 10SM BKN/// 19/13 A2996")
+        #expect(m.clouds.first?.altitude == nil)
+        #expect(m.ceiling == .notReported)
+        #expect(m.ceilingFeet == nil)
+        let notes = MetarPilotNotes.build(metar: m, history: [m])
+        #expect(!notes.contains { $0.text.contains("Ceiling") })
+        let earlier = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"BKN","base":4000}]"#),
+                                     raw: "METAR KTST 231451Z AUTO 20008KT 10SM BKN040 19/13 A2996", obsTime: Self.obs - 3600)
+        #expect(ObservedTrend.derive(from: [m, earlier]).ceiling == .unknown)
+    }
+
+    /// Live NOAA, Oct 23 2026: KIGM `10SM CLR` arrives as `clouds: []`. A stated clear sky is
+    /// "no ceiling", not "not reported" (Siri said "Sky condition not reported" for it).
+    @Test func statedClearWithNoLayersIsClear() throws {
+        let m = try Self.metar(Self.full)   // raw "... 10SM CLR ..."
+        #expect(m.skyReported)
+        #expect(m.ceiling == .none)
+        #expect(m.skyCode == "CLR")
+        #expect(m.noCeilingWords == "Clear")
+        #expect(SiriReportWording.skyText(m) == "Sky clear")
+    }
+
+    /// No sky group at all: unknown, never unlimited (was 99,000 ft in go/no-go).
+    @Test func missingSkyGroupIsNotReported() throws {
+        let m = try Self.metar(Self.full, raw: "METAR KTST 231551Z AUTO 20008KT 10SM 19/13 A2996")
+        #expect(!m.skyReported)
+        #expect(m.ceiling == .notReported)
+        #expect(m.skyCode == "Sky —")
+        #expect(SiriReportWording.skyText(m) == "Sky not reported")
+        #expect(AlertConditions(from: m).ceiling == .notReported)
+    }
+
+    /// FEW/SCT only: no ceiling, but never "Clear"/"CLR" (F18).
+    @Test func fewScatteredIsNoCeilingNotClear() throws {
+        let m = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"FEW","base":5500},{"cover":"SCT","base":10000}]"#),
+                               raw: "METAR KTST 231551Z 20008KT 10SM FEW055 SCT100 19/13 A2996")
+        #expect(m.ceiling == .none)
+        #expect(m.skyCode == "FEW 55")
+        #expect(m.noCeilingWords == "No ceiling")
+        #expect(SiriReportWording.skyText(m) == "No ceiling")
+    }
+
+    /// The ceiling is the LOWEST BKN/OVC/VV layer, whatever the list order (P3 `.first` vs `.min()`).
+    @Test func ceilingIsLowestLayerNotFirst() throws {
+        let m = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"OVC","base":2500},{"cover":"BKN","base":1200}]"#),
+                               raw: "METAR KTST 231551Z 20008KT 10SM BKN012 OVC025 19/13 A2996")
+        #expect(m.ceilingFeet == 1200)
+        #expect(m.ceilingCoverage == "BKN")
+    }
+
+    /// A no-base layer above a known ceiling leaves that ceiling standing; below it, unknown.
+    @Test func noBaseLayerOrdering() throws {
+        let above = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"BKN","base":1000},{"cover":"OVC"}]"#),
+                                   raw: "METAR KTST 231551Z 20008KT 10SM BKN010 OVC/// 19/13 A2996")
+        #expect(above.ceiling == .feet(1000))
+        let below = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"BKN"},{"cover":"OVC","base":3000}]"#),
+                                   raw: "METAR KTST 231551Z 20008KT 10SM BKN/// OVC030 19/13 A2996")
+        #expect(below.ceiling == .notReported)
+    }
+
+    /// TAF period with a no-base BKN and P6SM: the sky axis is unknown, so VFR vis alone can't
+    /// vouch for the period (it was LIFR at "0 ft").
+    @Test func tafNoBaseLayerCategory() throws {
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"TAF KTST 231120Z 2312/2412 20008KT P6SM BKN///","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"BKN"}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        let period = try #require(taf.forecasts.first)
+        #expect(period.ceiling == .notReported)
+        #expect(period.flightCategory == .unknown)
+    }
+
+    /// A METAR with no sky group against a TAF ceiling is not "Ceiling cleared" and isn't scored.
+    @Test func verificationSkipsUnknownSky() throws {
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"TAF KTST 231120Z 2312/2412 20008KT P6SM BKN020","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"BKN","base":2000}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        let newest = try Self.metar(Self.full, raw: "METAR KTST 231551Z AUTO 20008KT 10SM 19/13 A2996")
+        let older = try Self.metar(Self.full, raw: "METAR KTST 231451Z AUTO 20008KT 10SM 19/13 A2996", obsTime: Self.obs - 3600)
+        let v = try #require(TafVerification.derive(metars: [newest, older], taf: taf))
+        let point = try #require(v.points.first)
+        #expect(!point.ceilingReported)
+        #expect(!point.divergenceText.contains("Ceiling cleared"))
+        #expect(v.ceilingSampleCount == 0)
+    }
 }

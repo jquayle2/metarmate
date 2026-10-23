@@ -111,10 +111,11 @@ enum GoNoGoEvaluator {
                 failureText: "visibility \(fmt(v)) SM under \(fmt(lim)) SM"))
         }
 
-        // 5. Ceiling (lower is worse) — no ceiling (clear/FEW/SCT) is effectively unlimited, so
-        // a high sentinel ensures clear skies never fail a ceiling minimum.
-        if let lim = profile.minCeilingFt {
-            let v = Double(conditions.ceilingFeet ?? 99_000)
+        // 5. Ceiling (lower is worse) — no ceiling (clear/FEW/SCT) can't fail a ceiling minimum, so
+        // it adds no factor. A ceiling that wasn't reported is NOT "no ceiling" (audit #6): it's
+        // skipped here too, never scored as unlimited.
+        if let lim = profile.minCeilingFt, let ceilingFt = conditions.ceiling.feet {
+            let v = Double(ceilingFt)
             factors.append(Factor(
                 label: "ceiling", value: v, limit: Double(lim),
                 deadband: Deadband.ceilingFt(forLimit: Double(lim)), worseWhenHigher: false,

@@ -54,14 +54,15 @@ enum SiriReportWording {
         }
 
         // Ceiling
-        if let ceiling = metar.ceilingFeet {
-            let layer = metar.clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-            let coverageWord = layer?.coverage == .overcast ? "overcast" : "broken"
+        switch metar.ceiling {
+        case .feet(let ceiling):
+            let coverageWord = metar.clouds.ceilingLayer?.coverage == .overcast ? "overcast" : "broken"
             parts.append("Ceiling \(coverageWord) at \(ceiling) feet.")
-        } else if metar.clouds.isEmpty {
-            // No cloud group is sky not reported, never unlimited (audit #6).
+        case .notReported:
+            // No sky group is sky not reported, never unlimited (audit #6). NOAA sends no layers
+            // for CLR, so an empty list alone isn't "not reported" (Metar.skyReported).
             parts.append("Sky condition not reported.")
-        } else {
+        case .none:
             parts.append("Ceiling unlimited.")
         }
 
@@ -167,8 +168,7 @@ enum SiriReportWording {
     /// (Oct 22: KIGM FEW055 SCT100 read "Sky clear"); no cloud group is "Sky not reported" (audit #6).
     static func skyText(_ metar: Metar) -> String {
         if let c = metar.ceilingFeet { return "Ceil \(c / 100 * 100)ft" }
-        if metar.clouds.isEmpty { return "Sky not reported" }
-        let reportsClear = metar.clouds.allSatisfy { $0.coverage == .clear || $0.coverage == .skyClear }
-        return reportsClear ? "Sky clear" : "No ceiling"
+        let words = metar.noCeilingWords
+        return words == "Clear" ? "Sky clear" : words
     }
 }

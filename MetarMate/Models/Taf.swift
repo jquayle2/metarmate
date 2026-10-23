@@ -13,6 +13,9 @@ struct TafForecast: Identifiable, Codable {
     var weatherPhenomena: [String]
     var flightCategory: FlightCategory
 
+    /// Same ceiling rule as the METAR; no layers at all = sky not forecast.
+    nonisolated var ceiling: CeilingStatus { clouds.ceilingStatus(skyReported: !clouds.isEmpty) }
+
     enum ForecastType: String, Codable {
         case base = "BASE"
         case fm = "FM"

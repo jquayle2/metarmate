@@ -18,7 +18,9 @@ struct AlertConditions {
     var windIsVariable: Bool = false
     var windSpeed: Int?              // knots; nil = not reported (wind criteria are skipped)
     var windGust: Int?               // knots; nil = no gust reported
-    var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling
+    var ceilingFeet: Int?            // lowest BKN/OVC/VV layer, feet AGL; nil = no ceiling or not reported
+    var ceiling: CeilingStatus = .none   // distinguishes "no ceiling" from "not reported" (audit #6)
+    var skyCode: String? = nil       // compact sky token for the watch row (METAR only)
     var ceilingCoverage: String?     // coverage code (BKN/OVC/VV) of the ceiling layer; nil = no/unknown
     var visibilitySM: Double?         // statute miles; nil = not reported (visibility criterion is skipped)
     var flightCategory: FlightCategory
@@ -59,6 +61,8 @@ struct AlertConditions {
                   source: .metar,
                   timestamp: metar.observationTime)
         windIsVariable = metar.wind.isVariable
+        ceiling = metar.ceiling
+        skyCode = metar.skyCode
     }
 
     // MARK: - ASOS / Synoptic adapter
@@ -78,5 +82,6 @@ struct AlertConditions {
                   source: .asos,
                   timestamp: obs.observationTime)
         windIsVariable = obs.windDirection == nil   // Synoptic: no direction has always read VRB here
+        ceiling = obs.ceilingAGL.map(CeilingStatus.feet) ?? .none   // ASOS (not a verdict source, D#1): unchanged
     }
 }

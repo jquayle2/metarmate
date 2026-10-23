@@ -25,13 +25,11 @@ struct ComparableConditions {
 
     init(metar: Metar) {
         category = metar.flightCategory == .unknown ? nil : metar.flightCategory
-        if let c = metar.ceilingFeet {
-            ceiling = .feet(c)
-        } else {
-            // An empty cloud list is "clear" only when the report says so (CLR/SKC/NCD/NSC/CAVOK).
-            let tokens = Set(metar.rawText.split(separator: " ").map(String.init))
-            let statedClear = !tokens.isDisjoint(with: ["CLR", "SKC", "NCD", "NSC", "CAVOK"])
-            ceiling = (!metar.clouds.isEmpty || statedClear) ? .none : .notReported
+        // Shared rule (Metar.ceiling): an empty cloud list is clear only when the report says so.
+        switch metar.ceiling {
+        case .feet(let c):  ceiling = .feet(c)
+        case .none:         ceiling = .none
+        case .notReported:  ceiling = .notReported
         }
         visibility = metar.visibility
         sustainedKt = metar.wind.isReported ? metar.wind.speed : nil
@@ -41,10 +39,10 @@ struct ComparableConditions {
     /// A TAF period: its clouds are what was forecast (empty = not forecast).
     init(forecast: TafForecast) {
         category = forecast.flightCategory == .unknown ? nil : forecast.flightCategory
-        if let c = ForecastRules.ceilingFeet(forecast) {
-            ceiling = .feet(c)
-        } else {
-            ceiling = forecast.clouds.isEmpty ? .notReported : .none
+        switch forecast.ceiling {
+        case .feet(let c):  ceiling = .feet(c)
+        case .none:         ceiling = .none
+        case .notReported:  ceiling = .notReported
         }
         visibility = forecast.visibility
         sustainedKt = forecast.wind?.speed

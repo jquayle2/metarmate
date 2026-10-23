@@ -136,8 +136,9 @@ struct MetarParser {
             let coverKey = (coverageStr == "OVX") ? "VV" : coverageStr
             guard let coverage = CloudCoverage(rawValue: coverKey) else { return nil }
 
-            // API gives base in feet; CloudLayer stores hundreds of feet
-            var altitudeHundreds = 0
+            // API gives base in feet; CloudLayer stores hundreds of feet. No base (BKN///) stays
+            // nil — never 0 ft, which read as LIFR, a "0 ft" note and "Ceiling Falling" (audit #12).
+            var altitudeHundreds: Int?
             if let base = dict["base"]?.value as? Int {
                 altitudeHundreds = base / 100
             } else if let base = dict["base"]?.value as? Double {

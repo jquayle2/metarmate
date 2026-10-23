@@ -25,15 +25,24 @@ enum TrendDirection: String, Codable {
 private enum TrendThresholds {
     // Ceiling: only flag changes that cross or approach flight category boundaries
     // VFR > 3000, MVFR 1000-3000, IFR 500-1000, LIFR < 500
-    static func ceilingTrend(old: Int?, new: Int?) -> TrendDirection {
-        let oldFt = old ?? 99900
-        let newFt = new ?? 99900
+    // A ceiling that wasn't reported has no trend (audit #6/#12): never "unlimited", never 0 ft.
+    static func ceilingTrend(old: CeilingStatus, new: CeilingStatus) -> TrendDirection {
+        let oldFt: Int, newFt: Int
+        switch (old, new) {
+        case (.notReported, _), (_, .notReported):
+            return .unknown
+        case (.none, .none):
+            return .steady   // both "no ceiling" (clear/FEW/SCT only)
+        case (.none, .feet(let n)):
+            return n > 5000 ? .steady : .deteriorating   // a ceiling formed
+        case (.feet(let o), .none):
+            return o > 5000 ? .steady : .improving       // the ceiling lifted out
+        case (.feet(let o), .feet(let n)):
+            oldFt = o; newFt = n
+        }
 
         // Both above 5000 — nobody cares
         if oldFt > 5000 && newFt > 5000 { return .steady }
-
-        // Both are "no ceiling" (clear/FEW/SCT only)
-        if oldFt >= 99000 && newFt >= 99000 { return .steady }
 
         let delta = newFt - oldFt
 
@@ -211,7 +220,7 @@ struct ObservedTrend: Codable {
         let visTrend: TrendDirection = visExact.count >= 2
             ? TrendThresholds.visibilityTrend(old: visExact.last!, new: visExact.first!)
             : .unknown
-        let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceilingFeet, new: newest.ceilingFeet)
+        let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceiling, new: newest.ceiling)
 
         // Wind trend/delta use the newest and oldest samples that actually reported wind — a
         // missing wind group is unknown, not a 0-kt calm that would fake a drop to/from calm.
@@ -240,12 +249,10 @@ struct ObservedTrend: Codable {
 
         // Compute rate of change deltas (newest - oldest)
         let ceilDelta: Int?
-        if let oldCeil = oldest.ceilingFeet, let newCeil = newest.ceilingFeet {
-            ceilDelta = newCeil - oldCeil
-        } else if oldest.ceilingFeet == nil && newest.ceilingFeet == nil {
-            ceilDelta = 0
-        } else {
-            ceilDelta = nil  // ceiling appeared or disappeared
+        switch (oldest.ceiling, newest.ceiling) {
+        case (.feet(let oldCeil), .feet(let newCeil)): ceilDelta = newCeil - oldCeil
+        case (.none, .none):                           ceilDelta = 0
+        default:                                       ceilDelta = nil  // appeared, disappeared, or not reported
         }
 
         let roc = RateOfChange(
@@ -321,8 +328,8 @@ struct ForecastTrend: Codable {
             visTrend = .unknown
         }
 
-        let compareCeiling = ceilingFromClouds(compareBlock.clouds)
-        let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceilingFeet, new: compareCeiling)
+        // A period that doesn't forecast the sky is unknown, not "no ceiling".
+        let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceiling, new: compareBlock.ceiling)
 
         // Only compare wind when the METAR actually reported it — an unreported wind is unknown,
         // not a 0-kt calm to trend against.
@@ -351,11 +358,6 @@ struct ForecastTrend: Codable {
             forecastCategory: compareBlock.flightCategory,
             summaryText: summary
         )
-    }
-
-    private static func ceilingFromClouds(_ clouds: [CloudLayer]) -> Int? {
-        clouds.first(where: { $0.coverage == .broken || $0.coverage == .overcast || $0.coverage == .verticalVisibility })
-            .map { $0.altitude * 100 }
     }
 }
 
