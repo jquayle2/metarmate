@@ -97,11 +97,13 @@ App Review blockers (required regardless of section 0):
 - [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. `27a04d6`. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
-- [x] One switch, `FeatureFlags.proGatingEnabled`: off in TestFlight builds, on in Release (App Store) and Debug. `FeatureFlags.swift` is compiled into the app and the widget; `TESTFLIGHT` is set on the TestFlight configuration of every target. Verified in the simulator: the widget's diag line reads gating=off from a TestFlight build and gating=on from Debug, matching the app
-- [ ] #24 Siri waits for entitlements before reading `isProUser`
+- [x] One switch, `FeatureFlags.proGatingEnabled`: off in TestFlight builds, on in Release (App Store) and Debug. `FeatureFlags.swift` is compiled into the app and the widget; `TESTFLIGHT` is set on the TestFlight configuration of every target. Verified in the simulator: the widget's diag line reads gating=off from a TestFlight build and gating=on from Debug, matching the app. `f99f3cd`
+- [x] #24 Siri waits for entitlements before reading `isProUser`: up to 3 s, then the last saved status, then allow (a payer never hears "Pro required"). `StoreManager.proAccessForSiri`
 - [ ] #24 Lock-screen widgets gated
-- [ ] #24 StoreKit listener started in `App.init`
+- [x] #24 StoreKit listener started in `App.init`
 - [x] #24 ASOS product IDs requested only when `FeatureFlags.asosAvailable` is on. `49dd6d5`
+- [x] Entitlements: `StoreManager.isProUser` = Pro purchase (own or family-shared) OR active ASOS subscription; `entitlementsLoaded` state; refunds/revocations turn it off; only the newest overlapping entitlement check publishes. StoreKit test session: purchase turns Pro on, refund turns it off via `Transaction.updates`, ASOS includes Pro
+- [x] `MetarMateProducts.storekit` rewritten in Xcode's format (the hand-written file never loaded products): Pro $5.99, Family Sharing on, current copy; ASOS prices there are placeholders until D#21. The MetarMate scheme's Run action uses it; Jeff: confirm in Xcode, Edit Scheme > Run > Options > StoreKit Configuration
 - [ ] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro`
 - [ ] Widgets Pro: `WidgetDataManager.widgetsRequirePro = true` (home and lock screen)
 - [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only

@@ -1,15 +1,26 @@
 {
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
   "identifier" : "MetarMateProducts",
-  "type" : "com.apple.product-type.storekit-configuration",
-  "version" : 1,
+  "nonRenewingSubscriptions" : [
+
+  ],
   "products" : [
     {
-      "displayPrice" : "8.99",
-      "familyShareable" : false,
-      "internalID" : "1001",
+      "displayPrice" : "5.99",
+      "familyShareable" : true,
+      "internalID" : "6740000001",
       "localizations" : [
         {
-          "description" : "Unlock unlimited favorites, all widgets, and Siri shortcuts",
+          "description" : "Widgets, Siri, alerts and custom minimums",
           "displayName" : "MetarMate Pro",
           "locale" : "en_US"
         }
@@ -17,63 +28,83 @@
       "productID" : "com.jeffquayle.MetarMate.pro",
       "referenceName" : "MetarMate Pro",
       "type" : "NonConsumable"
-    },
-    {
-      "displayPrice" : "1.99",
-      "familyShareable" : false,
-      "internalID" : "1002",
-      "localizations" : [
-        {
-          "description" : "Live ASOS weather updates every few minutes between hourly METARs",
-          "displayName" : "ASOS Updates Monthly",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "com.jeffquayle.MetarMate.asosupdates.monthly",
-      "referenceName" : "ASOS Updates Monthly",
-      "subscriptionGroupID" : "ASOSUpdates",
-      "type" : "RecurringSubscription",
-      "subscription" : {
-        "subscriptionGroupID" : "ASOSUpdates",
-        "subscriptionPeriod" : "P1M"
-      }
-    },
-    {
-      "displayPrice" : "19.99",
-      "familyShareable" : false,
-      "internalID" : "1003",
-      "localizations" : [
-        {
-          "description" : "Live ASOS weather updates every few minutes between hourly METARs — best value",
-          "displayName" : "ASOS Updates Annual",
-          "locale" : "en_US"
-        }
-      ],
-      "productID" : "com.jeffquayle.MetarMate.asosupdates.annual",
-      "referenceName" : "ASOS Updates Annual",
-      "subscriptionGroupID" : "ASOSUpdates",
-      "type" : "RecurringSubscription",
-      "subscription" : {
-        "subscriptionGroupID" : "ASOSUpdates",
-        "subscriptionPeriod" : "P1Y",
-        "introductoryOffer" : {
-          "paymentMode" : "free",
-          "subscriptionPeriod" : "P7D"
-        }
-      }
     }
   ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
   "subscriptionGroups" : [
     {
-      "id" : "ASOSUpdates",
+      "id" : "21000001",
       "localizations" : [
-        {
-          "description" : "5-minute ASOS weather updates",
-          "displayName" : "ASOS Updates",
-          "locale" : "en_US"
-        }
+
       ],
-      "name" : "ASOSUpdates"
+      "name" : "ASOS Updates",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6740000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "5-minute ASOS updates between METARs",
+              "displayName" : "ASOS Updates Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.jeffquayle.MetarMate.asosupdates.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "ASOS Updates Monthly",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6740000003",
+          "introductoryOffer" : {
+            "internalID" : "6740000004",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "5-minute ASOS updates between METARs",
+              "displayName" : "ASOS Updates Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.jeffquayle.MetarMate.asosupdates.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "ASOS Updates Annual",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription"
+        }
+      ]
     }
-  ]
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
 }

@@ -32,6 +32,9 @@ struct MetarMateApp: App {
         // exactly what RunningBoard kills with 0xdead10cc. The task builds its own short-lived
         // container only when it actually fires.
         AlertScheduler.register()
+        // Start StoreKit now (audit #24): the Transaction.updates listener and the first
+        // entitlement check run from launch, including Siri and background launches.
+        _ = StoreManager.shared
     }
 
     // Lazy, process-wide singleton: a `static let` is built on first access, not during

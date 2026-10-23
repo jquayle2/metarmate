@@ -27,9 +27,9 @@ struct FlyingWeatherIntent: AppIntent {
     func perform() async throws -> some ProvidesDialog & ShowsSnippetView {
         NSLog("FlyingWeatherIntent: perform() called, airport entity='\(airport?.id ?? "nil")'")
 
-        // Gate behind Pro (disabled for beta via WidgetDataManager.widgetsRequirePro)
-        let isPro = await MainActor.run { StoreManager.shared.isProUser }
-        if WidgetDataManager.widgetsRequirePro && !isPro {
+        // Gate behind Pro (disabled for beta via WidgetDataManager.widgetsRequirePro). Waits for
+        // entitlements first so a paying user never hears "Pro required" (audit #24).
+        if WidgetDataManager.widgetsRequirePro, !(await StoreManager.shared.proAccessForSiri()) {
             return .result(
                 dialog: IntentDialog("Siri shortcuts require MetarMate Pro. Upgrade in the app to enable this feature."),
                 view: snippetView(label: "Pro Required", category: .unknown, detail: "Upgrade to MetarMate Pro")

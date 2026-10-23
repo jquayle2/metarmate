@@ -104,6 +104,11 @@ nonisolated enum WidgetDataManager {
         return sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
+    /// The last Pro status the app saved, or nil if it has never saved one (fresh install).
+    nonisolated static func savedProStatus() -> Bool? {
+        sharedDefaults?.object(forKey: isProKey) as? Bool
+    }
+
     // MARK: - Widget run diagnostics (written by the widget extension, all builds)
     // Last `diagCapacity` provider runs, newest last, as plain strings so they read directly from
     // the App Group plist pulled off a device. Tiny (~100 bytes per line); no personal data.
