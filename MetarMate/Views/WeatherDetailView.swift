@@ -2374,17 +2374,26 @@ struct WeatherDetailView: View {
                 rank: severe ? 0 : 2, time: p.fromTime))
         }
 
-        // 3. Gusts crossing METAR-card thresholds in any base period (caution ≥15, warning ≥20).
-        for p in bases {
-            guard let wind = p.wind, let gust = wind.gust, gust >= 15 else { continue }
+        // 3. Wind crossing METAR-card thresholds (sustained ≥20 or gust ≥15; warning at ≥25 / ≥20)
+        //    in any base period OR overlay — strong steady wind and TEMPO/PROB gusts too (audit #19).
+        for p in ForecastRules.windNotePeriods(taf, now: now) {
+            guard let wind = p.wind, let notable = ForecastRules.notableWind(wind) else { continue }
+            let isOverlay = p.type == .tempo || p.type == .becmg || p.type == .prob30 || p.type == .prob40
+            let when: String
+            if isOverlay {
+                let label = p.type == .becmg ? "becoming" : (p.type == .tempo ? "temporary" : p.type.rawValue)
+                let windowEnd = p.type == .becmg ? (p.becomingTime ?? p.toTime) : p.toTime
+                when = "\(label) \(tafWindowLabel(from: p.fromTime, to: windowEnd))"
+            } else {
+                when = "from \(tafTimeLabel(p.fromTime))"
+            }
+            let lead = notable.gust.map { "Gusts \($0) kt" } ?? "Wind \(wind.speed) kt"
             // Per-period crosswind range on the best runway (plus near-tie runner-up); empty → generic copy.
             let displays = crosswindDisplays(wind)
             if !displays.isEmpty {
                 for (i, display) in displays.enumerated() {
                     var cw = display
-                    cw.line1 = i == 0
-                        ? "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — RWY \(cw.ident)"
-                        : "or RWY \(cw.ident)"
+                    cw.line1 = i == 0 ? "\(lead) \(when) — RWY \(cw.ident)" : "or RWY \(cw.ident)"
                     // Crosswind line uses the calc wind palette (amber, red when the gust XW crosses
                     // the red threshold); ranks with the red/amber tiers so the card accent follows.
                     notes.append(.init(icon: "wind", text: cw.line1,
@@ -2392,11 +2401,11 @@ struct WeatherDetailView: View {
                                        time: p.fromTime, crosswind: cw))
                 }
             } else {
-                let detail = gust >= 20 ? "check crosswind component for your runway" : "verify crosswind within limits"
+                let detail = notable.isWarning ? "check crosswind component for your runway" : "verify crosswind within limits"
                 notes.append(.init(
                     icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail)" + (GustAdvice.text(sustained: wind.speed, gust: gust).map { ". \($0)" } ?? ""),
-                    color: gust >= 20 ? .orange : amber, rank: gust >= 20 ? 1 : 2, time: p.fromTime))
+                    text: "\(lead) \(when) — \(detail)" + (GustAdvice.text(sustained: wind.speed, gust: wind.gust).map { ". \($0)" } ?? ""),
+                    color: notable.isWarning ? .orange : amber, rank: notable.isWarning ? 1 : 2, time: p.fromTime))
             }
         }
 

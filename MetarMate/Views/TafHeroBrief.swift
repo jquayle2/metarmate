@@ -159,7 +159,7 @@ enum TafHeroBrief {
             // Category is genuinely steady across the period. Still surface a wind story if any
             // period gusts at or above the caution threshold (15 kt) — otherwise the hero would
             // claim "no significant changes" while the Pilot Notes card flags gusts (amber axis).
-            let firstGusty = bases.first(where: { ($0.wind?.gust ?? 0) >= 15 })
+            let firstGusty = bases.first(where: { $0.wind?.gust.map { $0 >= 15 } == true })
             if let gusty = firstGusty {
                 return [HeroSegment(text: "\(categoryText(first, capitalized: capitalize)) throughout, ", color: Brand.cloud),
                         HeroSegment(text: "but gusty periods \(TafFormat.coarseWhen(gusty.fromTime)).", color: Brand.cautionOrange)]

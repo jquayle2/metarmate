@@ -40,6 +40,24 @@ enum ForecastRules {
         period.ceiling.feet
     }
 
+    /// TAF wind worth a Pilot Note, on the METAR card's thresholds: sustained >= 20 kt or a gust
+    /// >= 15 kt; a warning at sustained >= 25 or gust >= 20. Strong steady wind counts, not just
+    /// gusts (audit #19). nil when the wind isn't notable or wasn't forecast.
+    static func notableWind(_ wind: Wind?) -> (gust: Int?, isWarning: Bool)? {
+        guard let wind, wind.isReported else { return nil }
+        let gust = wind.gust.flatMap { $0 > wind.speed ? $0 : nil }
+        let gustAtLeast = { (kt: Int) in gust.map { $0 >= kt } == true }
+        guard wind.speed >= 20 || gustAtLeast(15) else { return nil }
+        return (gust, wind.speed >= 25 || gustAtLeast(20))
+    }
+
+    /// Periods whose wind gets a TAF Pilot Note: the remaining prevailing periods AND the
+    /// remaining TEMPO/PROB/BECMG overlays (`TEMPO 30035G50KT` had no wind mention, audit #19).
+    static func windNotePeriods(_ taf: Taf, now: Date) -> [TafForecast] {
+        (taf.remainingTimeline(at: now) + taf.remainingOverlays(at: now))
+            .filter { notableWind($0.wind) != nil }
+    }
+
     /// Which of wind/ceiling/visibility is this period's limiting factor — whichever is
     /// closest to, or furthest past, its VFR/MVFR category boundary. Ties resolve
     /// visibility, then ceiling, then wind (per the design spec).

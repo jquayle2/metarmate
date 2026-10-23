@@ -49,4 +49,20 @@ struct DisplayUnknownTests {
         let c = try metar(cat: "VFR", wind: #""temp":19"#, clouds: #"[{"cover":"BKN","base":6000}]"#, minutesAgo: 0)
         #expect(WeatherDetailView.historyTrendTail([c, b], window: "2 hrs") == "")
     }
+
+    // MARK: - #19: TAF wind notes
+
+    /// Audit #19: `TEMPO 30035G50KT` had no wind mention (only base periods with a gust >= 15 were
+    /// scanned), and a strong steady wind never counted.
+    @Test func tafWindNotesCoverOverlaysAndSteadyWind() throws {
+        let start = MissingDataTests.obs - 1800
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":\#(start),"validTimeTo":\#(start + 86400),"rawTAF":"synthetic","fcsts":[{"timeFrom":\#(start),"timeTo":\#(start + 21600),"wdir":200,"wspd":10,"visib":"6+","clouds":[{"cover":"SKC"}]},{"timeFrom":\#(start + 3600),"timeTo":\#(start + 7200),"fcstChange":"TEMPO","wdir":300,"wspd":35,"wgst":50},{"timeFrom":\#(start + 21600),"timeTo":\#(start + 86400),"fcstChange":"FM","wdir":270,"wspd":22,"visib":"6+","clouds":[{"cover":"SKC"}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        let periods = ForecastRules.windNotePeriods(taf, now: Date(timeIntervalSince1970: TimeInterval(MissingDataTests.obs)))
+        #expect(periods.contains { $0.type == .tempo && $0.wind?.gust == 50 })
+        #expect(periods.contains { $0.type == .fm && $0.wind?.speed == 22 })
+        #expect(!periods.contains { $0.wind?.speed == 10 })
+        #expect(ForecastRules.notableWind(Wind(direction: 300, speed: 35, gust: 50, isVariable: false))?.isWarning == true)
+        #expect(ForecastRules.notableWind(Wind(direction: 300, speed: 10, gust: 14, isVariable: false)) == nil)
+    }
 }

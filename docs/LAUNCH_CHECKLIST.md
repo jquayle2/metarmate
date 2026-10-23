@@ -75,11 +75,11 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] #15 Missing `obsTime` not `Date()`: falls back to the report's own DDHHMMZ group; with no time at all the report isn't used. Same for TAF issue time. `91fa9da`
 - [x] #16 Unknown shown as good (green rail, "Clear", "Fcst on target", wind-only "Steady"): neutral rail on unknown TAF cards; TAF limiting factor "—" (not "Calm"/"CLR") when not forecast; widget "on target" only with measured deviations; history "VFR to IFR over the last 2 hrs", "Steady" only when conditions were. `c0a4837`
 - [x] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category): one `FlightCategory.forCeiling/forVisibility/from` (3,000 ft and 5 SM are MVFR; a lone VFR axis is unknown) used by TAF, ASOS estimate, advisory, layer colors, Pilot Notes, TAF hero. `e97c00b`
-- [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts
+- [x] #19 TAF Pilot Notes: strong steady winds and overlay gusts (base and TEMPO/PROB/BECMG periods, METAR-card thresholds: sustained ≥20 / gust ≥15)
 - [x] #20 Gust approach speed = ½ gust factor, one shared function (D#8): `GustAdvice` in Pilot Notes, detail crosswind line, TAF notes and the calculator; "Gusty: consider +5 kt (½ gust factor, or per your POH)". `eba3552`
 - [x] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; now 4,887 ft (NWS virtual-temperature method). Missing temp or altimeter → no DA. Table-driven ForeFlight test ready for more samples (`DensityAltitudeTests.foreFlightSamples`). `1e5a761`
 - [x] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19): Alerts rows and notifications. `1be5294`
-- [x] D#10 symmetric missing-field notes (wind, wind direction, visibility, ceiling/sky, temperature/dewpoint, altimeter: same "not reported" caution note); D#11 F17 hazards (TS, SQ, FC/+FC, GR, freezing precip) in both history lines
+- [x] D#10 symmetric missing-field notes (wind, wind direction, visibility, ceiling/sky, temperature/dewpoint, altimeter: same "not reported" caution note); D#11 F17 hazards (TS, SQ, FC/+FC, GR, freezing precip) in both history lines. `e6105af`
 - [ ] D#12 PROB TSRA in headline
 - [x] F16 present-weather chip off the category red (now `Brand.dangerRed`, alert chrome); F18 "Clear" with only FEW/SCT ("No ceiling" / "NO CIG" / "FEW 55" everywhere). `c0a4837`
 - [x] P3 Ceiling is the lowest BKN/OVC/VV layer (`.min()`), never `.first`, everywhere (one shared rule). `246dc2c`
