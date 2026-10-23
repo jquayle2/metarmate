@@ -3,6 +3,7 @@ import Combine
 import SwiftUI
 import SwiftData
 import CoreLocation
+import os
 
 // MARK: - Airport View Model
 @MainActor
@@ -61,6 +62,10 @@ class AirportViewModel: ObservableObject {
     }
 
     private var searchMetarTask: Task<Void, Never>? = nil
+    // Diagnostics: loadNearestAirports runs from .task, every location change and pull-to-refresh,
+    // and nothing stops two from overlapping. Counted so the logs show when they do.
+    private var nearestLoadSeq = 0
+    private var nearestLoadsInFlight = 0
 
     private let airportService = AirportService.shared
     private let weatherService = WeatherService.shared
@@ -116,7 +121,12 @@ class AirportViewModel: ObservableObject {
             noaaToOriginal[id] = code
         }
 
-        if let metars = try? await weatherService.fetchMetars(for: noaaIds) {
+        let fetchedMetars: [String: Metar]?
+        do { fetchedMetars = try await weatherService.fetchMetars(for: noaaIds) } catch {
+            Log.load.error("[rows] search results METAR batch: \(FetchLog.classify(error), privacy: .public) — rows keep no METAR")
+            fetchedMetars = nil
+        }
+        if let metars = fetchedMetars {
             // Map results back to original airport ICAO codes
             var mapped: [String: Metar] = [:]
             for (key, metar) in metars {
@@ -130,6 +140,18 @@ class AirportViewModel: ObservableObject {
         }
         let advisoryTargets = searchResults.filter { searchMetars[$0.icao] == nil && !$0.hasMetar }
         searchAdvisories = await fetchAdvisories(for: advisoryTargets)
+        Self.logRows("search", airports: searchResults, metars: searchMetars, advisories: searchAdvisories)
+    }
+
+    /// Diagnostics: what each row will render now, so a "METAR unavailable" / "Advisory weather only"
+    /// row can be matched to the fetch that left it empty. Mirrors AirportRowView's conditionsLine.
+    static func logRows(_ list: String, airports: [Airport], metars: [String: Metar], advisories: [String: AdvisoryWeather]) {
+        var unavailable: [String] = [], advisoryOnly: [String] = []
+        for a in airports where metars[a.icao] == nil && advisories[a.icao] == nil {
+            if a.hasMetar { unavailable.append(a.icao) } else { advisoryOnly.append(a.icao) }
+        }
+        let filled = airports.count - unavailable.count - advisoryOnly.count
+        Log.load.info("[rows] \(list, privacy: .public): \(filled, privacy: .public)/\(airports.count, privacy: .public) with weather; 'METAR unavailable'=[\(unavailable.joined(separator: ","), privacy: .public)] 'Advisory weather only'=[\(advisoryOnly.joined(separator: ","), privacy: .public)] cancelled=\(Task.isCancelled, privacy: .public)")
     }
 
     /// Fetch Open-Meteo advisory conditions for station-less airports, in parallel.
@@ -153,6 +175,10 @@ class AirportViewModel: ObservableObject {
     func loadNearestAirports(force: Bool = false) async {
         guard let location = locationService.currentLocation else { return }
         isLoadingNearest = true
+        nearestLoadSeq += 1; nearestLoadsInFlight += 1
+        let seq = nearestLoadSeq
+        defer { nearestLoadsInFlight -= 1 }
+        Log.load.info("[rows] nearest load #\(seq, privacy: .public) START force=\(force, privacy: .public) overlapping=\(self.nearestLoadsInFlight - 1, privacy: .public)")
 
         nearestAirports = airportService.nearest(to: location, count: 15)
 
@@ -167,6 +193,8 @@ class AirportViewModel: ObservableObject {
             nearestMetars = metars
             nearestAdvisories = advisories
         }
+        // Rows are on screen from here, before any fetch returns.
+        Self.logRows("nearest #\(seq) published before fetch", airports: nearestAirports, metars: metars, advisories: advisories)
 
         // Fetch METARs only for the misses among airports with official reporting stations.
         // K-prefix 3-letter FAA codes for NOAA lookup, then map results back.
@@ -180,7 +208,13 @@ class AirportViewModel: ObservableObject {
             nearNoaaIds.append(id)
             nearNoaaToOrig[id] = code
         }
-        if !nearNoaaIds.isEmpty, let fetched = try? await weatherService.fetchMetars(for: nearNoaaIds) {
+        var nearFetched: [String: Metar]?
+        if !nearNoaaIds.isEmpty {
+            do { nearFetched = try await weatherService.fetchMetars(for: nearNoaaIds) } catch {
+                Log.load.error("[rows] nearest #\(seq, privacy: .public) METAR batch: \(FetchLog.classify(error), privacy: .public) — \(nearNoaaIds.count, privacy: .public) rows keep no METAR")
+            }
+        }
+        if let fetched = nearFetched {
             var mapped: [String: Metar] = [:]
             for (key, metar) in fetched {
                 mapped[nearNoaaToOrig[key] ?? key] = metar
@@ -199,6 +233,7 @@ class AirportViewModel: ObservableObject {
             for (k, v) in fetchedAdv { advisories[k] = v }
         }
         nearestAdvisories = advisories
+        Self.logRows("nearest #\(seq) DONE", airports: nearestAirports, metars: metars, advisories: advisories)
         isLoadingNearest = false
     }
 

@@ -75,6 +75,7 @@ class WeatherViewModel: ObservableObject {
                     isLoading = false
                     return
                 }
+                Log.load.info("[fallback] \(airport.icao, privacy: .public) → ADVISORY (no hasMetar; \(kIcao, privacy: .public) noWeatherReporting=\(self.noWeatherReporting, privacy: .public) why=\(self.error.map(FetchLog.classify) ?? "noProduct", privacy: .public))")
                 error = nil
                 noWeatherReporting = false
             }
@@ -87,7 +88,7 @@ class WeatherViewModel: ObservableObject {
                 // This is the silent-fallback case: a hasMetar station couldn't return a
                 // real METAR (usually a slow/timed-out fetch), so we drop to advisory.
                 // Log loudly so we can see when it happens and why.
-                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR fallback → ADVISORY (noWeatherReporting=\(self.noWeatherReporting, privacy: .public), metar=\(self.metar != nil, privacy: .public), err=\(self.error != nil ? String(describing: self.error!) : "none", privacy: .public))")
+                Log.load.warning("[load] \(airport.icao, privacy: .public) METAR fallback → ADVISORY (noWeatherReporting=\(self.noWeatherReporting, privacy: .public), metar=\(self.metar != nil, privacy: .public), err=\(self.error != nil ? String(describing: self.error!) : "none", privacy: .public), why=\(self.error.map(FetchLog.classify) ?? "noProduct", privacy: .public))")
                 isMetarFallback = true
                 error = nil
                 await loadAdvisory(airport: airport)
@@ -220,6 +221,7 @@ class WeatherViewModel: ObservableObject {
         } catch let err as URLError where err.code == .cancelled {
             Log.load.info("[load] \(icao, privacy: .public) METAR load cancelled (navigated away)")
         } catch {
+            Log.load.error("[load] \(icao, privacy: .public) METAR load failed: \(FetchLog.classify(error), privacy: .public)")
             self.error = error
         }
     }
@@ -234,6 +236,7 @@ class WeatherViewModel: ObservableObject {
             (ids: Set([fetchIcao.uppercased(), f.icao.uppercased()]), latitude: f.latitude, longitude: f.longitude, elevationFt: f.elevation)
         }
         let service = weatherService
+        Log.load.info("[taf] \(fetchIcao, privacy: .public) own TAF request: \(FetchLog.classify(ownResult), privacy: .public) (only noProduct may borrow)")
         let resolved = await NearbyTaf.resolve(own: NearbyTaf.outcome(of: ownResult), field: position, at: Date()) {
             guard let position else { return [] }
             return try await service.tafCandidates(forField: fetchIcao, latitude: position.latitude, longitude: position.longitude)
@@ -256,7 +259,11 @@ class WeatherViewModel: ObservableObject {
     private func applyTaf(_ resolvedTaf: Taf?, status: TafStatus, history: [Metar]) async {
         var stationHistory: [Metar] = []
         if case .borrowed(let source, _) = status {
-            stationHistory = (try? await weatherService.fetchMetarHistory(for: source.stationId, hours: 6)) ?? []
+            do {
+                stationHistory = try await weatherService.fetchMetarHistory(for: source.stationId, hours: 6)
+            } catch {
+                Log.load.warning("[taf] borrowed station \(source.stationId, privacy: .public) METARs: \(FetchLog.classify(error), privacy: .public) — no trend/accuracy from it")
+            }
         }
         taf = resolvedTaf
         tafStatus = status

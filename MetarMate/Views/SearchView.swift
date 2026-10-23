@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import os
 
 struct SearchView: View {
     @EnvironmentObject private var airportVM: AirportViewModel
@@ -147,7 +148,13 @@ struct SearchView: View {
             let id = WeatherService.noaaCandidate(for: a.icao) ?? a.icao
             noaaIds.append(id); noaaToOriginal[id] = a.icao
         }
-        if !noaaIds.isEmpty, let fetched = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
+        var fetchedMetars: [String: Metar]?
+        if !noaaIds.isEmpty {
+            do { fetchedMetars = try await WeatherService.shared.fetchMetars(for: noaaIds) } catch {
+                Log.load.error("[rows] recents METAR batch: \(FetchLog.classify(error), privacy: .public) — \(noaaIds.count, privacy: .public) rows keep no METAR")
+            }
+        }
+        if let fetched = fetchedMetars {
             var mapped: [String: Metar] = [:]
             for (k, m) in fetched { mapped[noaaToOriginal[k] ?? k] = m }
             weatherCache.store(metars: mapped)
@@ -172,5 +179,6 @@ struct SearchView: View {
             for (k, v) in fetchedAdvisories { advisories[k] = v }
         }
         historyAdvisories = advisories
+        AirportViewModel.logRows("recents", airports: airports, metars: metars, advisories: advisories)
     }
 }
