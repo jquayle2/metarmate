@@ -93,7 +93,7 @@ App Review blockers (required regardless of section 0):
 - [ ] #21 TestFlight builds say "TestFlight" on a version line (Jeff, Oct 23). There's no About/settings screen yet; placement pending Jeff
 - [x] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]. `295af22`. `HarnessAbsentUITests`: forces the runtime gate open, then the chip is present in Debug/TestFlight and absent in Release (all three run)
 - [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
-- [x] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure. Store open: retry once, then in-memory for the session with a notice (store untouched); moved aside (renamed, never deleted) only after 3 failed launches in a row; the background task skips the run and never recovers (Jeff, Oct 23). A store written by earlier unversioned builds opens with V1 and keeps its data (unit test plus the simulator's Oct 21 store). The store stays in the App Group (A1 did not move it). Remaining `fatalError`: only if an in-memory store fails, which means an invalid schema
+- [x] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure. Store open: retry once, then in-memory for the session with a notice (store untouched); moved aside (renamed, never deleted) only after 3 failed launches in a row; the background task skips the run and never recovers (Jeff, Oct 23). A store written by earlier unversioned builds opens with V1 and keeps its data (unit test plus the simulator's Oct 21 store). The store stays in the App Group (A1 did not move it). Remaining `fatalError`: only if an in-memory store fails, which means an invalid schema. `07c7ea9`
 - [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. `27a04d6`. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
@@ -131,7 +131,7 @@ Background task (#26):
 - [ ] Watch `expiresAt` enforced
 
 Other:
-- [ ] #27 Favorites reconcile with `airports.json` at launch
+- [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched
 - [ ] Merge A3 [Jeff]
 
 ## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]

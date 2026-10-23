@@ -55,6 +55,8 @@ struct MetarMateApp: App {
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
                     MinimumsProfile.seedBuiltInsIfNeeded(in: Self.sharedModelContainer.mainContext)
+                    // Refresh favorites' airport details from airports.json (audit #27).
+                    FavoritesReconciler.reconcile(in: Self.sharedModelContainer.mainContext)
                     // Submit an initial background alert-check request.
                     AlertScheduler.schedule()
                 }
