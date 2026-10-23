@@ -12,10 +12,6 @@ nonisolated enum WidgetDataManager {
     private static let configKey = "widget.configs"
     static let isProKey = "widget.isPro"
 
-    /// Pro-gate for widgets and Siri. Lives here (not FeatureFlags) because this file is the
-    /// one shared with the widget extension target. Flip to `true` to re-enable the gate.
-    static let widgetsRequirePro = false
-
     private static var sharedDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)
     }
@@ -97,11 +93,6 @@ nonisolated enum WidgetDataManager {
     nonisolated static func saveProStatus(_ isPro: Bool) {
         sharedDefaults?.set(isPro, forKey: isProKey)
         reloadWidgets()
-    }
-
-    nonisolated static func loadProStatus() -> Bool {
-        guard widgetsRequirePro else { return true }
-        return sharedDefaults?.bool(forKey: isProKey) ?? false
     }
 
     /// The last Pro status the app saved, or nil if it has never saved one (fresh install).

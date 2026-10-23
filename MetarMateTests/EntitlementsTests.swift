@@ -36,15 +36,15 @@ struct EntitlementRulesTests {
     }
 
     @Test func siriUsesLoadedStatusWhenAvailable() {
-        #expect(StoreManager.siriProAccess(loaded: true, isPro: true, savedStatus: false))
-        #expect(!StoreManager.siriProAccess(loaded: true, isPro: false, savedStatus: true))
+        #expect(StoreManager.proStatus(loaded: true, isPro: true, savedStatus: false))
+        #expect(!StoreManager.proStatus(loaded: true, isPro: false, savedStatus: true))
     }
 
     @Test func siriFallsBackToSavedStatusThenAllows() {
-        #expect(StoreManager.siriProAccess(loaded: false, isPro: false, savedStatus: true))
-        #expect(!StoreManager.siriProAccess(loaded: false, isPro: false, savedStatus: false))
+        #expect(StoreManager.proStatus(loaded: false, isPro: false, savedStatus: true))
+        #expect(!StoreManager.proStatus(loaded: false, isPro: false, savedStatus: false))
         // Never saved (fresh install, StoreKit slow): allow rather than tell a payer "Pro required".
-        #expect(StoreManager.siriProAccess(loaded: false, isPro: false, savedStatus: nil))
+        #expect(StoreManager.proStatus(loaded: false, isPro: false, savedStatus: nil))
     }
 }
 

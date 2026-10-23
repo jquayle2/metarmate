@@ -75,11 +75,7 @@ struct WeatherDetailView: View {
                                 .foregroundColor(.secondary)
                         }
                         Button {
-                            if store.isProUser || !FeatureFlags.favoritesRequirePro {
-                                toggleFavorite()
-                            } else {
-                                showProSheet = true
-                            }
+                            toggleFavorite()   // favorites are free (D#19)
                         } label: {
                             Image(systemName: isFavorite ? "star.fill" : "star")
                                 .foregroundColor(isFavorite ? Brand.accentOrange : Brand.slate)

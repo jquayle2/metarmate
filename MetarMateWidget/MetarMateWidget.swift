@@ -127,9 +127,15 @@ struct MetarMateEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetWeatherSnapshot?
     let requestedICAO: String?  // non-nil when user selected an airport but no data exists yet
+    /// Widgets are Pro (D#20): a locked entry carries no weather at all, never stale data.
+    var locked = false
 
     static var placeholder: MetarMateEntry {
         MetarMateEntry(date: .now, snapshot: nil, requestedICAO: nil)
+    }
+
+    static var lockedEntry: MetarMateEntry {
+        MetarMateEntry(date: .now, snapshot: nil, requestedICAO: nil, locked: true)
     }
 }
 
@@ -205,11 +211,22 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: SelectAirportIntent, in context: Context) async -> MetarMateEntry {
+        // The widget gallery preview still shows weather, so a free user can see what Pro adds.
+        if !context.isPreview, !(await WidgetProAccess.isAllowed()) {
+            WidgetDiag.record(kind: "snapshot", icao: resolveICAO(for: configuration), configured: resolveICAO(for: configuration) != nil, outcome: "locked (Pro)")
+            return .lockedEntry
+        }
         let (snapshot, requestedICAO, _) = await loadSnapshot(for: configuration, kind: context.isPreview ? "preview" : "snapshot")
         return MetarMateEntry(date: .now, snapshot: snapshot, requestedICAO: requestedICAO)
     }
 
     func timeline(for configuration: SelectAirportIntent, in context: Context) async -> Timeline<MetarMateEntry> {
+        // Widgets are Pro (D#20). Locked: no fetch, no weather. The app reloads every timeline when
+        // Pro status changes; the hourly retry catches a family purchase made while the app is closed.
+        guard await WidgetProAccess.isAllowed() else {
+            WidgetDiag.record(kind: "timeline", icao: resolveICAO(for: configuration), configured: resolveICAO(for: configuration) != nil, outcome: "locked (Pro)")
+            return Timeline(entries: [.lockedEntry], policy: .after(Date.now.addingTimeInterval(3600)))
+        }
         let loaded = await loadSnapshot(for: configuration, kind: "timeline")
         let requestedICAO = loaded.requestedICAO
 
@@ -270,22 +287,41 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
     }
 }
 
-/// "Pro required" placeholder shown in home screen widgets for free users
-private struct ProRequiredView: View {
+/// Shown instead of weather when widgets are locked (not Pro), in every family, home and lock
+/// screen alike (#24: lock-screen families were never gated).
+private struct ProLockedView: View {
+    @Environment(\.widgetFamily) private var family
+
     var body: some View {
-        VStack(spacing: 6) {
+        switch family {
+        case .accessoryInline:
+            Text("MetarMate Pro")
+        case .accessoryCircular:
             Image(systemName: "lock.fill")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            Text("Pro Required")
-                .font(.system(.caption2, design: .rounded, weight: .semibold))
-                .foregroundStyle(.secondary)
-            Text("Upgrade in\nMetarMate")
-                .font(.system(size: 9, design: .rounded))
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+                .font(.title3)
+                .accessibilityLabel("MetarMate Pro")
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                Text("MetarMate Pro")
+                    .font(.headline)
+                Text("Widgets are part of Pro")
+                    .font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        default:
+            VStack(spacing: 6) {
+                Image(systemName: "lock.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("MetarMate Pro")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                Text("Widgets are part of Pro.\nOpen MetarMate to add it.")
+                    .font(.system(size: 10, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -443,9 +479,7 @@ struct HomeScreenSmallView: View {
     let date: Date
 
     var body: some View {
-        if !WidgetDataManager.loadProStatus() {
-            ProRequiredView()
-        } else if let snap = snapshot {
+        if let snap = snapshot {
             let age = snap.reportAge(at: date)
             HStack(spacing: 0) {
                 // Left-edge category strip
@@ -593,7 +627,13 @@ struct MetarMateLockScreenCircular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenCircularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+            Group {
+                if entry.locked {
+                    ProLockedView()
+                } else {
+                    LockScreenCircularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+                }
+            }
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Flight Category")
@@ -607,7 +647,13 @@ struct MetarMateLockScreenRectangular: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenRectangularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+            Group {
+                if entry.locked {
+                    ProLockedView()
+                } else {
+                    LockScreenRectangularView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+                }
+            }
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Airport Weather")
@@ -621,7 +667,13 @@ struct MetarMateLockScreenInline: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            LockScreenInlineView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+            Group {
+                if entry.locked {
+                    ProLockedView()
+                } else {
+                    LockScreenInlineView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+                }
+            }
                 .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Weather Inline")
@@ -635,7 +687,13 @@ struct MetarMateHomeSmall: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+            Group {
+                if entry.locked {
+                    ProLockedView()
+                } else {
+                    HomeScreenSmallView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+                }
+            }
                 .containerBackground(.fill.tertiary, for: .widget)
                 .widgetURL(detailURL(for: entry.snapshot))
         }
@@ -654,9 +712,7 @@ struct HomeScreenMediumView: View {
     let date: Date
 
     var body: some View {
-        if !WidgetDataManager.loadProStatus() {
-            ProRequiredView()
-        } else if let snap = snapshot {
+        if let snap = snapshot {
             let age = snap.reportAge(at: date)
             HStack(spacing: 0) {
                 // Left-edge category strip
@@ -897,7 +953,13 @@ struct MetarMateHomeMedium: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectAirportIntent.self, provider: ConfigurableProvider()) { entry in
-            HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+            Group {
+                if entry.locked {
+                    ProLockedView()
+                } else {
+                    HomeScreenMediumView(snapshot: entry.snapshot, requestedICAO: entry.requestedICAO, date: entry.date)
+                }
+            }
                 .containerBackground(.fill.tertiary, for: .widget)
                 .widgetURL(detailURL(for: entry.snapshot))
         }

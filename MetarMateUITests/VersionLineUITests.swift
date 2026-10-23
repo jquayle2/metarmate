@@ -16,7 +16,7 @@ final class VersionLineUITests: XCTestCase {
         app.launch()
 
         // Open any airport's detail screen via Search, then Customize Layout.
-        let search = app.tabBars.buttons["Search"]
+        let search = app.tabBars.buttons["Search"].firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 15), "Search tab never appeared")
         search.tap()
         let field = app.searchFields.firstMatch

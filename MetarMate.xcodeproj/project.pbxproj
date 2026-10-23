@@ -74,6 +74,7 @@
 				BuildChannel.swift,
 				FeatureFlags.swift,
 				Intents/SelectAirportIntent.swift,
+				ProAccess.swift,
 				Models/AdvisoryWeather.swift,
 				Models/Airport.swift,
 				Models/Metar.swift,

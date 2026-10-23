@@ -21,7 +21,7 @@ final class HarnessEntryUITests: XCTestCase {
         app.launch()
 
         // Favorites tab (survives the splash screen via the wait).
-        let favorites = app.tabBars.buttons["Favorites"]
+        let favorites = app.tabBars.buttons["Favorites"].firstMatch
         XCTAssertTrue(favorites.waitForExistence(timeout: 15), "Favorites tab never appeared")
         favorites.tap()
 

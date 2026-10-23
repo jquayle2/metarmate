@@ -3,9 +3,7 @@ import SwiftData
 
 struct FavoritesView: View {
     @Query(sort: \AirportFavorite.addedDate, order: .forward) private var favorites: [AirportFavorite]
-    @ObservedObject private var store = StoreManager.shared
     @EnvironmentObject private var weatherCache: WeatherCache
-    @State private var showProSheet = false
 
     private var sortedFavorites: [AirportFavorite] {
         AirportFavorite.ordered(favorites)
@@ -22,9 +20,7 @@ struct FavoritesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if FeatureFlags.favoritesRequirePro && !store.isProUser {
-                    proRequiredView
-                } else if favorites.isEmpty {
+                if favorites.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "star.circle")
                             .font(.system(size: 48))
@@ -187,36 +183,6 @@ struct FavoritesView: View {
         reordered.move(fromOffsets: source, toOffset: destination)
         for (index, fav) in reordered.enumerated() {
             fav.sortOrder = index
-        }
-    }
-
-    private var proRequiredView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "star.circle")
-                .font(.system(size: 56))
-                .foregroundColor(.yellow.opacity(0.7))
-            Text("Favorites requires Pro")
-                .font(.title3.bold())
-            Text("Save unlimited airports for instant access with MetarMate Pro.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button {
-                showProSheet = true
-            } label: {
-                Text("Upgrade to Pro — $8.99")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(Color.cyan)
-                    .cornerRadius(12)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showProSheet) {
-            ProUpgradeView(mode: .pro)
         }
     }
 }

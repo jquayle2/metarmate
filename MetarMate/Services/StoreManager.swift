@@ -9,9 +9,9 @@ class StoreManager: ObservableObject {
     static let shared = StoreManager()
 
     // MARK: - Product IDs
-    static let proID              = "com.jeffquayle.MetarMate.pro"
-    static let asosMonthlyID      = "com.jeffquayle.MetarMate.asosupdates.monthly"
-    static let asosAnnualID       = "com.jeffquayle.MetarMate.asosupdates.annual"
+    static let proID              = ProEntitlement.proID
+    static let asosMonthlyID      = ProEntitlement.asosMonthlyID
+    static let asosAnnualID       = ProEntitlement.asosAnnualID
     // Only products that can be sold: the ASOS subscriptions are requested only once ASOS is
     // switched on, so a build with ASOS off never shows or offers them (audit #24).
     private static var requestedIDs: Set<String> {
@@ -120,40 +120,15 @@ class StoreManager: ObservableObject {
         WidgetDataManager.saveProStatus(resolved.pro)
     }
 
-    // MARK: - Entitlement rules (pure, unit-tested)
+    // MARK: - Entitlement rule (shared with the widget: ProAccess.swift)
 
-    struct EntitlementRecord {
-        let productID: String
-        let ownership: Transaction.OwnershipType
-        let isRevoked: Bool
-        let isExpired: Bool
+    typealias EntitlementRecord = ProEntitlement.Record
 
-        init(productID: String, ownership: Transaction.OwnershipType = .purchased,
-             isRevoked: Bool = false, isExpired: Bool = false) {
-            self.productID = productID
-            self.ownership = ownership
-            self.isRevoked = isRevoked
-            self.isExpired = isExpired
-        }
-
-        init(_ t: Transaction, now: Date = Date()) {
-            self.init(productID: t.productID, ownership: t.ownershipType,
-                      isRevoked: t.revocationDate != nil,
-                      isExpired: t.expirationDate.map { $0 <= now } ?? false)
-        }
-    }
-
-    /// currentEntitlements already leaves out refunded/revoked and expired transactions; they're
-    /// skipped here as well so a refund always turns Pro off. Ownership is deliberately ignored:
-    /// a purchase shared by a family member counts the same as the user's own.
     nonisolated static func resolve(_ records: [EntitlementRecord]) -> (pro: Bool, asos: Bool) {
-        let live = records.filter { !$0.isRevoked && !$0.isExpired }
-        let asos = live.contains { $0.productID == asosMonthlyID || $0.productID == asosAnnualID }
-        let ownPro = live.contains { $0.productID == proID }
-        return (pro: ownPro || asos, asos: asos)
+        ProEntitlement.resolve(records)
     }
 
-    // MARK: - Waiting for entitlements (Siri)
+    // MARK: - Waiting for entitlements (Siri, background alerts)
 
     /// Waits up to `timeout` for the first entitlement check. Returns whether it finished.
     func waitUntilEntitlementsLoaded(timeout: Duration = .seconds(3)) async -> Bool {
@@ -164,16 +139,17 @@ class StoreManager: ObservableObject {
         return entitlementsLoaded
     }
 
-    /// Pro access for Siri, which can launch the app cold and ask before StoreKit answers (#24).
-    /// A paying user must never hear "Pro required", so if entitlements haven't loaded in time it
-    /// falls back to the last status the app saved, and allows when there is none.
-    func proAccessForSiri(timeout: Duration = .seconds(3)) async -> Bool {
+    /// Pro status for code that can run before StoreKit answers: Siri and the background alert
+    /// task launch the app cold (#24). A paying user must never be told "Pro required", so if
+    /// entitlements haven't loaded in time it uses the last status the app saved, and says Pro
+    /// when there is none.
+    func isProWhenLoaded(timeout: Duration = .seconds(3)) async -> Bool {
         let loaded = await waitUntilEntitlementsLoaded(timeout: timeout)
-        return Self.siriProAccess(loaded: loaded, isPro: isProUser,
-                                  savedStatus: WidgetDataManager.savedProStatus())
+        return Self.proStatus(loaded: loaded, isPro: isProUser,
+                              savedStatus: WidgetDataManager.savedProStatus())
     }
 
-    nonisolated static func siriProAccess(loaded: Bool, isPro: Bool, savedStatus: Bool?) -> Bool {
+    nonisolated static func proStatus(loaded: Bool, isPro: Bool, savedStatus: Bool?) -> Bool {
         if loaded { return isPro }
         return savedStatus ?? true
     }

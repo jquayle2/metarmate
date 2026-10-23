@@ -99,16 +99,17 @@ App Review blockers (required regardless of section 0):
 Pro gating (launch-blocking; scope in D#19–20):
 - [x] One switch, `FeatureFlags.proGatingEnabled`: off in TestFlight builds, on in Release (App Store) and Debug. `FeatureFlags.swift` is compiled into the app and the widget; `TESTFLIGHT` is set on the TestFlight configuration of every target. Verified in the simulator: the widget's diag line reads gating=off from a TestFlight build and gating=on from Debug, matching the app. `f99f3cd`
 - [x] #24 Siri waits for entitlements before reading `isProUser`: up to 3 s, then the last saved status, then allow (a payer never hears "Pro required"). `StoreManager.proAccessForSiri`
-- [ ] #24 Lock-screen widgets gated
+- [x] #24 Lock-screen widgets gated: every widget family goes through `WidgetProAccess`; a locked entry carries no weather and shows "MetarMate Pro" (simulator: Debug build shows the lock, TestFlight build shows weather)
 - [x] #24 StoreKit listener started in `App.init`
 - [x] #24 ASOS product IDs requested only when `FeatureFlags.asosAvailable` is on. `49dd6d5`
 - [x] Entitlements: `StoreManager.isProUser` = Pro purchase (own or family-shared) OR active ASOS subscription; `entitlementsLoaded` state; refunds/revocations turn it off; only the newest overlapping entitlement check publishes. StoreKit test session: purchase turns Pro on, refund turns it off via `Transaction.updates`, ASOS includes Pro
 - [x] `MetarMateProducts.storekit` rewritten in Xcode's format (the hand-written file never loaded products): Pro $5.99, Family Sharing on, current copy; ASOS prices there are placeholders until D#21. The MetarMate scheme's Run action uses it; Jeff: confirm in Xcode, Edit Scheme > Run > Options > StoreKit Configuration
-- [ ] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro`
-- [ ] Widgets Pro: `WidgetDataManager.widgetsRequirePro = true` (home and lock screen)
+- [x] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro` (and its hard-coded "Upgrade to Pro — $8.99" screen)
+- [x] Widgets Pro (home and lock screen) on `FeatureFlags.proGatingEnabled`; `widgetsRequirePro` retired. Allowed when the app saved Pro or StoreKit says Pro in the widget (family purchase, fresh install). The gallery preview still shows weather
+- [x] Siri Pro on the same switch: a free user hears one sentence ("Siri weather is part of MetarMate Pro…") and gets no weather; entitlements are awaited first
 - [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only
 - [ ] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message
-- [ ] Crosswind calculator free: remove any Pro gate on it
+- [x] Crosswind calculator free: there was no gate, and `ProFeature` has no crosswind case, so nothing can gate it
 - [ ] Layout customization Pro
 - [ ] Paywall screen: lists what Pro adds; restore purchases; $5.99 shown from StoreKit (never hard-coded)
 - [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
@@ -134,6 +135,8 @@ Background task (#26):
 - [ ] Watch `expiresAt` enforced
 
 Other:
+- [ ] Full suite: same unexplained failure as A2's "Full suite stopped once mid-run" line (section 3). A3 saw a run report TEST FAILED with no failing case named, and one run killed (exit 137). Likely cause found Oct 23: parallel sessions share the "iPhone 17" simulator and the same bundle ID, so one session's app and UI tests run over another's (an A3 widget screenshot showed the verdict-surfaces build). A3 now tests on its own simulator, "iPhone 17 A3"; each worktree should use its own. Recheck after integration
+- [ ] A2 hand-off: favorites of non-bundled airports saved before `9025643` keep the meter elevation. The #27 reconcile only refreshes airports in airports.json, so these aren't fixed yet
 - [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched. `86fc14b`
 - [ ] Merge A3 [Jeff]
 

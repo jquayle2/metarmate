@@ -26,7 +26,7 @@ final class HarnessAbsentUITests: XCTestCase {
         app.launchArguments.append("-UITestForceHarnessGate")
         app.launch()
 
-        let favorites = app.tabBars.buttons["Favorites"]
+        let favorites = app.tabBars.buttons["Favorites"].firstMatch
         XCTAssertTrue(favorites.waitForExistence(timeout: 15), "Favorites tab never appeared")
         favorites.tap()
 
