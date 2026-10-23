@@ -61,14 +61,14 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 
 Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data`, off `feat/nearby-taf`).
 
-- [x] #4 Go/no-go tri-state: unevaluated minimum → CHECK, never GO; no "back within minimums" alert (D#2). GO→CHECK sends one neutral "Can't confirm your minimums at KVGT: visibility not reported", not repeated; CHECK→GO silent; lastSide unchanged during CHECK (Jeff, Oct 23). No runway data or unknown wind direction: passes when the gust (else speed) is within the crosswind limit, else CHECK
-- [x] #5 VRB worst-case crosswind (D#3): within the limit GO "VRB, assuming full crosswind"; over it CHECK "Variable wind: crosswind can't be confirmed"
+- [x] #4 Go/no-go tri-state: unevaluated minimum → CHECK, never GO; no "back within minimums" alert (D#2). GO→CHECK sends one neutral "Can't confirm your minimums at KVGT: visibility not reported", not repeated; CHECK→GO silent; lastSide unchanged during CHECK (Jeff, Oct 23). No runway data or unknown wind direction: passes when the gust (else speed) is within the crosswind limit, else CHECK. `1be5294`
+- [x] #5 VRB worst-case crosswind (D#3): within the limit GO "VRB, assuming full crosswind"; over it CHECK "Variable wind: crosswind can't be confirmed". `1be5294`
 - [x] #6 Unknown sky ≠ unlimited ceiling: shared `CeilingStatus` (feet / none / not reported); NOAA sends no layers for CLR, so "sky reported" reads the report body. Go/no-go, trends, TAF verification, Siri, list rows, history (verdict CHECK under #4). `246dc2c`
-- [x] #7 Staleness gate on verdicts (D#4): shared 65/75 rule; late verdict marked "METAR late: N min old"; over 75 no verdict, category and conditions withheld on the watch row, nothing fires
+- [x] #7 Staleness gate on verdicts (D#4): shared 65/75 rule; late verdict marked "METAR late: N min old"; over 75 no verdict, category and conditions withheld on the watch row, nothing fires. `1be5294`
 - [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported". `48c1a90`
 - [x] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown (observed, forecast, combined; headline "No Trend Data", never "Stable"). `34d0873`
 - [x] #10 Missing wind direction/speed not reported as 000° / 0 kt (METAR and TAF parsers; shown as `///`/"Direction not reported"; verdict handling under #4). `45821c9`
-- [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
+- [x] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes (note severity = max of wind and crosswind tier)
 - [x] #12 Missing cloud base not 0 ft (METAR and TAF; TAF sky axis unknown). `246dc2c`
 - [x] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
 - [x] #14 TAF category with one axis unknown; clouds into overlays
@@ -76,9 +76,9 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [ ] #16 Unknown shown as good (green rail, "Clear", "Fcst on target", wind-only "Steady")
 - [x] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category): one `FlightCategory.forCeiling/forVisibility/from` (3,000 ft and 5 SM are MVFR; a lone VFR axis is unknown) used by TAF, ASOS estimate, advisory, layer colors, Pilot Notes, TAF hero. `e97c00b`
 - [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts
-- [ ] #20 Gust approach speed = ½ gust factor, one shared function (D#8)
+- [x] #20 Gust approach speed = ½ gust factor, one shared function (D#8): `GustAdvice` in Pilot Notes, detail crosswind line, TAF notes and the calculator; "Gusty: consider +5 kt (½ gust factor, or per your POH)"
 - [x] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; now 4,887 ft (NWS virtual-temperature method). Missing temp or altimeter → no DA. Table-driven ForeFlight test ready for more samples (`DensityAltitudeTests.foreFlightSamples`). `1e5a761`
-- [x] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19): Alerts rows and notifications
+- [x] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19): Alerts rows and notifications. `1be5294`
 - [ ] D#10 symmetric missing-field notes; D#11 F17 hazards in history; D#12 PROB TSRA in headline
 - [ ] F16 present-weather chip off the category red; F18 "Clear" with only FEW/SCT
 - [x] P3 Ceiling is the lowest BKN/OVC/VV layer (`.min()`), never `.first`, everywhere (one shared rule). `246dc2c`

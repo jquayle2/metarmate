@@ -52,6 +52,33 @@ struct CrosswindDisplay {
     }
 }
 
+// MARK: - Gust approach-speed additive (D#8, one shared function)
+/// Half the gust factor (gust minus sustained), rounded up. Source: FAA Airplane Flying Handbook,
+/// FAA-H-8083-3C, ch. 9 (turbulent air approach). 15G25 is +5 kt (the old "half the gust" gave
+/// +12). Used by Pilot Notes, the detail view's crosswind line, TAF Pilot Notes and the calculator.
+enum GustAdvice {
+    static func approachAdditiveKt(sustained: Int, gust: Int?) -> Int? {
+        guard let gust, gust > sustained else { return nil }
+        return (gust - sustained + 1) / 2
+    }
+
+    /// D#8 wording: "Gusty: consider +5 kt (½ gust factor, or per your POH)".
+    static func text(sustained: Int, gust: Int?) -> String? {
+        approachAdditiveKt(sustained: sustained, gust: gust)
+            .map { "Gusty: consider +\($0) kt (½ gust factor, or per your POH)" }
+    }
+}
+
+extension PilotNote.Severity {
+    nonisolated var rank: Int {
+        switch self {
+        case .caution: return 0
+        case .warning: return 1
+        case .danger:  return 2
+        }
+    }
+}
+
 // MARK: - Derivation
 enum MetarPilotNotes {
 
@@ -67,9 +94,10 @@ enum MetarPilotNotes {
     ) -> [PilotNote] {
         var notes: [PilotNote] = []
         let wind = metar.wind
-        let gust = wind.gust ?? 0
         let speed = wind.speed
-        let spread = gust - speed
+        // A reported gust above the sustained speed; nil = no gust (never a 0-kt placeholder).
+        let gust: Int? = wind.gust.flatMap { $0 > speed ? $0 : nil }
+        let spread: Int? = gust.map { $0 - speed }
 
         // Missing wind group — unknown, not calm. Surface it so the reader doesn't mistake an
         // unreported wind for a genuine 00000KT. (All wind-derived notes below stay silent because
@@ -91,17 +119,21 @@ enum MetarPilotNotes {
         // Triggers on a notable sustained wind, any gust crossing the caution threshold, OR a
         // steady crosswind component >= 5 kt on the best runway — so a meaningful steady crosswind
         // surfaces even with no gust (e.g. 9 kt straight across a runway). Component floor: Mike (CFII).
-        let hasGust = gust > speed
-        let bestSustainedXW = crosswindDisplays.first?.xwLow ?? 0
-        if speed >= 20 || gust >= 15 || bestSustainedXW >= 5 {
-            let severity: PilotNote.Severity = (speed >= 25 || gust >= 20) ? .warning : .caution
+        let gustAtLeast = { (kt: Int) in gust.map { $0 >= kt } == true }
+        let steadyCrosswind = crosswindDisplays.first.map { $0.xwLow >= 5 } == true
+        if speed >= 20 || gustAtLeast(15) || steadyCrosswind {
+            let windSeverity: PilotNote.Severity = (speed >= 25 || gustAtLeast(20)) ? .warning : .caution
             let displays = crosswindDisplays
             if !displays.isEmpty {
                 // Best runway first; a near-tie runner-up follows with subtler "or RWY" framing.
                 for (i, display) in displays.enumerated() {
+                    // Severity follows the crosswind tier too, so a red-tier crosswind is never
+                    // hidden under "Red only" (audit #11: 27022KT across the runway is 22 kt XW).
+                    let tierSeverity: PilotNote.Severity = display.tier == .danger ? .danger : .caution
+                    let severity = tierSeverity.rank > windSeverity.rank ? tierSeverity : windSeverity
                     var cw = display
                     if i == 0 {
-                        let lead = hasGust ? "Gusts \(gust) kt" : "Wind \(speed) kt"
+                        let lead = gust.map { "Gusts \($0) kt" } ?? "Wind \(speed) kt"
                         cw.line1 = "\(lead) — RWY \(cw.ident)"
                     } else {
                         cw.line1 = "or RWY \(cw.ident)"
@@ -109,16 +141,16 @@ enum MetarPilotNotes {
                     notes.append(.init(icon: "wind", text: cw.line1, severity: severity, crosswind: cw))
                 }
             } else {
-                let lead = hasGust ? "Gusts \(gust) kt" : "Sustained \(speed) kt"
-                let vref = hasGust ? "; \(gust >= 20 ? "add" : "consider adding") \(gust / 2) kt to approach speed" : ""
-                notes.append(.init(icon: "wind", text: "\(lead) — check crosswind component for your runway\(vref)", severity: severity))
+                let lead = gust.map { "Gusts \($0) kt" } ?? "Sustained \(speed) kt"
+                let vref = GustAdvice.text(sustained: speed, gust: wind.gust).map { ". \($0)" } ?? ""
+                notes.append(.init(icon: "wind", text: "\(lead) — check crosswind component for your runway\(vref)", severity: windSeverity))
             }
         }
 
         // Gust spread (turbulence indicator)
-        if spread >= 15 {
+        if let spread, spread >= 15 {
             notes.append(.init(icon: "tornado", text: "Gust spread \(spread) kt — significant mechanical turbulence likely", severity: .warning))
-        } else if spread >= 10 {
+        } else if let spread, spread >= 10 {
             notes.append(.init(icon: "tornado", text: "Gust spread \(spread) kt — moderate turbulence possible", severity: .caution))
         }
 

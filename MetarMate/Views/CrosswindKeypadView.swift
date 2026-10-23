@@ -62,11 +62,6 @@ struct CrosswindKeypadView: View {
         return abs(Int(round(Double(gustSpeed) * sin(angleRad))))
     }
     private var headwind: Int { Int(round(Double(windSpeed) * cos(angleRad))) }
-    // Headwind component of the gust, on the runway axis (signed, like `headwind`).
-    private var gustHeadwind: Int {
-        guard gustSpeed > windSpeed else { return headwind }
-        return Int(round(Double(gustSpeed) * cos(angleRad)))
-    }
     private var isTailwind: Bool { headwind < 0 }
 
     private var side: String {
@@ -151,12 +146,9 @@ struct CrosswindKeypadView: View {
                     .font(.avenir(13, .demibold)).foregroundColor(Brand.slate)
             }
         } else {
-            // Gust factor on the runway HEADWIND axis: half the headwind-component increment
-            // (gust HW − sustained HW), not the raw speed difference. An off-axis gust adds less
-            // to approach-speed margin than a straight-down-the-runway gust.
-            let gustAdd = hasGust ? max((gustHeadwind - headwind + 1) / 2, 1) : 0
+            // D#8: the shared ½-gust-factor additive (gust − sustained), same as Pilot Notes.
             let xw = hasGust ? gustCrosswind : crosswind
-            let lines = cautionLines(gustAdd: gustAdd, xw: xw)
+            let lines = cautionLines(gustAdvice: GustAdvice.text(sustained: windSpeed, gust: gustSpeed), xw: xw)
             if !lines.isEmpty {
                 advisoryCard(border: Brand.advisoryBorder, radius: Brand.stripRadius,
                              fill: [Brand.advisoryTop, Brand.advisoryBottom],
@@ -171,9 +163,9 @@ struct CrosswindKeypadView: View {
         }
     }
 
-    private func cautionLines(gustAdd: Int, xw: Int) -> [String] {
+    private func cautionLines(gustAdvice: String?, xw: Int) -> [String] {
         var l: [String] = []
-        if gustAdd > 0 { l.append("Increase Vref by \(gustAdd) kt") }
+        if let gustAdvice { l.append(gustAdvice) }
         if xw > 10 { l.append("Consider reducing flaps") }
         return l
     }

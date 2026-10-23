@@ -928,9 +928,7 @@ struct WeatherDetailView: View {
         let tier: CrosswindDisplay.Tier = xwHigh >= Self.crosswindRedThreshold ? .danger
             : (xwHigh >= Self.crosswindAmberThreshold ? .caution : .neutral)
 
-        let hasGust = (wind.gust ?? 0) > wind.speed
-        let g = wind.gust ?? wind.speed
-        let vref: String? = hasGust ? "\(g >= 20 ? "add" : "consider adding") \(g / 2) kt to approach speed" : nil
+        let vref = GustAdvice.text(sustained: wind.speed, gust: wind.gust)   // D#8: ½ gust factor
 
         return CrosswindDisplay(side: side, xwLow: xwLow, xwHigh: xwHigh,
                                 hwLow: hwLow, hwHigh: hwHigh, tier: tier, vref: vref, ident: ident)
@@ -2368,7 +2366,7 @@ struct WeatherDetailView: View {
                 let detail = gust >= 20 ? "check crosswind component for your runway" : "verify crosswind within limits"
                 notes.append(.init(
                     icon: "wind",
-                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail); \(gust >= 20 ? "add" : "consider adding") \(gust / 2) kt to approach speed",
+                    text: "Gusts \(gust) kt from \(tafTimeLabel(p.fromTime)) — \(detail)" + (GustAdvice.text(sustained: wind.speed, gust: gust).map { ". \($0)" } ?? ""),
                     color: gust >= 20 ? .orange : amber, rank: gust >= 20 ? 1 : 2, time: p.fromTime))
             }
         }

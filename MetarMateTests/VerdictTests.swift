@@ -178,4 +178,46 @@ struct VerdictTests {
         let own = MinimumsProfile(name: "Mine", minVisibilitySM: 3)
         #expect(AlertPipeline.body(for: v, icao: "KVGT", profile: own).hasPrefix("NO-GO:"))
     }
+
+    // MARK: - #11: crosswind severity follows the tier
+
+    /// Audit #11: 27022KT straight across a runway is a 22 kt (red-tier) crosswind, but the note's
+    /// severity came from speed/gust alone (.caution), so "Red only" hid it.
+    @Test func redTierCrosswindIsNotHiddenUnderRedOnly() throws {
+        let m = try MissingDataTests.metar(#""temp":19,"dewp":5,"altim":1014.6,"wdir":270,"wspd":22,"visib":"10+","fltCat":"VFR""#,
+                                           raw: "METAR KTST 231551Z 27022KT 10SM CLR 19/05 A2996")
+        let display = CrosswindDisplay(side: "L", xwLow: 22, xwHigh: 22, hwLow: 0, hwHigh: 0,
+                                       tier: .danger, vref: nil, ident: "36")
+        let notes = MetarPilotNotes.build(metar: m, history: [m], crosswindDisplays: [display])
+        let xw = try #require(notes.first { $0.crosswind != nil })
+        #expect(xw.severity == .danger)
+        // The detail view's "Red only" gate is warning-or-danger.
+        #expect(notes.contains { $0.severity == .warning || $0.severity == .danger })
+    }
+
+    // MARK: - #20 / D#8: ½ gust factor
+
+    /// FAA-H-8083-3C ch. 9: add half the gust factor. 15G25 -> +5 (was "+12", half the gust).
+    @Test func gustAdditiveIsHalfTheGustFactor() {
+        #expect(GustAdvice.approachAdditiveKt(sustained: 15, gust: 25) == 5)
+        #expect(GustAdvice.approachAdditiveKt(sustained: 15, gust: 26) == 6)   // rounded up
+        #expect(GustAdvice.approachAdditiveKt(sustained: 15, gust: nil) == nil)
+        #expect(GustAdvice.approachAdditiveKt(sustained: 15, gust: 15) == nil)
+        #expect(GustAdvice.text(sustained: 15, gust: 25) == "Gusty: consider +5 kt (½ gust factor, or per your POH)")
+    }
+
+    @Test func pilotNoteUsesHalfGustFactor() throws {
+        let m = try MissingDataTests.metar(#""temp":19,"dewp":5,"altim":1014.6,"wdir":270,"wspd":15,"wgst":25,"visib":"10+","fltCat":"VFR""#,
+                                           raw: "METAR KTST 231551Z 27015G25KT 10SM CLR 19/05 A2996")
+        let notes = MetarPilotNotes.build(metar: m, history: [m])
+        #expect(notes.contains { $0.text.contains("Gusty: consider +5 kt (½ gust factor, or per your POH)") })
+        #expect(!notes.contains { $0.text.contains("12 kt") })
+    }
+
+    /// A steady 15 kt with no gust doesn't trip the gust-15 trigger.
+    @Test func steadyFifteenIsNotAGust() throws {
+        let m = try MissingDataTests.metar(#""temp":19,"dewp":5,"altim":1014.6,"wdir":270,"wspd":15,"visib":"10+","fltCat":"VFR""#,
+                                           raw: "METAR KTST 231551Z 27015KT 10SM CLR 19/05 A2996")
+        #expect(!MetarPilotNotes.build(metar: m, history: [m]).contains { $0.icon == "wind" })
+    }
 }
