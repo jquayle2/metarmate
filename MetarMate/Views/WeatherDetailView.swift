@@ -255,17 +255,29 @@ struct WeatherDetailView: View {
                 .font(.avenir(31, .heavy))
                 .foregroundColor(Brand.cloud)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 12) {
-                // Re-judged every 30 s so the pill goes neutral when the report passes 75 min.
-                TimelineView(.periodic(from: .now, by: 30)) { context in
-                    StatusPill(category: vm.flightCategory, isNoCurrent: vm.metar?.isNoCurrent(at: context.date) ?? false)
+            // Re-judged every 30 s so the pill goes neutral when the report passes 75 min. The wider
+            // "No current METAR" pill can push the age under it on a narrow phone.
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                let pill = StatusPill(category: vm.flightCategory, isNoCurrent: vm.metar?.isNoCurrent(at: context.date) ?? false)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        pill
+                        if let metar = vm.metar {
+                            observationTimeView(metar)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        pill
+                        if let metar = vm.metar {
+                            observationTimeView(metar)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                    }
                 }
-                if let metar = vm.metar {
-                    observationTimeView(metar)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-                Spacer(minLength: 0)
             }
             .padding(.top, 14)
             if let elevation = airport.elevation {

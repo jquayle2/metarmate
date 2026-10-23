@@ -375,7 +375,8 @@ struct SectionFrontHeader: View {
 /// VFR / IFR status pill. VFR = translucent green outline; IFR = solid danger fill.
 struct StatusPill: View {
     let category: FlightCategory
-    /// A report that isn't current (over 75 min, D#4): neutral, never the category color.
+    /// A report that isn't current (over 75 min, D#4): neutral "No current METAR", never the category,
+    /// matching the widget and Alerts.
     var isNoCurrent = false
 
     var body: some View {
@@ -384,7 +385,7 @@ struct StatusPill: View {
         let solid = !isNoCurrent && (category == .ifr || category == .lifr)
         return HStack(spacing: 6) {
             Circle().frame(width: 6, height: 6)
-            Text(category.displayName)
+            Text(isNoCurrent ? "No current METAR" : category.displayName).lineLimit(1).fixedSize()
         }
         .font(.avenir(13, .heavy))
         .tracking(1.0)
