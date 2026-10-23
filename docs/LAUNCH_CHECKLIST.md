@@ -93,7 +93,7 @@ App Review blockers (required regardless of section 0):
 - [ ] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]
 - [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
 - [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
-- [ ] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration
+- [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
 - [ ] #24 Siri waits for entitlements before reading `isProUser`
