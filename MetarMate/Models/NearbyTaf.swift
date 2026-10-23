@@ -13,10 +13,11 @@ struct TafSource: Codable, Equatable {
     let bearing: String              // 8-point compass from the field to the TAF station ("W")
     let elevationDifferenceFt: Int?  // TAF station minus field; nil when either elevation is unknown
     let isBorrowed: Bool
-    // The field's own elevation wasn't reported, so there is no comparison (the caution says so
-    // rather than going quiet). Optional for the same persisted-JSON reason as the snapshot's
-    // flags: nil = false.
+    // The field's or the TAF station's elevation wasn't reported, so there is no comparison (the
+    // caution says so rather than going quiet). Optional for the same persisted-JSON reason as the
+    // snapshot's flags: nil = false.
     var fieldElevationNotReported: Bool? = nil
+    var stationElevationNotReported: Bool? = nil
 }
 
 /// A TAF from the `taf?bbox=` lookup, with the station position NOAA returns alongside it.
@@ -186,6 +187,8 @@ enum NearbyTaf {
         }
         if source.fieldElevationNotReported == true {
             lines.append("Elevation comparison not available: field elevation not reported.")
+        } else if source.stationElevationNotReported == true {
+            lines.append("Elevation comparison not available: TAF site elevation not reported.")
         } else if let diff = source.elevationDifferenceFt, abs(diff) >= 1000 {
             let rounded = Int((Double(abs(diff)) / 100).rounded()) * 100
             lines.append("TAF site is \(rounded.formatted()) ft \(diff > 0 ? "higher" : "lower").")
@@ -224,7 +227,8 @@ enum NearbyTaf {
                 c.elevationMeters.map { feet(fromMeters: $0) - field }
             },
             isBorrowed: true,
-            fieldElevationNotReported: fieldElevationFt == nil ? true : nil   // nil = reported
+            fieldElevationNotReported: fieldElevationFt == nil ? true : nil,   // nil = reported
+            stationElevationNotReported: c.elevationMeters == nil ? true : nil
         )
         return (c.taf, source)
     }

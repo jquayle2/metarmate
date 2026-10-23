@@ -116,6 +116,10 @@ struct NearbyTafTests {
         let noElev = NearbyTafCandidate(taf: khnd.taf, latitude: khnd.latitude, longitude: khnd.longitude,
                                         elevationMeters: nil, name: khnd.name)
         #expect(select([noElev])?.source.elevationDifferenceFt == nil)
+        // Said, not skipped.
+        let source = try #require(select([noElev])?.source)
+        #expect(source.stationElevationNotReported == true && source.fieldElevationNotReported == nil)
+        #expect(NearbyTaf.cautions(for: source).last == "Elevation comparison not available: TAF site elevation not reported.")
     }
 
     /// Field elevation not reported: still borrows, no difference, and the caution says why.
@@ -256,6 +260,9 @@ struct NearbyTafTests {
         var noField = source(5, elevation: nil)
         noField.fieldElevationNotReported = true
         #expect(NearbyTaf.cautions(for: noField) == ["Elevation comparison not available: field elevation not reported."])
+        var noStation = source(5, elevation: nil)
+        noStation.stationElevationNotReported = true
+        #expect(NearbyTaf.cautions(for: noStation) == ["Elevation comparison not available: TAF site elevation not reported."])
         // KIFP from KBVU: 1,457 ft lower, 50 nm — both cautions.
         #expect(NearbyTaf.cautions(for: source(50, elevation: -1457))
                 == ["TAF site 50 nm away. Conditions here may be quite different.", "TAF site is 1,500 ft lower."])
