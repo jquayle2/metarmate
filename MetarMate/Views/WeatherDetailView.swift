@@ -137,7 +137,8 @@ struct WeatherDetailView: View {
         )
         // Gate on ABSOLUTE density altitude via the single source of truth (DensityAltitude.swift),
         // NOT HP-loss. Keeps the section's "Red only"/"Amber+" gate in lockstep with the colors.
-        let daSev   = daSeverity(densityAltitudeFt: da.densityAltitudeFt)
+        // nil (temperature or altimeter not reported) -> no Performance section at all.
+        let daSev   = da.map { daSeverity(densityAltitudeFt: $0.densityAltitudeFt) }
         let daRed   = daSev == .red
         let daAmber = daSev == .amber || daSev == .red
 
@@ -179,7 +180,7 @@ struct WeatherDetailView: View {
                     default:             return false
                     }
                 }()
-                if showDA { densityAltitudeSection(metar) }
+                if showDA, let da { densityAltitudeSection(da) }
             case .trend:
                 if let trend = vm.trend {
                     let showTrend: Bool = {
@@ -1037,13 +1038,7 @@ struct WeatherDetailView: View {
     // nil = follow the auto default (expanded at amber/red); once the user taps, their choice sticks.
     @State private var performanceExpandedOverride: Bool? = nil
 
-    private func densityAltitudeSection(_ metar: Metar) -> some View {
-        let da = DensityAltitude.calculate(
-            temperatureC: Double(metar.temperature),
-            dewpointC: Double(metar.dewpoint),
-            altimeterInHg: metar.altimeter,
-            fieldElevationFt: airport.elevation
-        )
+    private func densityAltitudeSection(_ da: DensityAltitudeResult) -> some View {
         let severity = daSeverity(densityAltitudeFt: da.densityAltitudeFt)
         let color = daSeverityColor(severity)
         let icon  = daSeverityIcon(severity)
@@ -2699,7 +2694,7 @@ struct WeatherDetailView: View {
         let hasRed   = advisories.contains(where: { $0.isWarning })
 
         // Gate on ABSOLUTE density altitude via the single source of truth, matching the METAR path.
-        let daSev   = daSeverity(densityAltitudeFt: Int((wx.densityAltitudeFt ?? 0).rounded()))
+        let daSev   = wx.densityAltitudeFt.map { daSeverity(densityAltitudeFt: Int($0.rounded())) }
         let daRed   = daSev == .red
         let daAmber = daSev == .amber || daSev == .red
 

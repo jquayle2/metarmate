@@ -85,30 +85,52 @@ struct DensityAltitudeResult {
 }
 
 struct DensityAltitude {
-    /// Calculate density altitude given METAR data and airport field elevation.
-    /// - Parameters:
-    ///   - temperatureC: OAT in Celsius from METAR
-    ///   - dewpointC: Dewpoint in Celsius from METAR
-    ///   - altimeterInHg: Altimeter setting in inHg from METAR
-    ///   - fieldElevationFt: Airport field elevation in feet MSL
-    static func calculate(
-        temperatureC: Double,
-        dewpointC: Double,
-        altimeterInHg: Double,
-        fieldElevationFt: Int
-    ) -> DensityAltitudeResult {
+    // One density-altitude calculation for the whole app (METAR detail, advisory weather).
+    // Humid air is less dense than dry air at the same temperature, so the dewpoint goes in as
+    // virtual temperature. Reference: NWS El Paso density-altitude method (Brice & Hall, "Density
+    // Altitude", weather.gov/epz/wxcalc_densityaltitude): station pressure from the altimeter
+    // setting, vapor pressure from the dewpoint (Tetens), virtual temperature, then
+    //   DA = 145442.16 * (1 - (17.326 * P_inHg / Tv_Rankine) ^ 0.235).
+    // Ground truth: KIGM 19/13 A2996, field 3,449 ft, Oct 22 2026 -> ForeFlight 4,884 ft; this
+    // gives 4,887 ft (the old dry 120 ft/degree rule of thumb gave 4,707).
+    // Dry air (vapor pressure 0) only when the dewpoint is missing. Missing temperature or
+    // pressure -> nil: no density altitude at all, never one computed off 0 °C or 29.92.
 
-        // Pressure altitude = field elevation + 1000 * (29.92 - altimeter)
-        let pressureAlt = Double(fieldElevationFt) + 1000.0 * (29.92 - altimeterInHg)
+    /// From a METAR: OAT, dewpoint (°C), altimeter setting (inHg) and field elevation (ft MSL).
+    static func calculate(
+        temperatureC: Double?,
+        dewpointC: Double?,
+        altimeterInHg: Double?,
+        fieldElevationFt: Int
+    ) -> DensityAltitudeResult? {
+        guard let altimeterInHg else { return nil }
+        return calculate(temperatureC: temperatureC, dewpointC: dewpointC,
+                         stationPressureHpa: stationPressureHpa(altimeterInHg: altimeterInHg,
+                                                                fieldElevationFt: fieldElevationFt),
+                         fieldElevationFt: fieldElevationFt)
+    }
+
+    /// From station pressure (hPa at field elevation), e.g. Open-Meteo's surface_pressure.
+    static func calculate(
+        temperatureC: Double?,
+        dewpointC: Double?,
+        stationPressureHpa: Double?,
+        fieldElevationFt: Int
+    ) -> DensityAltitudeResult? {
+        guard let temperatureC, let p = stationPressureHpa, p > 0 else { return nil }
+
+        // Pressure altitude from station pressure (standard atmosphere).
+        let pressureAlt = 145366.45 * (1.0 - pow(p / 1013.25, 0.190284))
 
         // ISA standard temperature at pressure altitude: 15°C - 2°C per 1000 ft
         let isaTempC = 15.0 - (2.0 * pressureAlt / 1000.0)
-
-        // ISA deviation
         let isaDeviation = temperatureC - isaTempC
 
-        // Density altitude = pressure altitude + 120 * (OAT - ISA temp)
-        let densityAlt = pressureAlt + 120.0 * isaDeviation
+        // Virtual temperature: vapor pressure e (hPa) from the dewpoint; 0 when it's missing.
+        let e = dewpointC.map { 6.1078 * pow(10.0, 7.5 * $0 / (237.3 + $0)) } ?? 0
+        let tvK = (temperatureC + 273.15) / (1.0 - (e / p) * (1.0 - 0.622))
+        let pInHg = p / 33.8639
+        let densityAlt = 145442.16 * (1.0 - pow(17.326 * pInHg / (tvK * 1.8), 0.235))
 
         // Normally aspirated power loss via the density-ratio (sigma) model. At WOT with mixture
         // properly leaned, max available power tracks the air-density ratio sigma (mass airflow).
@@ -120,7 +142,7 @@ struct DensityAltitude {
         let hpLoss = max(0, (1.0 - sigma) * 100.0)
 
         // Penalty above field: how much extra DA the pilot "feels" vs just being at elevation
-        let penaltyFt = Int(densityAlt) - fieldElevationFt
+        let penaltyFt = Int(densityAlt.rounded()) - fieldElevationFt
 
         return DensityAltitudeResult(
             pressureAltitudeFt: Int(pressureAlt.rounded()),
@@ -129,5 +151,25 @@ struct DensityAltitude {
             hpLossPercent: hpLoss,
             performancePenaltyFt: penaltyFt
         )
+    }
+
+    /// Station pressure (hPa) from the altimeter setting and field elevation (NWS formula).
+    static func stationPressureHpa(altimeterInHg: Double, fieldElevationFt: Int) -> Double {
+        let altHpa = altimeterInHg * 33.8639
+        let elevM = Double(fieldElevationFt) * 0.3048
+        return pow(pow(altHpa, 0.190263) - 8.417286e-5 * elevM, 1.0 / 0.190263)
+    }
+}
+
+// Advisory (Open-Meteo) density altitude through the same function. Here rather than in
+// AdvisoryWeather.swift because that file is also compiled into the widget, which doesn't
+// include this one.
+extension AdvisoryWeather {
+    /// Density altitude in feet. Open-Meteo `surface_pressure` is station pressure at field elevation.
+    var densityAltitudeFt: Double? {
+        DensityAltitude.calculate(temperatureC: temperatureC, dewpointC: dewpointC,
+                                  stationPressureHpa: pressureHpa,
+                                  fieldElevationFt: airport.elevation)
+            .map { Double($0.densityAltitudeFt) }
     }
 }

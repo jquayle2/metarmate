@@ -44,7 +44,7 @@ enum HarnessAudit {
             let da = DensityAltitude.calculate(temperatureC: Double(m.temperature), dewpointC: Double(m.dewpoint),
                                                altimeterInHg: m.altimeter, fieldElevationFt: fx.airport.elevation)
             let altimNote = abs(m.altimeter - 29.92) < 0.001 ? " (29.92 — may be the fabricated default; see Finding 15)" : ""
-            out.append("     temp=\(m.temperature)°C dew=\(m.dewpoint)°C altim=\(String(format: "%.2f", m.altimeter)) inHg\(altimNote)  DA=\(da.densityAltitudeFt) ft MSL (elev \(fx.airport.elevation) ft)")
+            out.append("     temp=\(m.temperature)°C dew=\(m.dewpoint)°C altim=\(String(format: "%.2f", m.altimeter)) inHg\(altimNote)  DA=\(da.map { "\($0.densityAltitudeFt) ft MSL" } ?? "none") (elev \(fx.airport.elevation) ft)")
 
             let obs = WeatherTrend.derive(metars: inj.metars, taf: inj.taf).observed
             out.append("     trend(\(inj.metars.count) obs): vis=\(obs.visibility.rawValue) ceiling=\(obs.ceiling.rawValue) wind=\(obs.wind.rawValue) — \(obs.summaryText)")
