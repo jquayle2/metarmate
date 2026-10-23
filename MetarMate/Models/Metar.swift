@@ -19,6 +19,38 @@ enum FlightCategory: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Category thresholds (one definition, audit #18)
+// FAA/NWS: LIFR ceiling < 500 ft or vis < 1 SM; IFR ceiling < 1,000 or vis < 3; MVFR ceiling
+// 1,000-3,000 INCLUSIVE or vis 3-5 INCLUSIVE; VFR above both. Every place that derives a category
+// from a ceiling or visibility uses these — 3,000 ft and 5 SM are MVFR, not VFR.
+extension FlightCategory {
+    nonisolated static func forCeiling(_ feet: Int) -> FlightCategory {
+        feet < 500 ? .lifr : feet < 1000 ? .ifr : feet <= 3000 ? .mvfr : .vfr
+    }
+
+    nonisolated static func forVisibility(_ sm: Double) -> FlightCategory {
+        sm < 1 ? .lifr : sm < 3 ? .ifr : sm <= 5 ? .mvfr : .vfr
+    }
+
+    /// Worst of the known axes. With one axis unknown, a known MVFR/IFR/LIFR is a real lower bound
+    /// and stands; a known VFR axis can't vouch for the other, so the category is unknown.
+    nonisolated static func from(ceiling: CeilingStatus, visibilitySM: Double?) -> FlightCategory {
+        var axes: [FlightCategory] = []
+        switch ceiling {
+        case .feet(let f):  axes.append(forCeiling(f))
+        case .none:         axes.append(.vfr)
+        case .notReported:  break
+        }
+        if let visibilitySM { axes.append(forVisibility(visibilitySM)) }
+        let order: [FlightCategory] = [.vfr, .mvfr, .ifr, .lifr]
+        guard let worst = axes.max(by: { order.firstIndex(of: $0)! < order.firstIndex(of: $1)! }) else {
+            return .unknown
+        }
+        if axes.count == 1 && worst == .vfr { return .unknown }
+        return worst
+    }
+}
+
 // MARK: - Wind
 struct Wind: Codable {
     var direction: Int?      // degrees true; nil = variable (isVariable) or not reported (audit #10)

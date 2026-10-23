@@ -652,10 +652,7 @@ struct WeatherDetailView: View {
             return Brand.vfrGreen
         case .broken, .overcast, .verticalVisibility:
             // Ceiling-category ramp (magenta/red/blue/green), so blue is a legitimate MVFR-axis use.
-            if altFt < 200  { return Brand.lifrMagenta }
-            if altFt < 1000 { return Brand.valueRed }
-            if altFt < 3000 { return Brand.mvfrBlue }
-            return Brand.vfrGreen
+            return ceilingRampColor(altFt)
         case .clear, .skyClear, .noSignificantCloud:
             return Brand.vfrGreen
         }
@@ -828,12 +825,19 @@ struct WeatherDetailView: View {
             if altFt < 3000 { return Brand.cautionOrange }  // low FEW/SCT — caution
             return Brand.vfrGreen                            // high FEW/SCT benign
         case .broken, .overcast, .verticalVisibility:
-            if altFt < 500  { return Brand.lifrMagenta }     // LIFR
-            if altFt < 1000 { return Brand.valueRed }        // IFR
-            if altFt < 3000 { return Brand.mvfrBlue }        // MVFR
-            return Brand.vfrGreen                            // VFR
+            return ceilingRampColor(altFt)
         case .clear, .skyClear, .noSignificantCloud:
             return Brand.vfrGreen
+        }
+    }
+
+    // A ceiling layer's color from the shared category thresholds (3,000 ft is MVFR, audit #18).
+    private func ceilingRampColor(_ feet: Int) -> Color {
+        switch FlightCategory.forCeiling(feet) {
+        case .lifr: return Brand.lifrMagenta
+        case .ifr:  return Brand.valueRed
+        case .mvfr: return Brand.mvfrBlue
+        default:    return Brand.vfrGreen
         }
     }
 
@@ -1762,8 +1766,8 @@ struct WeatherDetailView: View {
         }
 
         var hasAmber: Bool {
-            if let ceil = minCeilingFt, ceil < 3000 { return true }
-            if let v = minVisSM, v < 5.0 { return true }
+            if let ceil = minCeilingFt, FlightCategory.forCeiling(ceil) != .vfr { return true }
+            if let v = minVisSM, FlightCategory.forVisibility(v) != .vfr { return true }
             if (maxGust ?? 0) >= 15 || maxSustained >= 20 { return true }
             if worstCategory == .mvfr { return true }
             return false
@@ -3070,7 +3074,7 @@ struct WeatherDetailView: View {
         if let vis = wx.visibilityMiles {
             if vis < 3 {
                 notes.append(.init(icon: "eye.slash.fill", text: "Estimated visibility ~\(Int(vis.rounded())) SM — IFR conditions possible", isWarning: true))
-            } else if vis < 5 {
+            } else if FlightCategory.forVisibility(vis) == .mvfr {   // 3-5 SM inclusive (audit #18)
                 notes.append(.init(icon: "eye.slash", text: "Estimated visibility ~\(Int(vis.rounded())) SM — marginal VFR", isWarning: false))
             }
         }

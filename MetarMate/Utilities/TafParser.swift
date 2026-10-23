@@ -235,32 +235,9 @@ struct TafParser {
         // Ceiling = lowest BKN, OVC, or VV layer (FEW/SCT don't count). The sky axis is known only
         // when clouds were forecast: no layers at all means "not forecast", while a stated clear sky
         // (SKC/NSC) or FEW/SCT only is a known "no ceiling". A ceiling layer with no base leaves the
-        // sky axis unknown (shared rule: CloudLayer.ceilingStatus).
-        let ceiling = clouds.ceilingStatus(skyReported: !clouds.isEmpty)
-
-        // .exact(n) and .greaterThan(n) both threshold on n: for .greaterThan the true value is > n,
-        // so n is the conservative floor (NOAA emits it only at 6/10, both VFR). .unknown -> nil.
-        let vis = visibility.lowerBoundSM
-
-        // Each known axis on its own. Thresholds: LIFR ceiling < 500 / vis < 1; IFR ceiling < 1000 /
-        // vis < 3; MVFR ceiling <= 3000 / vis <= 5; otherwise VFR.
-        var axes: [FlightCategory] = []
-        switch ceiling {
-        case .feet(let ceil): axes.append(ceil < 500 ? .lifr : ceil < 1000 ? .ifr : ceil <= 3000 ? .mvfr : .vfr)
-        case .none:           axes.append(.vfr)
-        case .notReported:    break
-        }
-        if let vis {
-            axes.append(vis < 1.0 ? .lifr : vis < 3.0 ? .ifr : vis <= 5.0 ? .mvfr : .vfr)
-        }
-
-        // Worst of the known axes. With one axis unknown, a known MVFR/IFR/LIFR is a real lower
-        // bound and stands; a known VFR axis can't vouch for the other, so the category is unknown.
-        let order: [FlightCategory] = [.vfr, .mvfr, .ifr, .lifr]
-        guard let worst = axes.max(by: { order.firstIndex(of: $0)! < order.firstIndex(of: $1)! }) else {
-            return .unknown
-        }
-        if axes.count == 1 && worst == .vfr { return .unknown }
-        return worst
+        // sky axis unknown. .greaterThan(n) thresholds on its floor n (NOAA emits it only at 6/10,
+        // both VFR). Shared thresholds and one-axis rule: FlightCategory.from (audit #14/#18).
+        FlightCategory.from(ceiling: clouds.ceilingStatus(skyReported: !clouds.isEmpty),
+                            visibilitySM: visibility.lowerBoundSM)
     }
 }

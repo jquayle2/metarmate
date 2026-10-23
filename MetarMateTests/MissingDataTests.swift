@@ -289,4 +289,34 @@ struct MissingDataTests {
         #expect(f.visibility == .deteriorating)
         #expect(f.overall == .deteriorating)
     }
+
+    // MARK: - #18: one category function
+
+    /// FAA/NWS: MVFR is ceiling 1,000-3,000 ft and visibility 3-5 SM, both INCLUSIVE.
+    @Test func boundariesAreMVFRInclusive() {
+        #expect(FlightCategory.forCeiling(3000) == .mvfr)
+        #expect(FlightCategory.forCeiling(3100) == .vfr)
+        #expect(FlightCategory.forCeiling(499) == .lifr)
+        #expect(FlightCategory.forCeiling(200) == .lifr)   // Synoptic color used < 200 for LIFR
+        #expect(FlightCategory.forCeiling(300) == .lifr)
+        #expect(FlightCategory.forVisibility(5) == .mvfr)
+        #expect(FlightCategory.forVisibility(5.5) == .vfr)
+        #expect(FlightCategory.forVisibility(0.75) == .lifr)
+    }
+
+    /// Advisory (Open-Meteo) estimate: 5 SM is MVFR (was VFR); with no visibility, a lone
+    /// "no ceiling" from cloud cover can't vouch for VFR.
+    @Test func advisoryCategoryUsesSharedThresholds() {
+        #expect(AdvisoryWeather.estimateFlightCategory(visibilityKm: 5 / 0.621371, cloudCoverPercent: 0) == .mvfr)
+        #expect(AdvisoryWeather.estimateFlightCategory(visibilityKm: 16, cloudCoverPercent: 100) == .vfr)
+        #expect(AdvisoryWeather.estimateFlightCategory(visibilityKm: nil, cloudCoverPercent: 60) == .mvfr)   // ~3,000 ft
+        #expect(AdvisoryWeather.estimateFlightCategory(visibilityKm: nil, cloudCoverPercent: 10) == .unknown)
+    }
+
+    /// TAF period BKN030 P6SM is MVFR (the shared function, same as before for the TAF).
+    @Test func tafCeilingAtThreeThousandIsMVFR() throws {
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"synthetic","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"BKN","base":3000}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        #expect(taf.forecasts.first?.flightCategory == .mvfr)
+    }
 }

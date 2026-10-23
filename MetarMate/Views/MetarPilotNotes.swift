@@ -134,7 +134,7 @@ enum MetarPilotNotes {
             let visStr = metar.visibility.displayNumber ?? ""
             if v < 3 {
                 notes.append(.init(icon: "eye.slash.fill", text: "Visibility \(visStr) SM — IFR conditions", severity: .warning))
-            } else if v < 5 {
+            } else if FlightCategory.forVisibility(v) == .mvfr {   // 3-5 SM inclusive (audit #18)
                 notes.append(.init(icon: "eye.slash", text: "Visibility \(visStr) SM — reduced; VFR marginal", severity: .caution))
             }
         }
@@ -145,7 +145,7 @@ enum MetarPilotNotes {
                 notes.append(.init(icon: "cloud.fill", text: "Ceiling \(ceiling.formatted()) ft — LIFR", severity: .warning))
             } else if ceiling < 1000 {
                 notes.append(.init(icon: "cloud.fill", text: "Ceiling \(ceiling.formatted()) ft — IFR ceiling", severity: .warning))
-            } else if ceiling < 3000 {
+            } else if FlightCategory.forCeiling(ceiling) == .mvfr {   // 1,000-3,000 ft inclusive (audit #18)
                 notes.append(.init(icon: "cloud", text: "Ceiling \(ceiling.formatted()) ft — below VFR minimums in many areas", severity: .caution))
             }
         }

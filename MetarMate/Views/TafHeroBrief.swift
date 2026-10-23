@@ -79,8 +79,8 @@ enum TafHeroBrief {
             let lead = HeroSegment(text: "\(categoryText(w, capitalized: leading)) by \(TafFormat.timeLabel(w.fromTime)). ",
                                    color: isLow ? Brand.valueRed : Brand.mvfrBlue)
             var tailParts: [String] = []
-            if let c = ForecastRules.ceilingFeet(w), c < 3000 { tailParts.append("ceiling \(c.formatted()) ft") }
-            if let v = w.visibility.lowerBoundSM, v < 5 { tailParts.append("visibility \(TafFormat.visText(w.visibility))") }
+            if let c = ForecastRules.ceilingFeet(w), FlightCategory.forCeiling(c) != .vfr { tailParts.append("ceiling \(c.formatted()) ft") }
+            if let v = w.visibility.lowerBoundSM, FlightCategory.forVisibility(v) != .vfr { tailParts.append("visibility \(TafFormat.visText(w.visibility))") }
             if !w.weatherPhenomena.isEmpty { tailParts.append(plainWeather(w.weatherPhenomena)) }
             if let axis = w.unforecastAxis { tailParts.append("\(axis) not forecast") }
             let tailText: String

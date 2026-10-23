@@ -184,12 +184,9 @@ struct AdvisoryWeather: Codable {
 
         // Visibility check first — most reliable NWP parameter
         if let v = visMi {
-            if v < 1.0 { return .lifr }
-            if v < 3.0 { return .ifr }
-            if v < 5.0 { return .mvfr }
-            // Vis >=5 SM = solidly VFR. Cloud cover % from NWP is too unreliable
-            // to push below VFR when visibility confirms clear conditions.
-            return .vfr
+            // Shared thresholds (audit #18): 5 SM is MVFR. Above 5 SM, cloud cover % from NWP is
+            // too unreliable to push below VFR when visibility confirms clear conditions.
+            return FlightCategory.forVisibility(v)
         }
 
         // No visibility data — fall back to cloud cover heuristic only
@@ -199,10 +196,9 @@ struct AdvisoryWeather: Codable {
         case 50..<75:  approxCeilingFt = 3000
         default:       approxCeilingFt = nil
         }
-        if let c = approxCeilingFt, c < 500  { return .lifr }
-        if let c = approxCeilingFt, c < 1000 { return .ifr }
-        if let c = approxCeilingFt, c < 3000 { return .mvfr }
-        return .vfr
+        // Cloud cover alone: a low estimated ceiling stands; "no ceiling" with visibility unknown
+        // can't vouch for VFR (shared one-axis rule), so it's unknown.
+        return FlightCategory.from(ceiling: approxCeilingFt.map(CeilingStatus.feet) ?? .none, visibilitySM: nil)
     }
 
     static func cloudCoverDesc(_ pct: Int) -> String {

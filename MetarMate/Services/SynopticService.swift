@@ -276,18 +276,14 @@ struct SynopticObservation: Identifiable, Sendable {
     let isFromSynoptic: Bool
 
     /// Estimated flight category from visibility and ceiling
+    /// Shared thresholds and one-axis rule (FlightCategory.from, audit #18): 3,000 ft / 5 SM are
+    /// MVFR, and a lone VFR axis with the other missing is unknown.
     nonisolated var estimatedCategory: FlightCategory {
-        let ceiling = ceilingAGL
-        let vis = visibility
-
-        if let c = ceiling, c < 500 { return .lifr }
-        if let v = vis, v < 1.0 { return .lifr }
-        if let c = ceiling, c < 1000 { return .ifr }
-        if let v = vis, v < 3.0 { return .ifr }
-        if let c = ceiling, c < 3000 { return .mvfr }
-        if let v = vis, v < 5.0 { return .mvfr }
-        if ceiling == nil && cloudLayers.isEmpty && !skyConfirmedClear { return .unknown }
-        return .vfr
+        let ceiling: CeilingStatus
+        if let c = ceilingAGL { ceiling = .feet(c) }
+        else if !cloudLayers.isEmpty || skyConfirmedClear { ceiling = .none }
+        else { ceiling = .notReported }
+        return FlightCategory.from(ceiling: ceiling, visibilitySM: visibility)
     }
 
     /// Ceiling in feet AGL (lowest BKN or OVC layer)
