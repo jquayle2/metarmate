@@ -57,6 +57,12 @@ enum MetarInjectionFixtures {
         Int(Date().addingTimeInterval(hoursFromNow * 3600).timeIntervalSince1970)
     }
 
+    /// NOAA-shaped TAF issueTime ("2026-10-23T15:51:00Z"). The fixtures are issued "now", which is
+    /// what the parser used to substitute for a missing issue time (no longer: audit #15).
+    private static func issueTimeNow() -> String {
+        ISO8601DateFormatter().string(from: Date())
+    }
+
     /// One observation JSON for a fixture's history. `wind` is a JSON fragment
     /// (`#""wdir":250,"wspd":8"#`, or `""` for a missing wind group). `visib` is the JSON value
     /// verbatim (`"0.5"` or `#""P6SM""#`). `clouds` is the JSON array verbatim. `wx`/`altim`/`vertVis`
@@ -244,7 +250,7 @@ enum MetarInjectionFixtures {
                         ob("KT01", minAgo: 120, wind: #""wdir":350,"wspd":6"#, visib: "2",   clouds: #"[{"cover":"OVC","base":800}]"#, temp: 10, dewp: 8, altim: 1013, fltCat: "IFR",  raw: "METAR KT01 35006KT 2SM OVC008 10/08 A2992 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT01","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT01 improving LIFR→IFR (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT01","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT01 improving LIFR→IFR (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(2)),"wdir":360,"wspd":5,"visib":0.5,"clouds":[{"cover":"OVC","base":300}]},
                       {"timeFrom":\#(epoch(2)),"timeTo":\#(epoch(24)),"fcstChange":"FM","wdir":20,"wspd":8,"visib":2,"clouds":[{"cover":"OVC","base":800}]}
                     ]}]
@@ -264,7 +270,7 @@ enum MetarInjectionFixtures {
                         ob("KT02", minAgo: 120, wind: #""wdir":240,"wspd":6"#, visib: #""P6SM""#, clouds: #"[{"cover":"FEW","base":6000}]"#, temp: 19, dewp: 8, altim: 1015, fltCat: "VFR", raw: "METAR KT02 24006KT P6SM FEW060 19/08 A2998 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT02","validTimeFrom":\#(epoch(-0.5)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT02 base VFR + PROB40 TSRA (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT02","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-0.5)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT02 base VFR + PROB40 TSRA (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-0.5)),"timeTo":\#(epoch(24)),"wdir":250,"wspd":8,"visib":"P6SM","clouds":[{"cover":"SCT","base":4000}]},
                       {"timeFrom":\#(epoch(3)),"timeTo":\#(epoch(6)),"fcstChange":"PROB","probability":40,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3500,"type":"CB"}]}
                     ]}]
@@ -284,7 +290,7 @@ enum MetarInjectionFixtures {
                         ob("KT03", minAgo: 120, wind: #""wdir":80,"wspd":7"#,  visib: "5", clouds: #"[{"cover":"BKN","base":2500}]"#, temp: 13, dewp: 10, altim: 1010, fltCat: "MVFR", raw: "METAR KT03 08007KT 5SM BKN025 13/10 A2983 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT03","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT03 clearing IFR→VFR (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT03","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT03 clearing IFR→VFR (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(3)),"wdir":90,"wspd":6,"visib":2,"clouds":[{"cover":"OVC","base":800}]},
                       {"timeFrom":\#(epoch(3)),"timeTo":\#(epoch(24)),"fcstChange":"FM","wdir":270,"wspd":8,"visib":"P6SM","clouds":[{"cover":"SCT","base":5000}]}
                     ]}]
@@ -304,7 +310,7 @@ enum MetarInjectionFixtures {
                         ob("KT04", minAgo: 120, wind: #""wdir":190,"wspd":7"#, visib: "5", clouds: #"[{"cover":"BKN","base":3000}]"#, temp: 16, dewp: 12, altim: 1011, fltCat: "MVFR", raw: "METAR KT04 19007KT 5SM BKN030 16/12 A2986 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT04","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT04 empty vis + BKN007 (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT04","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT04 empty vis + BKN007 (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(24)),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":700}]}
                     ]}]
                     """#
@@ -325,7 +331,7 @@ enum MetarInjectionFixtures {
                         ob("KT05", minAgo: 120, wind: #""wdir":100,"wspd":6"#,  visib: #""10+""#, clouds: #"[{"cover":"FEW","base":12000}]"#, temp: 21, dewp: 2, altim: 1013, fltCat: "VFR", raw: "METAR KT05 10006KT 10SM FEW120 21/02 A2992 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT05","validTimeFrom":\#(epoch(-2)),"validTimeTo":\#(epoch(25)),"rawTAF":"TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS TEMPO 2201/2204 12012G21KT 510009 BECMG 2210/2211 25009KT 9999 SCT080 QNH2980INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS TX26/2122Z TN18/2116Z (SIMULATED, times shifted)","fcsts":[
+                    [{"icaoId":"KT05","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-2)),"validTimeTo":\#(epoch(25)),"rawTAF":"TAF AMD KINS 211620Z 2116/2219 VRB06KT 9999 FEW120 QNH2992INS BECMG 2116/2117 11010G15KT 9999 SCT100 QNH2992INS BECMG 2117/2118 11012G21KT 9999 SCT100 510009 QNH2986INS TEMPO 2118/2120 12016G28KT 520009 BECMG 2119/2120 12016G28KT 9999 BKN080 520009 QNH2977INS TSRA OMTNS TEMPO 2120/2124 13018G31KT VCSH BECMG 2200/2201 11010G15KT 9999 SCT080 QNH2978INS TEMPO 2201/2204 12012G21KT 510009 BECMG 2210/2211 25009KT 9999 SCT080 QNH2980INS BECMG 2214/2215 25010G15KT 9999 BKN050 QNH2981INS SHRA OMTNS TX26/2122Z TN18/2116Z (SIMULATED, times shifted)","fcsts":[
                       {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(25)),"wdir":"VRB","wspd":6,"visib":"6+","clouds":[{"cover":"FEW","base":12000}]},
                       {"timeFrom":\#(epoch(-2)),"timeTo":\#(epoch(-0.5)),"timeBec":\#(epoch(-1)),"fcstChange":"BECMG","wdir":110,"wspd":10,"wgst":15,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
                       {"timeFrom":\#(epoch(-0.5)),"timeTo":\#(epoch(2)),"timeBec":\#(epoch(0.5)),"fcstChange":"BECMG","wdir":110,"wspd":12,"wgst":21,"visib":"6+","clouds":[{"cover":"SCT","base":10000}]},
@@ -354,7 +360,7 @@ enum MetarInjectionFixtures {
                         ob("KT06", minAgo: 120, wind: #""wdir":240,"wspd":10"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":5000}]"#, temp: 17, dewp: 9, altim: 1012, fltCat: "VFR", raw: "METAR KT06 24010KT 10SM SCT050 17/09 A2988 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT06","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT06 25012KT P6SM SCT040 PROB30 TEMPO TSRA BKN030CB, FM BKN025 (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT06","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(-1)),"validTimeTo":\#(epoch(24)),"rawTAF":"TAF KT06 25012KT P6SM SCT040 PROB30 TEMPO TSRA BKN030CB, FM BKN025 (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(-1)),"timeTo":\#(epoch(8)),"wdir":250,"wspd":12,"visib":"6+","clouds":[{"cover":"SCT","base":4000}]},
                       {"timeFrom":\#(epoch(2)),"timeTo":\#(epoch(5)),"fcstChange":"TEMPO","probability":30,"visib":2,"wxString":"TSRA","clouds":[{"cover":"BKN","base":3000,"type":"CB"}]},
                       {"timeFrom":\#(epoch(8)),"timeTo":\#(epoch(24)),"fcstChange":"FM","wdir":270,"wspd":10,"visib":"6+","clouds":[{"cover":"BKN","base":2500}]}
@@ -375,7 +381,7 @@ enum MetarInjectionFixtures {
                         ob("KT07", minAgo: 120, wind: #""wdir":190,"wspd":6"#, visib: #""10+""#, clouds: #"[{"cover":"SCT","base":7000}]"#, temp: 20, dewp: 5, altim: 1014, fltCat: "VFR", raw: "METAR KT07 19006KT 10SM SCT070 20/05 A2994 (SIM SCAFFOLD)"),
                     ]
                     let json = #"""
-                    [{"icaoId":"KT07","validTimeFrom":\#(epoch(0.5)),"validTimeTo":\#(epoch(24.5)),"rawTAF":"TAF KT07 issued 30 min before validity: VFR then FM MVFR (SIMULATED)","fcsts":[
+                    [{"icaoId":"KT07","issueTime":"\#(issueTimeNow())","validTimeFrom":\#(epoch(0.5)),"validTimeTo":\#(epoch(24.5)),"rawTAF":"TAF KT07 issued 30 min before validity: VFR then FM MVFR (SIMULATED)","fcsts":[
                       {"timeFrom":\#(epoch(0.5)),"timeTo":\#(epoch(6)),"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SCT","base":6000}]},
                       {"timeFrom":\#(epoch(6)),"timeTo":\#(epoch(24.5)),"fcstChange":"FM","wdir":190,"wspd":12,"wgst":22,"visib":4,"clouds":[{"cover":"BKN","base":2000}]}
                     ]}]

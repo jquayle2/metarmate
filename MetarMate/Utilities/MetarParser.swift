@@ -3,15 +3,20 @@ import Foundation
 // MARK: - METAR Parser
 // Parses aviationweather.gov JSON responses into Metar structs
 struct MetarParser {
-    nonisolated static func parse(raw: RawMetar) throws -> Metar {
+    nonisolated static func parse(raw: RawMetar, now: Date = Date()) throws -> Metar {
         guard let icao = raw.icaoId else { throw WeatherError.parseError("Missing station ID") }
         guard let rawText = raw.rawOb else { throw WeatherError.parseError("Missing raw METAR text") }
 
+        // Observation time: NOAA's obsTime, else the report's own DDHHMMZ group. Never Date(): a
+        // report with no time looked fresh and sorted newest (audit #15). With neither, the report
+        // can't be placed in time at all, so it isn't used.
         let obsTime: Date
         if let epoch = raw.obsTime {
             obsTime = Date(timeIntervalSince1970: TimeInterval(epoch))
+        } else if let stated = reportTimeGroup(in: rawText, now: now) {
+            obsTime = stated
         } else {
-            obsTime = Date()
+            throw WeatherError.parseError("Missing observation time")
         }
 
         let wind = parseWind(wdir: raw.wdir, wspd: raw.wspd, wgst: raw.wgst)
@@ -43,6 +48,34 @@ struct MetarParser {
             flightCategory: category,
             weatherPhenomena: phenomena
         )
+    }
+
+    // MARK: - Report time group
+    /// The first DDHHMMZ group in a METAR/TAF ("231551Z"), resolved to the most recent such UTC
+    /// time not more than an hour after `now` (so a report from the 31st read on the 1st lands in
+    /// the previous month). nil when the text has no such group or it isn't a valid time.
+    nonisolated static func reportTimeGroup(in rawText: String, now: Date) -> Date? {
+        let body = rawText.components(separatedBy: " RMK").first ?? rawText
+        guard let token = body.split(separator: " ").first(where: { t in
+            t.count == 7 && t.hasSuffix("Z") && t.dropLast().allSatisfy(\.isNumber)
+        }) else { return nil }
+        let digits = token.dropLast().compactMap { $0.wholeNumberValue }
+        let day = digits[0] * 10 + digits[1], hour = digits[2] * 10 + digits[3], minute = digits[4] * 10 + digits[5]
+        guard (1...31).contains(day), hour < 24, minute < 60 else { return nil }
+
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let nowParts = utc.dateComponents([.year, .month], from: now)
+        for monthsBack in 0...2 {
+            guard let monthStart = utc.date(from: nowParts),
+                  let month = utc.date(byAdding: .month, value: -monthsBack, to: monthStart) else { continue }
+            var parts = utc.dateComponents([.year, .month], from: month)
+            parts.day = day; parts.hour = hour; parts.minute = minute
+            // Reject a day the month doesn't have (date(from:) would roll it into the next month).
+            guard let date = utc.date(from: parts), utc.component(.day, from: date) == day else { continue }
+            if date <= now.addingTimeInterval(3600) { return date }
+        }
+        return nil
     }
 
     // MARK: - Wind

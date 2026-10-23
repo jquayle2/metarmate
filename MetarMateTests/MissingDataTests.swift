@@ -208,4 +208,38 @@ struct MissingDataTests {
         #expect(!point.divergenceText.contains("Ceiling cleared"))
         #expect(v.ceilingSampleCount == 0)
     }
+
+    // MARK: - #15: observation time
+
+    /// No obsTime: the time comes from the report's own 231551Z group, never "now".
+    @Test func missingObsTimeUsesReportGroup() throws {
+        let now = Date(timeIntervalSince1970: TimeInterval(Self.obs + 3 * 3600))   // 3 h later
+        let json = #"{"icaoId":"KTST","rawOb":"METAR KTST 231551Z AUTO 20008KT 10SM CLR 19/13 A2996","temp":19}"#
+        let m = try MetarParser.parse(raw: JSONDecoder().decode(RawMetar.self, from: Data(json.utf8)), now: now)
+        #expect(m.observationTime == Date(timeIntervalSince1970: TimeInterval(Self.obs)))
+        #expect(m.observationTime < now.addingTimeInterval(-3 * 3600 + 1))
+    }
+
+    /// No time anywhere: the report can't be placed in time, so it isn't used (was Date(): fresh).
+    @Test func noTimeAtAllIsNotUsed() throws {
+        #expect(throws: (any Error).self) {
+            try Self.metar(Self.full, raw: "METAR KTST AUTO 20008KT 10SM CLR 19/13 A2996", obsTime: nil)
+        }
+    }
+
+    /// A report from the 31st read on the 1st belongs to the previous month.
+    @Test func reportGroupMonthRollover() throws {
+        var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(identifier: "UTC")!
+        let now = try #require(utc.date(from: DateComponents(year: 2026, month: 11, day: 1, hour: 0, minute: 20)))
+        let t = try #require(MetarParser.reportTimeGroup(in: "METAR KTST 312351Z 20008KT", now: now))
+        #expect(t == utc.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 23, minute: 51)))
+        #expect(MetarParser.reportTimeGroup(in: "METAR KTST 312551Z 20008KT", now: now) == nil)   // hour 25
+    }
+
+    @Test func tafMissingIssueTimeUsesReportGroup() throws {
+        let json = #"{"icaoId":"KTST","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"TAF KTST 231120Z 2312/2412 20008KT P6SM SKC","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SKC"}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)),
+                                      now: Date(timeIntervalSince1970: TimeInterval(Self.obs)))
+        #expect(taf.issueTime == Date(timeIntervalSince1970: 1792754400))   // 2026-10-23 11:20Z
+    }
 }

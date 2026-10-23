@@ -70,7 +70,7 @@ final class SimulatedBannerSnapshotTests: XCTestCase {
         // can't vouch for the unforecast visibility, so it computes unknown, not VFR (audit #14).
         let e0 = Int(Date().addingTimeInterval(-3600).timeIntervalSince1970)
         let e1 = Int(Date().addingTimeInterval(24 * 3600).timeIntervalSince1970)
-        let highCeil = #"[{"icaoId":"KT04H","validTimeFrom":\#(e0),"validTimeTo":\#(e1),"rawTAF":"control 5000 ceiling","fcsts":[{"timeFrom":\#(e0),"timeTo":\#(e1),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":5000}]}]}]"#
+        let highCeil = #"[{"icaoId":"KT04H","issueTime":"\#(ISO8601DateFormatter().string(from: Date()))","validTimeFrom":\#(e0),"validTimeTo":\#(e1),"rawTAF":"control 5000 ceiling","fcsts":[{"timeFrom":\#(e0),"timeTo":\#(e1),"wdir":200,"wspd":6,"visib":"","clouds":[{"cover":"BKN","base":5000}]}]}]"#
         let control = try SimulatedDecode.parseTaf(json: highCeil)
         XCTAssertEqual(control.forecasts.first?.flightCategory, .unknown,
                        "same TAF shape with a 5000 ft ceiling must not compute IFR (ceiling-driven), nor VFR with visibility unforecast")

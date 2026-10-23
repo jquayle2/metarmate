@@ -2,15 +2,19 @@ import Foundation
 
 // MARK: - TAF Parser
 struct TafParser {
-    nonisolated static func parse(raw: RawTaf) throws -> Taf {
+    nonisolated static func parse(raw: RawTaf, now: Date = Date()) throws -> Taf {
         guard let icao = raw.icaoId else { throw WeatherError.parseError("Missing station ID") }
         guard let rawText = raw.rawTAF else { throw WeatherError.parseError("Missing raw TAF text") }
 
+        // Issue time: NOAA's issueTime, else the TAF's own DDHHMMZ group. Never Date() (audit #15);
+        // with neither, the TAF can't be placed in time and isn't used.
         let issueTime: Date
-        if let str = raw.issueTime {
-            issueTime = parseDate(str) ?? Date()
+        if let str = raw.issueTime, let parsed = parseDate(str) {
+            issueTime = parsed
+        } else if let stated = MetarParser.reportTimeGroup(in: rawText, now: now) {
+            issueTime = stated
         } else {
-            issueTime = Date()
+            throw WeatherError.parseError("Missing TAF issue time")
         }
 
         let validFrom = raw.validTimeFrom.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? issueTime
