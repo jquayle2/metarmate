@@ -6,21 +6,21 @@ Started Oct 21, 2026. Release line: `feat/trend-time-spine` (build 1.2 (21)).
 How this list is maintained:
 - Claude (chat) or Claude Code updates it at the end of any session that changes status, in the same commit as the work where possible.
 - Check an item only when it's verified (built, tested, or confirmed by the named person). Not just "code written".
-- Refs: `#n` = `claude/AUDIT_2026-10-12_full_codebase.md`, `D#n` = `docs/DECISIONS_2026-10.md`.
+- Refs: `#n` = `docs/AUDIT_2026-10-12_full_codebase.md`, `D#n` = `docs/DECISIONS_2026-10.md`.
 - Owner tags: **[Jeff]**, **[Code]** (Claude Code), **[Claude]** (chat).
 
 ---
 
 ## 0. Decisions needed before scope is final [Jeff]
 
-- [ ] **ASOS Updates at launch or after?** D#18 says no IAP in the first submission; the Synoptic paid plan may change that. If "at launch", section 6 moves onto the critical path.
+- [x] **ASOS Updates at launch or after?** At launch (Jeff, Oct 23). Section 6 is now on the critical path.
 - [x] **Pro at launch or after?** At launch (D#18, Oct 21). Section 4's Pro gating is launch-blocking.
 - [x] **Pro scope** (D#19–20, Oct 21): Pro = widgets, unlimited custom minimums profiles, alerts, Siri, layout, Watch; $5.99 one-time, Family Sharing. Free = starter-profile verdicts, crosswind calculator, favorites.
 - [ ] **ASOS Updates subscription price** (D#21): set against Synoptic cost and category norms.
 - [x] **Nearby-TAF fallback (D#13–17): at launch** (Oct 21). Build items in section 4b.
 - [x] **Siri staleness rule** (D#4, Oct 21): Siri always speaks the report age, says when it's late, and calls it stale with no conditions over 75 min.
-- [ ] **P3 triage:** which items in section 5 are launch-required.
-- [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other.
+- [ ] **P3 triage:** which items in section 5 are launch-required. Recommendation sent Oct 23; the data-integrity P3 items are staged as A2 step 5, pending Jeff's OK.
+- [ ] **Proxy hosting** for ASOS: Cloudflare Worker (proposed) or other. Oct 23: Jeff proposed calling Synoptic directly from the app to start; open until the token-in-binary tradeoff is settled.
 
 ## 1. Product rulings [Jeff]
 
@@ -59,6 +59,8 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 
 ## 3. A2 — missing data never shown as a value; verdict logic [Code]
 
+Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data`, off `feat/nearby-taf`).
+
 - [ ] #4 Go/no-go tri-state: unevaluated minimum → CHECK, never GO; no "back within minimums" alert (D#2)
 - [ ] #5 VRB worst-case crosswind (D#3)
 - [ ] #6 Unknown sky ≠ unlimited ceiling
@@ -83,6 +85,8 @@ Code done: 7 commits (`d28cbab`…`1fe5edc`), builds, 58/58 unit tests. Pushed, 
 - [ ] Merge A2 [Jeff]
 
 ## 4. A3 — App Review blockers, Pro gating, Siri [Code]
+
+Handoff: `docs/handoffs/A3_RELEASE_handoff.md` (branch `fix/a3-release`, worktree `MetarMate-a3`, off `feat/nearby-taf`). Siri items below were done on `feat/siri-hands-free`.
 
 App Review blockers (required regardless of section 0):
 - [ ] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk)
@@ -223,3 +227,4 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 - **Oct 22, 2026:** Widget showed KVGT "late · 65 min" correctly at 1558Z. Siri device test at Kingman: prompts for an airport, cached-strip suggestions, "Kingman" ambiguous with 9K8 (KS), "Sky clear" with FEW/SCT, first try went to Apple Weather. Siri items and handoff added (section 4). Density altitude 180 ft low vs ForeFlight (no humidity); fix added to A2.
 - **Oct 22, 2026:** Siri hands-free code done on `feat/siri-hands-free` (`2173fb7`, `5b13947`, `06a87ca`, `a5ce1cb`, `8606c81`); device check pending [Jeff]. App search now also matches city.
 - **Oct 22, 2026:** Synoptic written answers (email): API closed to our authenticated users allowed (redistribution API not); display on a monetized app allowed; annual contract $100/mo ($1,200/yr), 60 days' notice; attribution wording "Data aggregated by Synoptic" → synopticdata.com confirmed (implementation open); no annual usage report. Open [Jeff]: commercial use in the signed quote, Public vs Restricted Data Content for 5-min ASOS, 12-month term starting at ASOS launch, questions for the Oct 22 call (section 6).
+- **Oct 23, 2026:** ASOS Updates moved to launch scope (section 6 now critical path). Nearby-TAF code complete on `feat/nearby-taf` (device check pending). Audit doc copied into `docs/`. A2 and A3 handoffs written; `fix/a2-missing-data` and `fix/a3-release` (worktree `MetarMate-a3`) branched off `feat/nearby-taf` to run in parallel. Open [Jeff]: proxy vs in-app Synoptic token, ASOS consumer price, P3 triage.
