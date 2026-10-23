@@ -83,13 +83,13 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] D#12 PROB TSRA in headline: thunderstorms always reach the TAF hero with probability and time ("PROB30 IFR in thunderstorms with rain 2–4 PM"; a later one follows as "Plus PROB30 thunderstorms …"); non-convective PROB groups stay in the detail. `62c503d`
 - [x] F16 present-weather chip off the category red (now `Brand.dangerRed`, alert chrome); F18 "Clear" with only FEW/SCT ("No ceiling" / "NO CIG" / "FEW 55" everywhere). `c0a4837`
 - [x] P3 Ceiling is the lowest BKN/OVC/VV layer (`.min()`), never `.first`, everywhere (one shared rule). `246dc2c`
-- [x] P3 `M1/4SM` is less than ¼ SM, shown "<1/4 SM" (NOAA sends 0.25, so it's read from the report group; app, widget, Siri). Also: Siri spoke ¼ SM as "0 miles" and the widget showed "0.2"; both now "1/4"
-- [x] P3 PROB group with no number isn't PROB30 (new `.prob`, shown "PROB") (PROB30 TEMPO keeping its probability: already fixed on nearby-TAF)
-- [x] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown (level arrow for steady/mixed, level slate mark without a head for unknown; VoiceOver "Trend steady/mixed/unknown")
-- [x] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken" (detail, ASOS row, Siri "Indefinite ceiling, vertical visibility N feet")
-- [x] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`)
+- [x] P3 `M1/4SM` is less than ¼ SM, shown "<1/4 SM" (NOAA sends 0.25, so it's read from the report group; app, widget, Siri). Also: Siri spoke ¼ SM as "0 miles" and the widget showed "0.2"; both now "1/4". `c7c34b5`
+- [x] P3 PROB group with no number isn't PROB30 (new `.prob`, shown "PROB") (PROB30 TEMPO keeping its probability: already fixed on nearby-TAF). `c7c34b5`
+- [x] P3 Trend arrow: no up arrow for steady/mixed/unknown; VoiceOver doesn't say "improving or stable" for unknown (level arrow for steady/mixed, level slate mark without a head for unknown; VoiceOver "Trend steady/mixed/unknown"). `c7c34b5`
+- [x] P3 TAF ribbon keeps LIFR magenta separate from IFR red; VV labeled "Vertical visibility", not "Broken" (detail, ASOS row, Siri "Indefinite ceiling, vertical visibility N feet"). `c7c34b5`
+- [x] P3 `metars.first ?? metars[0]` can't trap on empty (`WeatherTrend.derive`, reached from `seedSimulated`). `c7c34b5`
 - [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
-- [ ] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases)
+- [x] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases): A2 suites DensityAltitudeTests, MissingDataTests, VerdictTests, DisplayUnknownTests, P3IntegrityTests; `currentForecast`/BECMG/verification in TafTimeLogicTests (nearby-TAF). 230/230 on `c7c34b5`
 - [ ] Merge A2 [Jeff]
 
 ## 4. A3 — App Review blockers, Pro gating, Siri [Code]
