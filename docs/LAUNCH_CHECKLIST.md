@@ -91,7 +91,8 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] Fallback (non-bundled) airport elevation: NOAA meters converted to feet at the source (DA, nearby-TAF elevation caution). `9025643`
 - [x] DA uses NOAA's temperature/dewpoint tenths; display stays whole degrees. `6f3d066`
 - [x] TAF validity from NOAA or the TAF's own DDHH/DDHH group; never an assumed 24 h; no validity → TAF not used. `ad9b24f`
-- [ ] Favorites of non-bundled airports saved before `9025643` keep the meter elevation until re-added (repair needs SwiftData: A3 / Jeff)
+- [x] Favorites of non-bundled airports saved before `9025643` keep the meter elevation: handed to A3 (#27 below)
+- [ ] Full suite stopped once mid-run in the SwiftData store tests (no failing assertion); recheck after A2+A3 integration and capture the crash log if it recurs
 - [ ] Free starter verdict on the detail screen and widget (D-19/20): not built, planned as its own pass after A2
 - [x] Unit tests for the gaps listed in the audit (DensityAltitude, trends, TafVerification, `currentForecast`, BECMG, advisory category, parser missing-field cases): A2 suites DensityAltitudeTests, MissingDataTests, VerdictTests, DisplayUnknownTests, P3IntegrityTests; `currentForecast`/BECMG/verification in TafTimeLogicTests (nearby-TAF). 230/230 on `c7c34b5`
 - [ ] Merge A2 [Jeff]
@@ -143,6 +144,7 @@ Background task (#26):
 
 Other:
 - [ ] #27 Favorites reconcile with `airports.json` at launch
+  - [ ] Favorites not in airports.json: refetch NOAA station info once, store elevation in feet
 - [ ] Merge A3 [Jeff]
 
 ## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]
@@ -171,6 +173,7 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [x] UI test target: template tests removed (`16f53c0`); full suite runs clean with `-parallel-testing-enabled NO` (parallel clones were refused launch); simulator `iPhone 17` re-created on iOS 26.1 after it went missing
 - [ ] Nearby-TAF bbox near the 180° meridian is clamped, not wrapped (western Aleutians search a narrower box)
 - [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
+- [ ] Post-launch: a non-bundled airport with no NOAA elevation is stored as 0 ft (`AirportService.liveAirport`); left as is for launch (Jeff, Oct 23)
 - [ ] Misc: search race, layout prefs wiped on unknown `SectionID`, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache, `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, two DA formulas, PROB defaults
 
 ## 6. ASOS Updates — Synoptic (launch-blocking only if section 0 says so)
