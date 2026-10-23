@@ -66,13 +66,13 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [x] #6 Unknown sky ≠ unlimited ceiling: shared `CeilingStatus` (feet / none / not reported); NOAA sends no layers for CLR, so "sky reported" reads the report body. Go/no-go, trends, TAF verification, Siri, list rows, history (verdict CHECK under #4). `246dc2c`
 - [ ] #7 Staleness gate on verdicts (D#4)
 - [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported". `48c1a90`
-- [ ] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown
+- [x] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown (observed, forecast, combined; headline "No Trend Data", never "Stable")
 - [x] #10 Missing wind direction/speed not reported as 000° / 0 kt (METAR and TAF parsers; shown as `///`/"Direction not reported"; verdict handling under #4). `45821c9`
 - [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
 - [x] #12 Missing cloud base not 0 ft (METAR and TAF; TAF sky axis unknown). `246dc2c`
 - [x] #13 TAF: one "period covering time t" helper (overlays, expired periods/TAFs, BECMG, TafHeroBrief)
 - [x] #14 TAF category with one axis unknown; clouds into overlays
-- [x] #15 Missing `obsTime` not `Date()`: falls back to the report's own DDHHMMZ group; with no time at all the report isn't used. Same for TAF issue time
+- [x] #15 Missing `obsTime` not `Date()`: falls back to the report's own DDHHMMZ group; with no time at all the report isn't used. Same for TAF issue time. `91fa9da`
 - [ ] #16 Unknown shown as good (green rail, "Clear", "Fcst on target", wind-only "Steady")
 - [ ] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category)
 - [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts

@@ -22,7 +22,8 @@ enum TrendDirection: String, Codable {
 // A ceiling dropping from 30,000 to 25,000 doesn't matter.
 // A ceiling dropping from 2,000 to 1,200 absolutely matters.
 
-private enum TrendThresholds {
+// Internal (not private) so the trend unit tests can reach the interval ordering directly.
+enum TrendThresholds {
     // Ceiling: only flag changes that cross or approach flight category boundaries
     // VFR > 3000, MVFR 1000-3000, IFR 500-1000, LIFR < 500
     // A ceiling that wasn't reported has no trend (audit #6/#12): never "unlimited", never 0 ft.
@@ -58,6 +59,25 @@ private enum TrendThresholds {
 
         if abs(delta) < threshold { return .steady }
         return delta > 0 ? .improving : .deteriorating
+    }
+
+    // Visibility between two parsed reports, ordered as intervals (audit #9): a ".greaterThan(n)"
+    // is > n, so ">10" -> 1.5 is a decrease of at least 8.5 SM and is measured off the floor n (the
+    // smallest change it can be). Only a pair that can't be ordered (e.g. 8 vs >6) or an unknown
+    // side has no trend; two values both 6+ are steady as before.
+    static func visibilityTrend(old: Visibility, new: Visibility) -> TrendDirection {
+        guard let o = old.lowerBoundSM, let n = new.lowerBoundSM else { return .unknown }
+        if o >= 6.0 && n >= 6.0 { return .steady }
+        switch (old, new) {
+        case (.exact, .exact):
+            return visibilityTrend(old: o, new: n)
+        case (.greaterThan, .exact):
+            return n <= o ? visibilityTrend(old: o, new: n) : .unknown
+        case (.exact, .greaterThan):
+            return o <= n ? visibilityTrend(old: o, new: n) : .unknown
+        default:
+            return .unknown
+        }
     }
 
     // Visibility: only flag changes that cross or approach category boundaries
@@ -213,13 +233,14 @@ struct ObservedTrend: Codable {
         let newest = metars.first!
         let oldest = metars.last!
 
-        // Visibility trend/delta use only EXACT reported visibilities (newest-first, order kept).
-        // A .greaterThan (P6SM) can't be ordered against another value without fabricating one, and
-        // .unknown isn't a value — both are excluded rather than substituted (Flag 4 / Finding 15).
-        let visExact: [Double] = metars.compactMap { $0.visibility.exactSM }
-        let visTrend: TrendDirection = visExact.count >= 2
-            ? TrendThresholds.visibilityTrend(old: visExact.last!, new: visExact.first!)
+        // Visibility trend: newest and oldest REPORTED visibilities, ordered as intervals so "10+"
+        // (P6SM/P10SM) -> 1.5 reads as a decrease (audit #9). .unknown isn't a value and is skipped.
+        // The numeric delta below stays exact-only: a .greaterThan has no honest magnitude.
+        let visReported = metars.map(\.visibility).filter(\.isKnown)
+        let visTrend: TrendDirection = visReported.count >= 2
+            ? TrendThresholds.visibilityTrend(old: visReported.last!, new: visReported.first!)
             : .unknown
+        let visExact: [Double] = metars.compactMap { $0.visibility.exactSM }
         let ceilTrend = TrendThresholds.ceilingTrend(old: oldest.ceiling, new: newest.ceiling)
 
         // Wind trend/delta use the newest and oldest samples that actually reported wind — a
@@ -284,10 +305,10 @@ struct ObservedTrend: Codable {
 
         if critical.contains(.deteriorating) { return .deteriorating }
         if critical.allSatisfy({ $0 == .improving }) { return .improving }
-        if critical.allSatisfy({ $0 == .steady || $0 == .unknown }) {
-            if wind == .deteriorating { return .steady }
-            return .steady
-        }
+        // Neither ceiling nor visibility could be trended: unknown, not "steady" (audit #9). Wind
+        // alone can't vouch for conditions.
+        if critical.allSatisfy({ $0 == .unknown }) { return .unknown }
+        if critical.allSatisfy({ $0 == .steady || $0 == .unknown }) { return .steady }
         if critical.contains(.improving) && !critical.contains(.deteriorating) { return .improving }
 
         return .steady
@@ -319,14 +340,8 @@ struct ForecastTrend: Codable {
         let compareBlock = taf.prevailingTimeline.first(where: { $0.fromTime > current.fromTime }) ?? current
         let isForwardLooking = compareBlock.fromTime > current.fromTime
 
-        // Only compare visibility when BOTH the METAR and the compared period report an EXACT
-        // value — a .greaterThan / .unknown can't be ordered without fabricating one (Flag 4).
-        let visTrend: TrendDirection
-        if let mv = metar.visibility.exactSM, let cv = compareBlock.visibility.exactSM {
-            visTrend = TrendThresholds.visibilityTrend(old: mv, new: cv)
-        } else {
-            visTrend = .unknown
-        }
+        // Interval ordering: "10+" vs a forecast 2 SM is a decrease; an unknown side has no trend.
+        let visTrend = TrendThresholds.visibilityTrend(old: metar.visibility, new: compareBlock.visibility)
 
         // A period that doesn't forecast the sky is unknown, not "no ceiling".
         let ceilTrend = TrendThresholds.ceilingTrend(old: metar.ceiling, new: compareBlock.ceiling)
@@ -345,12 +360,18 @@ struct ForecastTrend: Codable {
         let critical = [visTrend, ceilTrend]
         let overall: TrendDirection
         if critical.contains(.deteriorating) { overall = .deteriorating }
+        else if critical.allSatisfy({ $0 == .unknown }) { overall = .unknown }   // audit #9
         else if critical.allSatisfy({ $0 == .improving }) { overall = .improving }
         else { overall = .steady }
 
         let timeframe = isForwardLooking ? "over the next few hours" : "for the current period"
-        let summary = station.map { "\($0) forecasts conditions to be \(overall.rawValue.lowercased()) \(timeframe)." }
-            ?? "Forecast expects conditions to be \(overall.rawValue.lowercased()) \(timeframe)."
+        let summary: String
+        if overall == .unknown {
+            summary = "Ceiling and visibility can't be compared with the forecast."
+        } else {
+            summary = station.map { "\($0) forecasts conditions to be \(overall.rawValue.lowercased()) \(timeframe)." }
+                ?? "Forecast expects conditions to be \(overall.rawValue.lowercased()) \(timeframe)."
+        }
 
         return ForecastTrend(
             visibility: visTrend, ceiling: ceilTrend,
@@ -395,6 +416,10 @@ struct WeatherTrend: Codable {
             overall = observed.overall
         } else if observed.overall == .deteriorating || forecast.overall == .deteriorating {
             overall = .deteriorating
+        } else if observed.overall == .unknown {
+            overall = .unknown   // the observations can't say "steady"; a forecast alone doesn't either
+        } else if forecast.overall == .unknown {
+            overall = observed.overall   // no usable TAF: the observations are the trend
         } else if observed.overall == .improving && forecast.overall == .steady {
             overall = .improving
         } else if observed.overall == .steady && forecast.overall == .improving {
@@ -528,6 +553,8 @@ struct WeatherTrend: Codable {
             return "Improvement Forecast"
         }
 
+        // Ceiling and visibility couldn't be trended: never "Stable" (audit #9).
+        if observed.overall == .unknown { return "No Trend Data" }
         return "Stable Conditions"
 
     }

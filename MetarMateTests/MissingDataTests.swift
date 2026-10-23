@@ -242,4 +242,51 @@ struct MissingDataTests {
                                       now: Date(timeIntervalSince1970: TimeInterval(Self.obs)))
         #expect(taf.issueTime == Date(timeIntervalSince1970: 1792754400))   // 2026-10-23 11:20Z
     }
+
+    // MARK: - #9: visibility trend against "10+", unknown overall
+
+    private static func visMetar(_ visib: String, hoursAgo: Double, clouds: String = "[]", sky: String = "CLR") throws -> Metar {
+        try metar(#""temp":19,"dewp":13,"altim":1014.6,"wdir":200,"wspd":8,"visib":\#(visib),"clouds":\#(clouds),"fltCat":"VFR""#,
+                  raw: "METAR KTST 231551Z 20008KT \(sky) 19/13 A2996", obsTime: obs - Int(hoursAgo * 3600))
+    }
+
+    /// Audit #9: `10+` -> `1.5 FU` read "Stable Conditions" (headline, widget, Siri). An interval
+    /// ordering sees >10 -> 1.5 as a decrease.
+    @Test func greaterThanTenToOneAndHalfIsDecreasing() throws {
+        let newest = try Self.visMetar("1.5", hoursAgo: 0)
+        let oldest = try Self.visMetar(#""10+""#, hoursAgo: 2)
+        let trend = WeatherTrend.derive(metars: [newest, oldest], taf: nil)
+        #expect(trend.observed.visibility == .deteriorating)
+        #expect(trend.observed.overall == .deteriorating)
+        #expect(trend.headline.hasPrefix("Visibility Decreasing"))
+    }
+
+    @Test func intervalsThatCantBeOrderedStayUnknownOrSteady() {
+        #expect(TrendThresholds.visibilityTrend(old: .greaterThan(6), new: .exact(8)) == .steady)    // both 6+
+        #expect(TrendThresholds.visibilityTrend(old: .exact(3), new: .greaterThan(6)) == .improving)
+        #expect(TrendThresholds.visibilityTrend(old: .unknown, new: .exact(2)) == .unknown)
+    }
+
+    /// No visibility and no sky group in either report: unknown, never "steady"/"Stable" — even
+    /// with the wind changing.
+    @Test func bothAxesUnknownIsUnknownNotSteady() throws {
+        let newest = try Self.metar(#""temp":19,"wdir":200,"wspd":25"#, raw: "METAR KTST 231551Z AUTO 20025KT 19/13 A2996")
+        let oldest = try Self.metar(#""temp":19,"wdir":200,"wspd":8"#, raw: "METAR KTST 231351Z AUTO 20008KT 19/13 A2996",
+                                    obsTime: Self.obs - 7200)
+        let trend = WeatherTrend.derive(metars: [newest, oldest], taf: nil)
+        #expect(trend.observed.overall == .unknown)
+        #expect(trend.overall == .unknown)
+        #expect(trend.headline != "Stable Conditions")
+    }
+
+    /// Forecast trend: METAR 10+ vs a TAF period forecasting 2 SM is a forecast decrease.
+    @Test func forecastTrendOrdersGreaterThan() throws {
+        let start = Self.obs - 1800
+        let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":\#(start),"validTimeTo":\#(start + 86400),"rawTAF":"synthetic","fcsts":[{"timeFrom":\#(start),"timeTo":\#(start + 7200),"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"SKC"}]},{"timeFrom":\#(start + 7200),"timeTo":\#(start + 86400),"fcstChange":"FM","wdir":200,"wspd":8,"visib":2,"clouds":[{"cover":"SKC"}]}]}"#
+        let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
+        let f = ForecastTrend.derive(metar: try Self.visMetar(#""10+""#, hoursAgo: 0), taf: taf,
+                                     now: Date(timeIntervalSince1970: TimeInterval(Self.obs)))
+        #expect(f.visibility == .deteriorating)
+        #expect(f.overall == .deteriorating)
+    }
 }
