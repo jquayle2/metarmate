@@ -93,9 +93,11 @@ actor WeatherService {
     }
 
     // MARK: - METAR
-    func fetchMetar(for icao: String) async throws -> Metar {
+    func fetchMetar(for icao: String, file: String = #fileID, function: String = #function) async throws -> Metar {
         let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "2"])
-        let (data, response) = try await session.data(from: url)
+        let (data, response) = try await FetchLog.request("METAR", ids: icao, caller: FetchLog.caller(file, function)) {
+            try await session.data(from: url)
+        }
         try validateResponse(response)
         let raw = try JSONDecoder().decode([RawMetar].self, from: data)
         guard let first = raw.first else { throw WeatherError.noData }
@@ -108,20 +110,26 @@ actor WeatherService {
     // which a fresh request almost always recovers. This is the automatic version of the
     // manual "just load it again" workaround, and it prevents a full-reporting station
     // from being silently dumped into advisory on a one-off network hiccup.
-    func fetchMetarHistory(for icao: String, hours: Int = 6) async throws -> [Metar] {
+    func fetchMetarHistory(for icao: String, hours: Int = 6, file: String = #fileID, function: String = #function) async throws -> [Metar] {
         let url = try buildURL(path: "metar", params: ["ids": icao, "format": "json", "hours": "\(hours)"])
+        let caller = FetchLog.caller(file, function)
 
-        func attempt() async throws -> [Metar] {
-            let (data, response) = try await session.data(from: url)
+        func attempt(_ kind: String) async throws -> [Metar] {
+            let (data, response) = try await FetchLog.request(kind, ids: icao, caller: caller) {
+                try await session.data(from: url)
+            }
             try validateResponse(response)
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
             let parsed = raws.compactMap { try? MetarParser.parse(raw: $0) }
+            if parsed.count < raws.count {
+                Log.net.warning("[net] METAR history \(icao, privacy: .public) \(raws.count - parsed.count, privacy: .public) of \(raws.count, privacy: .public) obs failed to parse (dropped)")
+            }
             return parsed
         }
 
         let start = DispatchTime.now()
         do {
-            let parsed = try await attempt()
+            let parsed = try await attempt("METAR-history")
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] METAR history \(icao, privacy: .public) hours=\(hours) - \(String(format: "%.0f", ms), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
             // Cache the newest obs so a nearby sheet / list showing this station is instant.
@@ -145,7 +153,7 @@ actor WeatherService {
             Log.net.warning("[net] METAR history \(icao, privacy: .public) transient failure after \(String(format: "%.0f", ms1), privacy: .public) ms - retrying once")
             let retryStart = DispatchTime.now()
             do {
-                let parsed = try await attempt()
+                let parsed = try await attempt("METAR-history(retry)")
                 let ms2 = Double(DispatchTime.now().uptimeNanoseconds - retryStart.uptimeNanoseconds) / 1_000_000
                 Log.net.info("[net] METAR history \(icao, privacy: .public) RETRY OK - \(String(format: "%.0f", ms2), privacy: .public) ms, \(parsed.count, privacy: .public) obs")
                 return parsed
@@ -157,7 +165,7 @@ actor WeatherService {
         }
     }
 
-    func fetchMetars(for icaos: [String]) async throws -> [String: Metar] {
+    func fetchMetars(for icaos: [String], file: String = #fileID, function: String = #function) async throws -> [String: Metar] {
         // Serve any fresh cached stations directly; only hit the network for the rest.
         // This is what kills the nearby-sheet churn — paging back over stations already
         // fetched on a previous page now costs nothing.
@@ -179,19 +187,30 @@ actor WeatherService {
         let url = try buildURL(path: "metar", params: ["ids": ids, "format": "json", "hours": "2"])
         let start = DispatchTime.now()
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await FetchLog.request("METAR-batch", ids: ids, caller: FetchLog.caller(file, function)) {
+                try await session.data(from: url)
+            }
             try validateResponse(response)
             let raws = try JSONDecoder().decode([RawMetar].self, from: data)
+            var parseFailed: Set<String> = []
             for raw in raws {
-                if let metar = try? MetarParser.parse(raw: raw) {
-                    if let existing = result[metar.stationId] {
-                        if metar.observationTime > existing.observationTime {
-                            result[metar.stationId] = metar
-                        }
-                    } else {
+                guard let metar = try? MetarParser.parse(raw: raw) else {
+                    parseFailed.insert(raw.icaoId ?? "?")
+                    continue
+                }
+                if let existing = result[metar.stationId] {
+                    if metar.observationTime > existing.observationTime {
                         result[metar.stationId] = metar
                     }
+                } else {
+                    result[metar.stationId] = metar
                 }
+            }
+            // Requested stations NOAA didn't return (or returned only unparseable obs): these rows
+            // render with no METAR. Logged so a "METAR unavailable" row can be traced to its cause.
+            let missing = needed.filter { result[$0] == nil }
+            if !missing.isEmpty || !parseFailed.isEmpty {
+                Log.net.warning("[net] batch METAR missing=[\(missing.joined(separator: ","), privacy: .public)] parseFailed=[\(parseFailed.sorted().joined(separator: ","), privacy: .public)]")
             }
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
             Log.net.info("[net] batch METAR \(needed.count, privacy: .public) fetched (\(icaos.count - needed.count, privacy: .public) cached) [\(ids, privacy: .public)] - \(String(format: "%.0f", ms), privacy: .public) ms, \(data.count, privacy: .public) bytes, \(result.count, privacy: .public) total")
@@ -215,11 +234,13 @@ actor WeatherService {
     }
 
     // MARK: - TAF
-    func fetchTaf(for icao: String) async throws -> Taf {
+    func fetchTaf(for icao: String, file: String = #fileID, function: String = #function) async throws -> Taf {
         let url = try buildURL(path: "taf", params: ["ids": icao, "format": "json"])
         let start = DispatchTime.now()
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await FetchLog.request("TAF", ids: icao, caller: FetchLog.caller(file, function)) {
+                try await session.data(from: url)
+            }
             try validateResponse(response)
             let raw = try JSONDecoder().decode([RawTaf].self, from: data)
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
@@ -247,19 +268,20 @@ actor WeatherService {
 
     /// The field's own TAF request as a result, so "no TAF" (204 / empty) and "request failed" stay
     /// distinguishable (only the former may borrow a nearby TAF).
-    func tafResult(for icao: String) async -> Result<Taf, Error> {
-        do { return .success(try await fetchTaf(for: icao)) } catch { return .failure(error) }
+    func tafResult(for icao: String, file: String = #fileID, function: String = #function) async -> Result<Taf, Error> {
+        do { return .success(try await fetchTaf(for: icao, file: file, function: function)) } catch { return .failure(error) }
     }
 
     // MARK: - TAFs near a field, cached ~10 min per field
     private var tafCandidateCache = NearbyTafCandidateCache()
 
-    func tafCandidates(forField icao: String, latitude: Double, longitude: Double) async throws -> [NearbyTafCandidate] {
+    func tafCandidates(forField icao: String, latitude: Double, longitude: Double,
+                       file: String = #fileID, function: String = #function) async throws -> [NearbyTafCandidate] {
         if let cached = tafCandidateCache.candidates(for: icao, at: Date()) {
             Log.net.info("[cache] TAF bbox for \(icao, privacy: .public) HIT - \(cached.count, privacy: .public) TAFs")
             return cached
         }
-        let fetched = try await fetchTafCandidates(latitude: latitude, longitude: longitude)
+        let fetched = try await fetchTafCandidates(latitude: latitude, longitude: longitude, file: file, function: function)
         tafCandidateCache.store(fetched, for: icao, at: Date())
         return fetched
     }
@@ -273,12 +295,15 @@ actor WeatherService {
     /// Every TAF NOAA has in the box covering `radiusNm` around the point, with station position and
     /// elevation. One request. 204 means none in the box: an empty list, not an error.
     func fetchTafCandidates(latitude: Double, longitude: Double,
-                            radiusNm: Int = NearbyTaf.maxDistanceNm) async throws -> [NearbyTafCandidate] {
+                            radiusNm: Int = NearbyTaf.maxDistanceNm,
+                            file: String = #fileID, function: String = #function) async throws -> [NearbyTafCandidate] {
         let bbox = NearbyTaf.boundingBox(latitude: latitude, longitude: longitude, radiusNm: radiusNm)
         let url = try buildURL(path: "taf", params: ["bbox": bbox, "format": "json"])
         let start = DispatchTime.now()
         do {
-            let (data, response) = try await session.data(from: url)
+            let (data, response) = try await FetchLog.request("TAF-bbox", ids: bbox, caller: FetchLog.caller(file, function)) {
+                try await session.data(from: url)
+            }
             try validateResponse(response)
             let candidates = Self.tafCandidates(from: try JSONDecoder().decode([RawTaf].self, from: data))
             let ms = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
@@ -307,13 +332,16 @@ actor WeatherService {
     }
 
     // MARK: - Nearby stations with METAR
-    func fetchNearbyMetars(latitude: Double, longitude: Double, radiusNm: Int = 50) async throws -> [Metar] {
+    func fetchNearbyMetars(latitude: Double, longitude: Double, radiusNm: Int = 50,
+                           file: String = #fileID, function: String = #function) async throws -> [Metar] {
         let url = try buildURL(path: "metar", params: [
             "bbox": "\(longitude - 1),\(latitude - 1),\(longitude + 1),\(latitude + 1)",
             "format": "json",
             "hours": "2"
         ])
-        let (data, response) = try await session.data(from: url)
+        let (data, response) = try await FetchLog.request("METAR-bbox", ids: "\(latitude),\(longitude)", caller: FetchLog.caller(file, function)) {
+            try await session.data(from: url)
+        }
         try validateResponse(response)
         let raws = try JSONDecoder().decode([RawMetar].self, from: data)
         return raws.compactMap { try? MetarParser.parse(raw: $0) }

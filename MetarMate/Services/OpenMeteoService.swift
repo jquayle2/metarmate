@@ -12,10 +12,12 @@ actor OpenMeteoService {
 
     private init() {}
 
-    func fetchAdvisory(for airport: Airport) async throws -> AdvisoryWeather {
+    func fetchAdvisory(for airport: Airport, file: String = #fileID, function: String = #function) async throws -> AdvisoryWeather {
         guard let url = buildURL(airport: airport) else { throw OpenMeteoError.badURL }
 
-        let (data, response) = try await session.data(from: url)
+        let (data, response) = try await FetchLog.request("ADVISORY", ids: airport.icao, caller: FetchLog.caller(file, function)) {
+            try await session.data(from: url)
+        }
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw OpenMeteoError.badResponse
         }
