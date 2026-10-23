@@ -71,6 +71,8 @@ nonisolated struct RetryPolicy: Sendable {
     var sleep: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) }
 
     static let foreground = RetryPolicy(delays: [2, 5, 15])
+    /// Background refresh time is short: retry after 2 s and 5 s only.
+    static let background = RetryPolicy(delays: [2, 5])
 
     /// The wait before retry `index` (0-based), or nil once the retries are used up.
     func delay(beforeRetry index: Int, retryAfter: TimeInterval?) -> TimeInterval? {
@@ -92,6 +94,36 @@ nonisolated struct RetryPolicy: Sendable {
             try await sleep(wait)
             index += 1
         }
+    }
+}
+
+extension RetryPolicy {
+    /// A batch request, retried for its transiently failing ids only (one request per attempt).
+    /// Returns every id's final outcome. Throws CancellationError if cancelled.
+    func runBatch<Value>(_ label: String, ids: [String],
+                         _ fetch: ([String]) async throws -> [String: FetchOutcome<Value>]) async throws -> [String: FetchOutcome<Value>] {
+        var result: [String: FetchOutcome<Value>] = [:]
+        var pending = ids
+        var index = 0
+        while !pending.isEmpty {
+            let outcomes = try await fetch(pending)
+            var failing: [String] = []
+            var retryAfter: TimeInterval = 0
+            for id in pending {
+                let outcome = outcomes[id] ?? .failed(FetchFailure(WeatherError.badResponse))
+                result[id] = outcome
+                if case .failed(let failure) = outcome, failure.isTransient {
+                    failing.append(id)
+                    retryAfter = max(retryAfter, failure.retryAfter ?? 0)
+                }
+            }
+            guard !failing.isEmpty, let wait = delay(beforeRetry: index, retryAfter: retryAfter) else { break }
+            Log.load.info("[retry] \(label, privacy: .public) batch retry \(index + 1, privacy: .public)/\(delays.count, privacy: .public) in \(Int(wait), privacy: .public)s for [\(failing.joined(separator: ","), privacy: .public)]")
+            try await sleep(wait)
+            index += 1
+            pending = failing
+        }
+        return result
     }
 }
 

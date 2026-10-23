@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import os
 
 // MARK: - AlertPipeline
 // The single evaluation pipeline shared by the manual "Check now" action and the background
@@ -16,8 +17,10 @@ enum AlertPipeline {
     // Load enabled watches → resolve the active profile → batch-fetch conditions for the
     // distinct ICAOs (METAR only) → run each through the GoNoGoEvaluator → fire a notification
     // on a verdict transition vs lastSide → persist the new side + evaluation time.
+    // `retry`: the background task's short budget by default (2 s, 5 s); "Check now" uses the
+    // foreground policy.
     @discardableResult
-    static func runChecks(in context: ModelContext) async -> Outcome {
+    static func runChecks(in context: ModelContext, retry: RetryPolicy = .background) async -> Outcome {
         let watches = (try? context.fetch(
             FetchDescriptor<AirportWatch>(predicate: #Predicate { $0.isEnabled })
         )) ?? []
@@ -28,13 +31,24 @@ enum AlertPipeline {
         let icaos = Array(Set(watches.map { $0.icao }))
         // Background checks always fetch fresh (force) so notification verdicts never ride on a
         // stale cached METAR; the fetch still warms the shared cache for the UI.
-        let conditions = await fetchConditions(for: icaos, force: true)
+        let conditions = await fetchConditions(for: icaos, force: true, retry: retry)
 
         var fired = 0
         for watch in watches {
             // BG task expired (expirationHandler cancelled us): stop posting and wind down.
             if Task.isCancelled { break }
-            guard let c = conditions[watch.icao] else { continue }   // no data this cycle → leave side untouched
+            let c: AlertConditions
+            switch conditions[watch.icao] {
+            case .conditions(let fetched)?:
+                c = fetched
+            case .failed?:
+                // Couldn't reach the weather service after retries: not evaluated. Side, CHECK and the
+                // last good check time stay as they were, and no notification is sent.
+                Log.load.warning("[alerts] \(watch.icao, privacy: .public) not checked — METAR request failed after retries")
+                continue
+            case .noProduct?, nil:
+                continue   // no METAR this cycle (or cancelled) → leave side untouched
+            }
             let verdict = GoNoGoEvaluator.evaluate(profile, c, previousSide: watch.side,
                                                    wasInCheck: CheckState.isInCheck(watch.icao), icao: watch.icao)
             if verdict.shouldFire {
@@ -66,7 +80,7 @@ enum AlertPipeline {
     @discardableResult
     static func checkNow(in context: ModelContext) async -> Outcome {
         await NotificationManager.shared.requestAuthorizationIfNeeded()
-        return await runChecks(in: context)
+        return await runChecks(in: context, retry: .foreground)
     }
 
     // MARK: - Read-only display evaluation
@@ -78,6 +92,13 @@ enum AlertPipeline {
         let conditions: AlertConditions?
         let verdict: Verdict?
         let profile: VerdictProfileSnapshot   // the profile the verdict was judged against (its label)
+        var notChecked: NotChecked? = nil     // set when this refresh couldn't reach the weather service
+    }
+
+    /// This refresh failed after retries. `lastGoodCheck` is when the station's METAR was last
+    /// fetched (nil: never). The row shows "Not checked — couldn't reach weather service".
+    struct NotChecked {
+        let lastGoodCheck: Date?
     }
 
     // `force` (pull-to-refresh) bypasses the shared cache's freshness window; the auto/appear
@@ -85,50 +106,86 @@ enum AlertPipeline {
     static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext, force: Bool = false) async -> [String: WatchDisplay] {
         guard !watches.isEmpty, let profile = VerdictProfile.current(in: context) else { return [:] }
         let icaos = Array(Set(watches.map { $0.icao }))
-        let conditions = await fetchConditions(for: icaos, force: force)
+        let conditions = await fetchConditions(for: icaos, force: force, retry: .foreground)
         var result: [String: WatchDisplay] = [:]
+        let now = Date()
         for watch in watches {
-            let c = conditions[watch.icao]
+            var c: AlertConditions?
+            var notChecked: NotChecked?
+            switch conditions[watch.icao] {
+            case .conditions(let fetched)?:
+                c = fetched
+            case .failed?:
+                let lastGoodCheck = [WeatherCache.shared.lastMetarFetchedAt(for: watch.icao), watch.lastEvaluatedDate]
+                    .compactMap { $0 }.max()
+                c = conditionsAfterFailure(lastMetar: WeatherCache.shared.lastMetar(for: watch.icao),
+                                           lastGoodCheck: lastGoodCheck, at: now)
+                notChecked = NotChecked(lastGoodCheck: lastGoodCheck)
+            case .noProduct?, nil:
+                c = nil
+            }
             // Bare limits (previousSide nil), like the detail screen and widgets, so every surface
             // shows the same verdict for the same report. Hysteresis only decides notifications.
             let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: nil, icao: watch.icao) }
             result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict,
-                                              profile: GoNoGoEvaluator.snapshot(of: profile))
+                                              profile: GoNoGoEvaluator.snapshot(of: profile), notChecked: notChecked)
         }
         return result
+    }
+
+    /// After a failed check, the previous reading still shows (with its verdict) while the last good
+    /// check is within 75 min (D#4 cutoff); after that the row drops it and is neutral and
+    /// unevaluated, so a stale GO never looks current.
+    static func conditionsAfterFailure(lastMetar: Metar?, lastGoodCheck: Date?, at now: Date) -> AlertConditions? {
+        guard let lastMetar, let lastGoodCheck,
+              now.timeIntervalSince(lastGoodCheck) <= TimeInterval(WidgetWeatherSnapshot.noCurrentAfterMinutes * 60)
+        else { return nil }
+        return AlertConditions(from: lastMetar)
     }
 
     // MARK: - Conditions source
     // METAR only. 5-minute ASOS data never sets or changes a verdict, whatever the feature flag
     // or subscription says (DECISIONS_2026-10 #1).
-    private static func fetchConditions(for icaos: [String], force: Bool = false) async -> [String: AlertConditions] {
+    /// A watch's conditions for this check: from a METAR, NOAA has no METAR, or the request failed
+    /// after retries (we don't know: never evaluated, never notified).
+    enum ConditionsResult {
+        case conditions(AlertConditions)
+        case noProduct
+        case failed
+    }
+
+    private static func fetchConditions(for icaos: [String], force: Bool, retry: RetryPolicy) async -> [String: ConditionsResult] {
         // Read-through the shared cache for METARs: keep fresh cached values, and only fetch the
         // misses. Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K) for the fetch,
         // then map back to the watch's own id so numeric-LID stations are actually evaluated.
-        var metars: [String: Metar] = [:]
+        var result: [String: ConditionsResult] = [:]
         var noaaToOriginal: [String: String] = [:]
         var noaaIds: [String] = []
         for code in icaos {
             if !force, let cached = WeatherCache.shared.freshMetar(for: code) {
-                metars[code] = cached
+                result[code] = .conditions(AlertConditions(from: cached))
                 continue
             }
             let id = WeatherService.noaaCandidate(for: code) ?? code
             noaaToOriginal[id] = code
             noaaIds.append(id)
         }
-        if !noaaIds.isEmpty {
-            let metarsByNoaa = (try? await WeatherService.shared.fetchMetars(for: noaaIds)) ?? [:]
-            var fetched: [String: Metar] = [:]
-            for (key, m) in metarsByNoaa { fetched[noaaToOriginal[key] ?? key] = m }
-            WeatherCache.shared.store(metars: fetched)
-            for (k, m) in fetched { metars[k] = m }
-        }
-
-        var result: [String: AlertConditions] = [:]
-        for icao in icaos {
-            if let metar = metars[icao] {
-                result[icao] = AlertConditions(from: metar)
+        guard !noaaIds.isEmpty else { return result }
+        // Transient failures retry (only the failing stations); cancellation (BG expiry) leaves
+        // those watches out entirely, as if this check never ran for them.
+        guard let outcomes = try? await retry.runBatch("alerts METAR", ids: noaaIds, {
+            try await WeatherService.shared.metarOutcomes(for: $0)
+        }) else { return result }
+        for (id, outcome) in outcomes {
+            let code = noaaToOriginal[id] ?? id
+            switch outcome {
+            case .loaded(let metar):
+                WeatherCache.shared.store(metar: metar, for: code)
+                result[code] = .conditions(AlertConditions(from: metar))
+            case .noProduct:
+                result[code] = .noProduct
+            case .failed:
+                result[code] = .failed
             }
         }
         return result

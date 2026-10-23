@@ -209,9 +209,13 @@ private struct WatchRow: View {
         airport?.hasMetar == false && conditions == nil && display != nil
     }
 
-    // CATEGORY axis — left strip color (brand category palette; gray when unknown).
+    // This refresh couldn't reach the weather service (after retries).
+    private var notChecked: AlertPipeline.NotChecked? { display?.notChecked }
+
+    // CATEGORY axis — left strip color (brand category palette; gray when unknown). A watch that
+    // wasn't checked never shows a category color.
     private var categoryColor: Color {
-        if isNoCurrent { return ColorRules.flightCategoryColor(.unknown) }
+        if isNoCurrent || notChecked != nil { return ColorRules.flightCategoryColor(.unknown) }
         return ColorRules.flightCategoryColor(conditions?.flightCategory ?? .unknown)
     }
 
@@ -240,7 +244,7 @@ private struct WatchRow: View {
                             .font(.avenir(19, .heavy))
                             .tracking(0.4)
                             .foregroundColor(Brand.cloud)
-                        if let cat = conditions?.flightCategory, !isNoCurrent {
+                        if let cat = conditions?.flightCategory, !isNoCurrent, notChecked == nil {
                             FlightCategoryBadge(category: cat)
                         }
                     }
@@ -270,6 +274,8 @@ private struct WatchRow: View {
                             Text("Checking…")
                                 .font(.brandMono(13, weight: .medium))
                                 .foregroundColor(Brand.slate)
+                        } else if notChecked != nil {
+                            EmptyView()   // the not-checked line below says why there's nothing
                         } else {
                             Text("No weather data")
                                 .font(.brandMono(13, weight: .medium))
@@ -277,6 +283,21 @@ private struct WatchRow: View {
                         }
                     }
                     .padding(.top, 4)
+
+                    // Not checked this refresh: say so, with when the station was last checked. The
+                    // previous verdict stays only while that check is within 75 min.
+                    if let notChecked {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Not checked — couldn't reach weather service")
+                                .font(.avenir(12.5, .bold))
+                                .foregroundColor(Brand.slate)
+                            Text(notChecked.lastGoodCheck.map { "Last good check \($0.formatted(date: .omitted, time: .shortened))" }
+                                 ?? "No good check yet")
+                                .font(.avenir(11.5, .demibold))
+                                .foregroundColor(Brand.slate)
+                        }
+                        .padding(.top, 2)
+                    }
 
                     // Limiting factor(s) in plain language when NO-GO; what couldn't be checked when
                     // CHECK (D#2: "CHECK: visibility not reported"); VRB qualifier on a GO (D#3).
