@@ -111,7 +111,7 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [x] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message ("Alerts are paused. Your watches are saved and resume with MetarMate Pro.", rows say "Paused"; nothing deleted). The background task waits for entitlements, then skips. Simulator: watch added in a TestFlight build shows paused in a gated Debug build. `4835714` is 3b
 - [x] Crosswind calculator free: there was no gate, and `ProFeature` has no crosswind case, so nothing can gate it
 - [x] Layout customization Pro: the Customize Layout button opens the paywall without Pro (UI test both ways). A lapsed user keeps the saved layout and starting tab (Jeff, Oct 23). `78c427c`
-- [ ] Paywall screen: lists what Pro adds; restore purchases; $5.99 shown from StoreKit (never hard-coded)
+- [x] Paywall screen: lists what Pro adds (no Apple Watch until it ships); Buy Pro with the price from StoreKit (never hard-coded); Family Sharing note; Restore Purchases (says so when nothing is found) and Redeem Code (Apple's offer-code sheet); no links out (3.1.1). UI test: $5.99 from the scheme's .storekit, every line, restore message. Redeem Code sheet and a real purchase are device tests. `208866e`
 - [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
 - [ ] TestFlight testers get Pro via offer codes (D#20)
 
