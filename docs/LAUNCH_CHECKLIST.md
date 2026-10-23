@@ -90,7 +90,7 @@ Handoff: `docs/handoffs/A3_RELEASE_handoff.md` (branch `fix/a3-release`, worktre
 
 App Review blockers (required regardless of section 0):
 - [x] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk). New build configuration **TestFlight** (Release + `TESTFLIGHT`) and shared scheme **MetarMate TestFlight**, which archives with it. App Store archives use scheme **MetarMate** (Release). Built Release binary: 0 harness symbols or strings; TestFlight and Debug still carry it
-- [ ] #21 TestFlight builds say "TestFlight" on a version line (Jeff, Oct 23). There's no About/settings screen yet; placement pending Jeff
+- [x] #21 TestFlight builds say "TestFlight" on a version line (Jeff, Oct 23): bottom of Customize Layout, every build shows "Version x (n)", TestFlight builds add "· TestFlight"
 - [x] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]. `295af22`. `HarnessAbsentUITests`: forces the runtime gate open, then the chip is present in Debug/TestFlight and absent in Release (all three run)
 - [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
 - [x] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure. Store open: retry once, then in-memory for the session with a notice (store untouched); moved aside (renamed, never deleted) only after 3 failed launches in a row; the background task skips the run and never recovers (Jeff, Oct 23). A store written by earlier unversioned builds opens with V1 and keeps its data (unit test plus the simulator's Oct 21 store). The store stays in the App Group (A1 did not move it). Remaining `fatalError`: only if an in-memory store fails, which means an invalid schema. `07c7ea9`
@@ -131,7 +131,7 @@ Background task (#26):
 - [ ] Watch `expiresAt` enforced
 
 Other:
-- [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched
+- [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched. `86fc14b`
 - [ ] Merge A3 [Jeff]
 
 ## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]
@@ -193,7 +193,7 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 
 ## 7. App Store Connect and submission [Jeff]
 
-- [ ] Version/build bumped (app + widget, Debug + Release)
+- [ ] Version/build bumped in all six configurations: app and widget × Debug, Release, TestFlight. The App Store archive (scheme MetarMate, Release) and the TestFlight archive (scheme MetarMate TestFlight) are separate uploads, so each needs its own build number
 - [ ] Pro IAP (non-consumable) at $5.99 in App Store Connect, Family Sharing on, review screenshot + notes
 - [ ] App name, subtitle, keywords, description
 - [ ] Screenshots: 6.9" and 6.5" iPhone, 13" iPad (iPad is supported)
