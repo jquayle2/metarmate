@@ -52,7 +52,8 @@ struct AlertsView: View {
                                 let airport = AirportService.shared.airport(icao: watch.icao)
                                 let row = WatchRow(watch: watch,
                                                    display: vm.displays[watch.icao],
-                                                   airport: airport)
+                                                   airport: airport,
+                                                   starterName: activeProfile.flatMap { $0.isBuiltIn ? $0.name : nil })
                                 Group {
                                     if let airport {
                                         NavigationLink(destination: WeatherDetailView(airport: airport)) {
@@ -194,6 +195,7 @@ private struct WatchRow: View {
     let watch: AirportWatch
     let display: AlertPipeline.WatchDisplay?
     let airport: Airport?
+    let starterName: String?   // active profile is a built-in starter: label the verdict with it (D#19)
 
     private var conditions: AlertConditions? { display?.conditions }
     private var verdict: Verdict? { display?.verdict }
@@ -206,8 +208,12 @@ private struct WatchRow: View {
 
     // CATEGORY axis — left strip color (brand category palette; gray when unknown).
     private var categoryColor: Color {
-        ColorRules.flightCategoryColor(conditions?.flightCategory ?? .unknown)
+        if isNoCurrent { return ColorRules.flightCategoryColor(.unknown) }
+        return ColorRules.flightCategoryColor(conditions?.flightCategory ?? .unknown)
     }
+
+    // Over 75 min: no verdict, and the old category/conditions are withheld like the widget (D#4).
+    private var isNoCurrent: Bool { verdict?.outcome == .noCurrent }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -231,7 +237,7 @@ private struct WatchRow: View {
                             .font(.avenir(19, .heavy))
                             .tracking(0.4)
                             .foregroundColor(Brand.cloud)
-                        if let cat = conditions?.flightCategory {
+                        if let cat = conditions?.flightCategory, !isNoCurrent {
                             FlightCategoryBadge(category: cat)
                         }
                     }
@@ -247,7 +253,11 @@ private struct WatchRow: View {
 
                     // Conditions summary ("CLR · 10+SM · 180@19G30") or a status placeholder.
                     Group {
-                        if let c = conditions {
+                        if isNoCurrent {
+                            Text("No current METAR")
+                                .font(.avenir(12.5, .bold))
+                                .foregroundColor(Brand.cautionOrange)
+                        } else if let c = conditions {
                             conditionsSummary(c)
                         } else if isAdvisoryOnly {
                             Text("Advisory weather only")
@@ -265,19 +275,22 @@ private struct WatchRow: View {
                     }
                     .padding(.top, 4)
 
-                    // Limiting factor(s) in plain language when NO-GO.
-                    if let v = verdict, v.newSide == .noGo, !v.failingFactors.isEmpty {
-                        Text(v.failingFactors.joined(separator: " · "))
+                    // Limiting factor(s) in plain language when NO-GO; what couldn't be checked when
+                    // CHECK (D#2: "CHECK: visibility not reported"); VRB qualifier on a GO (D#3).
+                    if let line = verdictDetail {
+                        Text(line)
                             .font(.avenir(12.5, .demibold))
                             .foregroundColor(Brand.slate)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    // Source + freshness — the alert-specific provenance line.
+                    // Source + freshness — the alert-specific provenance line. Late / no current
+                    // METAR per D#4, from the observation time.
                     if let c = conditions {
                         Text(freshness(c))
                             .font(.avenir(11.5, .demibold))
-                            .foregroundColor(Brand.slate)
+                            .foregroundColor(verdict?.lateMinutes != nil || verdict?.outcome == .noCurrent
+                                             ? Brand.cautionOrange : Brand.slate)
                             .padding(.top, 1)
                     }
                 }
@@ -302,14 +315,30 @@ private struct WatchRow: View {
                 .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .overlay(Capsule().stroke(Brand.slate.opacity(0.5), lineWidth: 1))
-        } else if let v = verdict {
-            let isNoGo = v.newSide == .noGo
-            Text(isNoGo ? "NO-GO" : "GO")
-                .font(.avenir(13, .heavy)).tracking(0.5)
-                .foregroundColor(.white)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(isNoGo ? Brand.dangerRed : Brand.vfrGreen))
+        } else if let v = verdict, v.outcome == .go || v.outcome == .noGo {
+            let isNoGo = v.outcome == .noGo
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(isNoGo ? "NO-GO" : "GO")
+                    .font(.avenir(13, .heavy)).tracking(0.5)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(isNoGo ? Brand.dangerRed : Brand.vfrGreen))
+                starterCaption
+            }
+            .accessibilityElement(children: .combine)
+        } else if let v = verdict, v.outcome == .check {
+            // Neutral: not green, not red (D#2). The reason is on the detail line.
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("CHECK")
+                    .font(.avenir(13, .heavy)).tracking(0.5)
+                    .foregroundColor(Brand.cloud)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 4)
+                    .overlay(Capsule().stroke(Brand.slate, lineWidth: 1.5))
+                starterCaption
+            }
+            .accessibilityElement(children: .combine)
         } else {
             Text("—")
                 .font(.avenir(13, .heavy))
@@ -359,9 +388,45 @@ private struct WatchRow: View {
         return "\(dir)@\(spd)"
     }
 
+    // "vs VFR day starter" under the badge, so a starter verdict is never mistaken for the
+    // pilot's own minimums (D#19).
+    @ViewBuilder private var starterCaption: some View {
+        if let starterName {
+            Text("vs \(starterName) starter")
+                .font(.avenir(10.5, .demibold))
+                .foregroundColor(Brand.slate)
+        }
+    }
+
+    private var verdictDetail: String? {
+        guard let v = verdict else { return nil }
+        switch v.outcome {
+        case .noGo:
+            let parts = v.failingFactors + v.uncheckedFactors
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .check:
+            return "CHECK: " + v.uncheckedFactors.joined(separator: " · ")
+        case .go:
+            return v.notes.isEmpty ? nil : v.notes.joined(separator: " · ")
+        case .noCurrent:
+            return nil
+        }
+    }
+
     private func freshness(_ c: AlertConditions) -> String {
         let mins = max(0, Int(Date().timeIntervalSince(c.timestamp) / 60))
         let source = (c.source == .asos) ? "live ASOS" : "METAR"
-        return "via \(source) · \(mins) min ago"
+        switch verdict?.outcome {
+        case .noCurrent:
+            return "Last report \(Self.spokenAge(mins)) ago"
+        default:
+            if let late = verdict?.lateMinutes { return "METAR late: \(late) min old" }
+            return "via \(source) · \(mins) min ago"
+        }
+    }
+
+    // "2 h 10 min" (D#4 wording).
+    private static func spokenAge(_ minutes: Int) -> String {
+        minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
     }
 }

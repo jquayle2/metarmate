@@ -178,17 +178,16 @@ struct AdverseWeatherParsingTests {
         // (4) AlertConditions carries nil windSpeed — the input that skips the wind criteria.
         #expect(AlertConditions(from: m).windSpeed == nil)
 
-        // (5) GoNoGo: with nil windSpeed, strict wind limits are INERT — identical verdict and
-        // failingFactors to a profile with no wind limits at all (i.e. the wind factors were not
-        // evaluated). Observable through existing surfaces. NB: a skipped factor and a passing
-        // 0-kt factor remain indistinguishable via Verdict — see audit Finding 13 (open).
+        // (5) GoNoGo: nil windSpeed is never scored as 0 kt. The wind can't be evaluated, so the
+        // verdict is CHECK "wind not reported" (F13 / audit #4, closed in A2) — never a pass, never
+        // a failing wind factor. Crosswind is always tested, so this holds with no wind limits too.
         let c = AlertConditions(from: m)
         let strict = MinimumsProfile(name: "strict", maxGustKt: 1, maxSustainedWindKt: 1)
         let noWindLimits = MinimumsProfile(name: "noWindLimits")
-        let v1 = GoNoGoEvaluator.evaluate(strict, c, previousSide: nil, icao: "KABR")
-        let v2 = GoNoGoEvaluator.evaluate(noWindLimits, c, previousSide: nil, icao: "KABR")
-        #expect(v1.shouldFire == v2.shouldFire)
-        #expect(v1.failingFactors == v2.failingFactors)
+        let v1 = GoNoGoEvaluator.evaluate(strict, c, previousSide: nil, icao: "KABR", now: m.observationTime)
+        let v2 = GoNoGoEvaluator.evaluate(noWindLimits, c, previousSide: nil, icao: "KABR", now: m.observationTime)
+        #expect(v1.outcome == .check && v2.outcome == .check)
+        #expect(v1.uncheckedFactors == ["wind not reported"])
         #expect(!v1.failingFactors.contains { $0.lowercased().contains("wind") || $0.lowercased().contains("gust") })
     }
 

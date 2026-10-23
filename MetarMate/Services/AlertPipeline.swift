@@ -35,13 +35,20 @@ enum AlertPipeline {
             // BG task expired (expirationHandler cancelled us): stop posting and wind down.
             if Task.isCancelled { break }
             guard let c = conditions[watch.icao] else { continue }   // no data this cycle → leave side untouched
-            let verdict = GoNoGoEvaluator.evaluate(profile, c, previousSide: watch.side, icao: watch.icao)
+            let verdict = GoNoGoEvaluator.evaluate(profile, c, previousSide: watch.side,
+                                                   wasInCheck: CheckState.isInCheck(watch.icao), icao: watch.icao)
             if verdict.shouldFire {
                 let posted = await NotificationManager.shared.post(title: title(for: verdict, icao: watch.icao),
-                                                                   body: body(for: verdict))
+                                                                   body: body(for: verdict, icao: watch.icao, profile: profile))
                 if posted { fired += 1 }   // count only confirmed adds, not intentions
             }
-            watch.side = verdict.newSide
+            // CHECK and "no current METAR" leave lastSide as it was (the last real GO/NO-GO).
+            if let side = verdict.newSide { watch.side = side }
+            switch verdict.outcome {
+            case .check:      CheckState.set(watch.icao, inCheck: true)
+            case .go, .noGo:  CheckState.set(watch.icao, inCheck: false)
+            case .noCurrent:  break   // no evaluation happened: keep whatever it was
+            }
             watch.lastEvaluatedDate = Date()
         }
         // Don't write to the App Group store after expiry — the process may be suspended mid-write
@@ -83,7 +90,8 @@ enum AlertPipeline {
             let c = conditions[watch.icao]
             // previousSide: watch.side so the displayed side respects the same hysteresis the
             // notifier uses. shouldFire is ignored here — display only.
-            let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: watch.side, icao: watch.icao) }
+            let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: watch.side,
+                                                           wasInCheck: CheckState.isInCheck(watch.icao), icao: watch.icao) }
             result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict)
         }
         return result
@@ -125,20 +133,42 @@ enum AlertPipeline {
         return result
     }
 
-    // MARK: - Notification text
-    private static func title(for verdict: Verdict, icao: String) -> String {
-        verdict.newSide == .noGo ? "NO-GO — \(icao)" : "GO — \(icao)"
+    // MARK: - CHECK memory
+    // Whether a watch's last evaluation was CHECK. Kept in UserDefaults, not on AirportWatch, so
+    // lastSide stays the last real GO/NO-GO and the SwiftData schema is unchanged (Jeff, Oct 23).
+    // Used to send the "Can't confirm" notification once, and never "Back within" out of CHECK.
+    enum CheckState {
+        private static func key(_ icao: String) -> String { "alertInCheck.\(icao.uppercased())" }
+        static func isInCheck(_ icao: String) -> Bool { UserDefaults.standard.bool(forKey: key(icao)) }
+        static func set(_ icao: String, inCheck: Bool) {
+            if inCheck { UserDefaults.standard.set(true, forKey: key(icao)) }
+            else { UserDefaults.standard.removeObject(forKey: key(icao)) }
+        }
     }
 
-    private static func body(for verdict: Verdict) -> String {
-        switch verdict.newSide {
+    // MARK: - Notification text
+    static func title(for verdict: Verdict, icao: String) -> String {
+        switch verdict.outcome {
+        case .noGo:              return "NO-GO — \(icao)"
+        case .check:             return "CHECK — \(icao)"
+        case .go, .noCurrent:    return "GO — \(icao)"
+        }
+    }
+
+    static func body(for verdict: Verdict, icao: String, profile: MinimumsProfile) -> String {
+        // A starter profile's verdict always says which profile it is (D#19).
+        let against = profile.isBuiltIn ? " (vs \(profile.name) starter)" : ""
+        let late = verdict.lateMinutes.map { " METAR late: \($0) min old." } ?? ""
+        switch verdict.outcome {
         case .noGo:
             let reasons = verdict.failingFactors.isEmpty
                 ? "below your minimums"
                 : verdict.failingFactors.joined(separator: "; ")
-            return "NO-GO: \(reasons). \(verdict.sourceLabel)."
-        case .go:
-            return "Back within your minimums. \(verdict.sourceLabel)."
+            return "NO-GO\(against): \(reasons). \(verdict.sourceLabel).\(late)"
+        case .check:
+            return "Can't confirm your minimums at \(icao)\(against): \(verdict.uncheckedFactors.joined(separator: "; ")). \(verdict.sourceLabel).\(late)"
+        case .go, .noCurrent:
+            return "Back within your minimums\(against). \(verdict.sourceLabel).\(late)"
         }
     }
 }
