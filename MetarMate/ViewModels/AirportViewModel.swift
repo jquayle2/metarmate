@@ -60,10 +60,13 @@ class AirportViewModel: ObservableObject {
     }
 
     private var searchMetarTask: Task<Void, Never>? = nil
-    // Diagnostics: loadNearestAirports runs from .task, every location change and pull-to-refresh,
-    // and nothing stops two from overlapping. Counted so the logs show when they do.
+    // One Nearest load at a time: a new one (.task, a 2 nm move, pull-to-refresh) cancels the one
+    // running, and only the newest load writes rows. Two overlapping loads used to fire 13 estimate
+    // requests each and the slower one overwrote the other's rows.
+    private var nearestTask: Task<Void, Never>?
     private var nearestLoadSeq = 0
-    private var nearestLoadsInFlight = 0
+    private var nearestLoadedAt: CLLocation?   // where the current rows were loaded for
+    static let nearestReloadDistanceMeters: CLLocationDistance = 2 * 1852   // 2 nm
 
     private let airportService = AirportService.shared
     private let locationService = LocationService.shared
@@ -111,20 +114,42 @@ class AirportViewModel: ObservableObject {
 
     // MARK: - Nearest Airports
     /// Rows show fresh cached weather at once, else what they showed, else loading; then the misses
-    /// are fetched (RowWeatherLoader). `force` (pull-to-refresh) fetches every row.
+    /// are fetched (RowWeatherLoader). `force` (pull-to-refresh) fetches every row. Cancels a load
+    /// already running; cancelling the caller (the view's .task) cancels this load.
     func loadNearestAirports(force: Bool = false) async {
+        nearestTask?.cancel()
+        let task = Task { await self.runNearestLoad(force: force) }
+        nearestTask = task
+        await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+    }
+
+    /// Whether a location update should reload Nearest: only after a move of 2 nm or more from where
+    /// the rows were loaded (GPS refinements arrive far more often, each used to start a full load).
+    func shouldReloadNearest(for location: CLLocation?) -> Bool {
+        Self.movedEnoughToReload(from: nearestLoadedAt, to: location)
+    }
+
+    nonisolated static func movedEnoughToReload(from loadedAt: CLLocation?, to location: CLLocation?) -> Bool {
+        guard let location else { return false }
+        guard let loadedAt else { return true }
+        return location.distance(from: loadedAt) >= nearestReloadDistanceMeters
+    }
+
+    private func runNearestLoad(force: Bool) async {
         guard let location = locationService.currentLocation else { return }
-        isLoadingNearest = true
-        nearestLoadSeq += 1; nearestLoadsInFlight += 1
+        nearestLoadSeq += 1
         let seq = nearestLoadSeq
-        defer { nearestLoadsInFlight -= 1 }
-        Log.load.info("[rows] nearest load #\(seq, privacy: .public) START force=\(force, privacy: .public) overlapping=\(self.nearestLoadsInFlight - 1, privacy: .public)")
+        isLoadingNearest = true
+        nearestLoadedAt = location
+        Log.load.info("[rows] nearest load #\(seq, privacy: .public) START force=\(force, privacy: .public)")
 
         nearestAirports = airportService.nearest(to: location, count: 15)
         await RowWeatherLoader.load(list: "nearest #\(seq)", airports: nearestAirports, current: nearestRows, force: force) { [weak self] rows in
-            self?.nearestRows = rows
+            // Only the newest load writes, and it merges: rows it hasn't reached keep their value.
+            guard let self, seq == self.nearestLoadSeq else { return }
+            self.nearestRows.merge(rows) { _, new in new }
         }
-        isLoadingNearest = false
+        if seq == nearestLoadSeq { isLoadingNearest = false }
     }
 
     func distance(to airport: Airport) -> String? {

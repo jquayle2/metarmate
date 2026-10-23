@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import CoreLocation
 @testable import MetarMate
 
 // List rows: a stale last-good reading never shows its category as current; loading, no product
@@ -28,6 +29,19 @@ struct RowWeatherTests {
         let row = RowWeather.retrying(last: .metar(try Self.metar()))
         #expect(row.displayMetar(at: Self.obsDate.addingTimeInterval(76 * 60)) == nil)
         #expect(row.reading?.metar != nil)   // still known, for the row's age/dim rendering
+    }
+
+    // MARK: - Nearest reload on a move
+
+    /// Nearest reloads after a 2 nm move, not on every GPS refinement.
+    @Test func nearestReloadsOnlyAfterTwoNauticalMiles() {
+        let kigm = CLLocation(latitude: 35.2595, longitude: -113.9380)
+        let oneNmNorth = CLLocation(latitude: 35.2595 + 1.0 / 60, longitude: -113.9380)
+        let threeNmNorth = CLLocation(latitude: 35.2595 + 3.0 / 60, longitude: -113.9380)
+        #expect(!AirportViewModel.movedEnoughToReload(from: kigm, to: oneNmNorth))
+        #expect(AirportViewModel.movedEnoughToReload(from: kigm, to: threeNmNorth))
+        #expect(AirportViewModel.movedEnoughToReload(from: nil, to: kigm))     // never loaded
+        #expect(!AirportViewModel.movedEnoughToReload(from: kigm, to: nil))    // no fix
     }
 
     @Test func loadingNoProductAndEmptyFailureShowNothing() {

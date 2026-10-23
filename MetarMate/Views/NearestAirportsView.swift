@@ -72,6 +72,7 @@ struct NearestAirportsView: View {
             lastUpdated = Date()
         }
         .onChange(of: locationService.currentLocation) {
+            guard airportVM.shouldReloadNearest(for: locationService.currentLocation) else { return }
             Task {
                 await airportVM.loadNearestAirports()
                 lastUpdated = Date()
