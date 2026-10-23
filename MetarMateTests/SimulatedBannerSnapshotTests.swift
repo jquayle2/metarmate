@@ -1,3 +1,6 @@
+// The harness is compiled only into Debug and TestFlight builds (audit #21), so its tests are too.
+#if DEBUG || TESTFLIGHT
+
 import XCTest
 import SwiftUI
 import SwiftData
@@ -183,3 +186,5 @@ final class SimulatedBannerSnapshotTests: XCTestCase {
         return false
     }
 }
+
+#endif

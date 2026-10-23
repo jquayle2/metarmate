@@ -15,7 +15,9 @@ struct FavoritesView: View {
     @State private var favAdvisories: [String: AdvisoryWeather] = [:]
     @State private var isLoading = false
     @State private var editMode: EditMode = .inactive
+    #if DEBUG || TESTFLIGHT
     @State private var showInjectionHarness = false   // Test Harness (Debug/TestFlight only)
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -79,13 +81,14 @@ struct FavoritesView: View {
                     }
                 }
             }
+            #if DEBUG || TESTFLIGHT
             // Test Harness entry (Debug/TestFlight only): FIVE taps on this chip open the METAR
             // Injection screen. Moved OFF the nav-bar header — the top ~20 pt screen edge is where
             // iOS's system gesture gate wins ("System gesture gate timed out"), which starved the old
             // long-press so the app's recognizer never fired. A 5-tap target inside the content area,
-            // clear of the top edge, competes with no system gesture. The receipt check on
-            // TestHarnessGate.isAvailable is UNCHANGED and remains the actual App Store boundary — this
-            // whole inset is absent in a production build, so it can't be reached or seen there.
+            // clear of the top edge, competes with no system gesture. This whole inset is compiled only
+            // into Debug and TestFlight builds (audit #21); TestHarnessGate.isAvailable is a second,
+            // runtime layer inside those builds.
             .safeAreaInset(edge: .bottom) {
                 if TestHarnessGate.isAvailable {
                     HStack(spacing: 6) {
@@ -107,6 +110,7 @@ struct FavoritesView: View {
             .fullScreenCover(isPresented: $showInjectionHarness) {
                 MetarInjectionHarnessView()
             }
+            #endif
         }
         .task {
             await fetchMetars()

@@ -1,3 +1,6 @@
+// The harness is compiled only into Debug and TestFlight builds (audit #21), so its tests are too.
+#if DEBUG || TESTFLIGHT
+
 import Testing
 @testable import MetarMate
 
@@ -25,3 +28,5 @@ struct TestHarnessGateTests {
         #expect(TestHarnessGate.isTestFlightOrDebug(receiptName: "somethingElse") == false)
     }
 }
+
+#endif

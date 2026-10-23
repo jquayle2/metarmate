@@ -1,3 +1,6 @@
+// Compiled only into Debug and TestFlight builds; the App Store build has none of it (audit #21).
+#if DEBUG || TESTFLIGHT
+
 import Foundation
 import os
 
@@ -95,3 +98,5 @@ enum HarnessAudit {
         logger.info("\(s, privacy: .public)")
     }
 }
+
+#endif

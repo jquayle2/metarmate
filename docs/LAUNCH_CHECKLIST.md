@@ -89,11 +89,12 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 Handoff: `docs/handoffs/A3_RELEASE_handoff.md` (branch `fix/a3-release`, worktree `MetarMate-a3`, off `feat/nearby-taf`). Siri items below were done on `feat/siri-hands-free`.
 
 App Review blockers (required regardless of section 0):
-- [ ] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk)
-- [ ] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]
+- [x] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk). New build configuration **TestFlight** (Release + `TESTFLIGHT`) and shared scheme **MetarMate TestFlight**, which archives with it. App Store archives use scheme **MetarMate** (Release). Built Release binary: 0 harness symbols or strings; TestFlight and Debug still carry it
+- [ ] #21 TestFlight builds say "TestFlight" on a version line (Jeff, Oct 23). There's no About/settings screen yet; placement pending Jeff
+- [x] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]. `HarnessAbsentUITests`: forces the runtime gate open, then the chip is present in Debug/TestFlight and absent in Release (all three run)
 - [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
 - [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
-- [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
+- [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. `27a04d6`. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
 - [ ] #24 Siri waits for entitlements before reading `isProUser`

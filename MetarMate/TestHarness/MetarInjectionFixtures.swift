@@ -1,3 +1,6 @@
+// Compiled only into Debug and TestFlight builds; the App Store build has none of it (audit #21).
+#if DEBUG || TESTFLIGHT
+
 import Foundation
 
 // MARK: - Canned adverse-weather fixtures (A1–A13, T1–T7)
@@ -391,3 +394,5 @@ enum MetarInjectionFixtures {
     // never mistaken for a guaranteed-adverse injection. These are NOT simulated (no banner).
     static let liveSpotCheckICAOs: [String] = ["KJFK", "KORD", "KDEN", "KSEA", "KATL"]
 }
+
+#endif

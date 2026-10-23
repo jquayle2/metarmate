@@ -1,28 +1,29 @@
+// Compiled only into Debug and TestFlight builds; the App Store build has none of it (audit #21).
+#if DEBUG || TESTFLIGHT
+
 import Foundation
 
 // MARK: - Test Harness Gate
 //
-// The runtime boundary that keeps the METAR Injection harness OUT of the App Store while leaving
-// it reachable in Debug builds and TestFlight. Deliberately NOT wrapped in `#if DEBUG`: that would
-// compile the harness out of the TestFlight Release build, and TestFlight is exactly where the
-// pilots who exercise the adverse-weather cases live.
+// Two layers keep the METAR Injection harness out of the App Store:
 //
-// The boundary is the App Store receipt filename:
+// 1. Compile time (the real boundary). Every harness file, this one included, is wrapped in
+//    `#if DEBUG || TESTFLIGHT`. TESTFLIGHT is set only on the TestFlight build configuration, which
+//    the "MetarMate TestFlight" scheme archives with. The App Store archive (scheme "MetarMate",
+//    Release) has no harness code and no entry chip. App Review installs carry a sandbox receipt,
+//    so a runtime check alone could not keep reviewers out (audit #21, 2.2 risk).
+//    MetarMateUITests/HarnessAbsentUITests.swift proves the chip is absent in a Release build.
+//
+// 2. Runtime (belt and braces inside Debug/TestFlight builds). The receipt filename:
 //   • "sandboxReceipt"  → Debug (device + simulator) and TestFlight        → harness ALLOWED
 //   • "receipt"         → App Store production download                     → harness DENIED
 //   • nil (absent)      → no receipt URL at all                             → harness DENIED (fail-closed)
-//
-// IMPORTANT — what this can and cannot prove locally:
-// The receipt filename is set by the INSTALL CHANNEL, not the build configuration. A locally-built
-// Release/Archive still reports "sandboxReceipt" — identical to Debug — because only an actual App
-// Store download stamps a production "receipt". So you cannot make `isAvailable` return false by
-// building Release locally. What IS provable locally: the predicate below is a pure function of the
-// filename (unit-tested: "receipt"→false, "sandboxReceipt"→true, nil→false), and it compiles into
-// the Release build (no #if DEBUG), so the logic ships and can be reasoned about. See
-// MetarMateTests/TestHarnessGateTests.swift and docs/PRE_MERGE_TEST_PLAN.md.
+// The filename is set by the INSTALL CHANNEL, not the build configuration, so a local build
+// always reports "sandboxReceipt". The predicate is a pure function of the filename and is
+// unit-tested in MetarMateTests/TestHarnessGateTests.swift.
 enum TestHarnessGate {
 
-    /// Pure, testable predicate. The ONLY place the allow/deny rule lives.
+    /// Pure, testable predicate. The ONLY place the runtime allow/deny rule lives.
     /// nil → false is the fail-closed guarantee: if the receipt is ever absent, the harness is denied.
     static func isTestFlightOrDebug(receiptName: String?) -> Bool {
         receiptName == "sandboxReceipt"
@@ -33,8 +34,17 @@ enum TestHarnessGate {
         Bundle.main.appStoreReceiptURL?.lastPathComponent
     }
 
+    /// Launch argument UI tests pass to open the runtime layer in the simulator, whose receipt
+    /// filename isn't "sandboxReceipt". Only UI tests can pass launch arguments, and this code
+    /// doesn't exist in the App Store build, so the HarnessAbsentUITests assertion there means
+    /// "compiled out", not "gate closed".
+    static let uiTestForceArgument = "-UITestForceHarnessGate"
+
     /// True only when the harness entry is permitted. Gates BOTH the entry gesture and the screen.
     static var isAvailable: Bool {
-        isTestFlightOrDebug(receiptName: receiptName)
+        ProcessInfo.processInfo.arguments.contains(uiTestForceArgument)
+            || isTestFlightOrDebug(receiptName: receiptName)
     }
 }
+
+#endif

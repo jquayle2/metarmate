@@ -1,3 +1,6 @@
+// Compiled only into Debug and TestFlight builds; the App Store build has none of it (audit #21).
+#if DEBUG || TESTFLIGHT
+
 import SwiftUI
 import os
 
@@ -311,3 +314,5 @@ struct SimulatedRawTextScreen: View {
         }
     }
 }
+
+#endif
