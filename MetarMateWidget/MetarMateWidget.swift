@@ -361,7 +361,7 @@ struct LockScreenCircularView: View {
                 if case .late = age {
                     Image(systemName: "exclamationmark.circle.fill")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.secondary)   // late is neutral: amber is for wind and pressure only
                 }
             }
         } else {
@@ -419,7 +419,7 @@ struct LockScreenRectangularView: View {
                             if case .late(let minutes) = age {
                                 Text("LATE \(minutes)m")
                                     .font(.system(.caption2, design: .rounded, weight: .bold))
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.secondary)
                             } else if let pct = snap.tafAccuracyPct, snap.borrowedTafStation == nil {
                                 // A borrowed TAF's accuracy can't be labeled with its station here.
                                 Text("TAF \(pct)%")
@@ -548,7 +548,7 @@ struct HomeScreenSmallView: View {
                             .font(.system(size: 9, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         Text(ObsTimeFormat.string(snap.observationTime))
@@ -772,7 +772,7 @@ struct HomeScreenMediumView: View {
                                 .font(.system(.caption2, design: .rounded, weight: .semibold))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.secondary)
                         } else {
                             Text(ObsTimeFormat.string(snap.observationTime))
                                 .font(.system(.caption2, design: .monospaced))

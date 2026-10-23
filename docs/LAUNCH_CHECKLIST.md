@@ -175,6 +175,7 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
 - [ ] Post-launch: a non-bundled airport with no NOAA elevation is stored as 0 ft (`AirportService.liveAirport`); left as is for launch (Jeff, Oct 23)
 - [x] Misc, data items: `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, PROB defaults (A2 `c7c34b5`, `246dc2c`); two DA formulas (A2 `1e5a761`)
+- [x] "METAR late" is neutral, not orange, on Alerts rows and every widget family (amber is for wind and pressure only; Jeff, Oct 23)
 - [x] Layout prefs no longer wiped by an unknown `SectionID` or visibility: unknown entries are dropped, the rest of the saved order and visibility kept (verdict-surfaces pass; the verdict card is not a layout section)
 - [ ] Misc, still open: search race, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache
 

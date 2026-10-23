@@ -292,8 +292,8 @@ private struct WatchRow: View {
                     if let c = conditions {
                         Text(freshness(c))
                             .font(.avenir(11.5, .demibold))
-                            .foregroundColor(verdict?.lateMinutes != nil || verdict?.outcome == .noCurrent
-                                             ? Brand.cautionOrange : Brand.slate)
+                            // Late is neutral: amber is for wind and pressure only.
+                            .foregroundColor(verdict?.outcome == .noCurrent ? Brand.cautionOrange : Brand.slate)
                             .padding(.top, 1)
                     }
                 }
