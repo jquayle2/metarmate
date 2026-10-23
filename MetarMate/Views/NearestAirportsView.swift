@@ -90,9 +90,9 @@ struct NearestAirportsView: View {
                     } label: {
                         AirportRowView(
                             airport: airport,
-                            metar: airportVM.nearestRows[airport.icao]?.displayMetar(at: Date()),
                             distance: airportVM.distance(to: airport),
-                            advisory: airportVM.nearestRows[airport.icao]?.displayAdvisory
+                            state: airportVM.nearestRows[airport.icao] ?? .loading,
+                            onRetry: { Task { await airportVM.loadNearestAirports() } }
                         )
                     }
                     .buttonStyle(.plain)

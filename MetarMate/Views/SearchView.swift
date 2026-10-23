@@ -35,9 +35,9 @@ struct SearchView: View {
                                             .onAppear { airportVM.recordSearch(airport) }
                                         ) {
                                             AirportRowView(airport: airport,
-                                                          metar: historyRows[entry.icao]?.displayMetar(at: Date()),
                                                           distance: nil,
-                                                          advisory: historyRows[entry.icao]?.displayAdvisory)
+                                                          state: historyRows[entry.icao] ?? .loading,
+                                                          onRetry: { Task { await loadHistoryMetars() } })
                                         }
                                         .listRowBackground(Color.clear)
                                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
@@ -98,9 +98,9 @@ struct SearchView: View {
                             .onAppear { airportVM.recordSearch(airport) }
                         ) {
                             AirportRowView(airport: airport,
-                                          metar: airportVM.searchRows[airport.icao]?.displayMetar(at: Date()),
                                           distance: nil,
-                                          advisory: airportVM.searchRows[airport.icao]?.displayAdvisory)
+                                          state: airportVM.searchRows[airport.icao] ?? .loading,
+                                          onRetry: { Task { await airportVM.retrySearchWeather() } })
                         }
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))

@@ -30,18 +30,6 @@ enum RowWeather {
         }
     }
 
-    var isLoaded: Bool { if case .loaded = self { return true }; return false }
-    var isFailed: Bool { if case .failed = self { return true }; return false }
-
-    /// The METAR today's AirportRowView may show: only while it's still current (not over the
-    /// 75-min cutoff, D#4), so a stale last-good reading never shows its category color as current.
-    func displayMetar(at now: Date) -> Metar? {
-        guard let metar = reading?.metar else { return nil }
-        if case .noCurrent = WidgetWeatherSnapshot.reportAge(observationTime: metar.observationTime, at: now) { return nil }
-        return metar
-    }
-
-    var displayAdvisory: AdvisoryWeather? { reading?.advisory }
 }
 
 // MARK: - Loader
@@ -95,7 +83,13 @@ final class RowWeatherLoader {
             } else if !force, let adv = cache.freshAdvisory(for: a.icao) {
                 rows[a.icao] = .loaded(.advisory(adv))
             } else {
-                rows[a.icao] = current[a.icao].flatMap { $0.reading != nil ? $0 : nil } ?? .loading
+                // Keep what the row shows while it refreshes; a failed row (its retry button) shows
+                // "Retrying…" at once.
+                switch current[a.icao] {
+                case .failed(let last): rows[a.icao] = .retrying(last: last)
+                case let shown? where shown.reading != nil: rows[a.icao] = shown
+                default: rows[a.icao] = .loading
+                }
                 toFetch.append(a)
             }
         }

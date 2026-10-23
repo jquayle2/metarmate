@@ -106,6 +106,11 @@ class AirportViewModel: ObservableObject {
         }
     }
 
+    /// The failed rows' retry button: fetch the search results' weather again (fresh rows are skipped).
+    func retrySearchWeather() async {
+        await fetchSearchMetars()
+    }
+
     private func fetchSearchMetars() async {
         await RowWeatherLoader.load(list: "search", airports: searchResults, current: searchRows, force: false) { [weak self] rows in
             self?.searchRows = rows

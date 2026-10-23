@@ -3,32 +3,68 @@ import Foundation
 import CoreLocation
 @testable import MetarMate
 
-// List rows: a stale last-good reading never shows its category as current; loading, no product
-// and a failure with nothing cached show no reading.
+// List rows: what AirportRowView shows for each RowWeather state. A reading reads as current
+// (category rail) only when loaded and within 75 min of observation; stale, retrying and failed rows
+// never show a category color; loading is "—", no METAR is "No current METAR".
 @MainActor
 struct RowWeatherTests {
 
     static let obs = 1_792_770_660   // Oct 23, 2026 15:51Z
     static var obsDate: Date { Date(timeIntervalSince1970: TimeInterval(obs)) }
-    static func metar() throws -> Metar { try FetchOutcomeTests.metar("KVGT", obsTime: obs) }
+    static func metar() throws -> Metar { try FetchOutcomeTests.metar("KVGT", obsTime: obs) }   // VFR
+    static let kvgt = Airport(icao: "KVGT", iata: "VGT", name: "North Las Vegas", latitude: 36.2, longitude: -115.2, elevation: 2205)
 
-    @Test func loadedMetarShowsWhileCurrent() throws {
-        let row = RowWeather.loaded(.metar(try Self.metar()))
-        #expect(row.displayMetar(at: Self.obsDate.addingTimeInterval(30 * 60)) != nil)
+    static func display(_ state: RowWeather, minutesAfterObs: Double) -> AirportRowView.StateDisplay {
+        AirportRowView.StateDisplay(state, airport: kvgt, at: obsDate.addingTimeInterval(minutesAfterObs * 60))
     }
 
-    /// Last good reading kept through a failure: shown while it's within 75 min of observation…
-    @Test func failedKeepsLastGoodReadingWhileCurrent() throws {
-        let row = RowWeather.failed(last: .metar(try Self.metar()))
-        #expect(row.displayMetar(at: Self.obsDate.addingTimeInterval(75 * 60))?.stationId == "KVGT")
+    @Test func loadedCurrentMetarShowsItsCategory() throws {
+        let d = Self.display(.loaded(.metar(try Self.metar())), minutesAfterObs: 30)
+        #expect(d.isCurrent)
+        #expect(d.railColor == Brand.vfrGreen)
+        #expect(d.ageSuffix.isEmpty)
     }
 
-    /// …and withheld once it's over 75 min old, so its flight-category color can't read as current.
-    /// Age is from the observation time, not when it was fetched.
-    @Test func staleLastReadingIsNotShownAsCurrent() throws {
-        let row = RowWeather.retrying(last: .metar(try Self.metar()))
-        #expect(row.displayMetar(at: Self.obsDate.addingTimeInterval(76 * 60)) == nil)
-        #expect(row.reading?.metar != nil)   // still known, for the row's age/dim rendering
+    /// Age is from the observation time, not when it was fetched: at 76 min a loaded METAR is stale
+    /// — dimmed, neutral rail, its age shown.
+    @Test func staleLoadedMetarIsNeutralWithAge() throws {
+        let d = Self.display(.loaded(.metar(try Self.metar())), minutesAfterObs: 76)
+        #expect(!d.isCurrent)
+        #expect(d.railColor == Brand.slate)
+        #expect(d.ageSuffix == " · 1 h 16 min old")
+        #expect(d.metar != nil)
+    }
+
+    @Test func loadedMetarAt75MinutesIsStillCurrent() throws {
+        #expect(Self.display(.loaded(.metar(try Self.metar())), minutesAfterObs: 75).isCurrent)
+    }
+
+    /// A reading kept through a failure is never shown as current, even when it's recent.
+    @Test func failedRowKeepsLastReadingDimmedWithRetry() throws {
+        let d = Self.display(.failed(last: .metar(try Self.metar())), minutesAfterObs: 20)
+        #expect(!d.isCurrent)
+        #expect(d.railColor == Brand.slate)
+        #expect(d.showRetry)
+        #expect(d.ageSuffix == " · 20 min old")
+    }
+
+    @Test func retryingRowKeepsLastReadingDimmedWithoutRetryButton() throws {
+        let d = Self.display(.retrying(last: .metar(try Self.metar())), minutesAfterObs: 20)
+        #expect(!d.isCurrent)
+        #expect(d.note == "Retrying…")
+        #expect(!d.showRetry)
+    }
+
+    @Test func statesWithoutAReadingAreNeutralText() {
+        let loading = Self.display(.loading, minutesAfterObs: 0)
+        #expect(loading.note == "—")
+        #expect(loading.railColor == Brand.slate)
+        #expect(Self.display(.noProduct, minutesAfterObs: 0).note == "No current METAR")
+        #expect(Self.display(.retrying(last: nil), minutesAfterObs: 0).note == "Retrying…")
+        let failed = Self.display(.failed(last: nil), minutesAfterObs: 0)
+        #expect(failed.note == "Couldn't reach weather service")
+        #expect(failed.showRetry)
+        #expect(failed.railColor == Brand.slate)
     }
 
     // MARK: - Nearest reload on a move
@@ -42,13 +78,5 @@ struct RowWeatherTests {
         #expect(AirportViewModel.movedEnoughToReload(from: kigm, to: threeNmNorth))
         #expect(AirportViewModel.movedEnoughToReload(from: nil, to: kigm))     // never loaded
         #expect(!AirportViewModel.movedEnoughToReload(from: kigm, to: nil))    // no fix
-    }
-
-    @Test func loadingNoProductAndEmptyFailureShowNothing() {
-        let now = Self.obsDate
-        #expect(RowWeather.loading.displayMetar(at: now) == nil)
-        #expect(RowWeather.noProduct.displayMetar(at: now) == nil)
-        #expect(RowWeather.failed(last: nil).displayMetar(at: now) == nil)
-        #expect(RowWeather.loading.reading == nil)
     }
 }
