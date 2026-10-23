@@ -21,6 +21,10 @@ actor WeatherService {
     private var metarCache: [String: (metar: Metar, fetchedAt: Date)] = [:]
     private let metarCacheTTL: TimeInterval = 300   // 5 minutes
 
+    // Stations that gave a confirmed "no product" in the last 10 min (never a failure). Lists skip
+    // asking them again; the detail screen always asks, and records what it learns.
+    private var noProductMemory = NoProductMemory()
+
     private func cachedMetar(for icao: String) -> Metar? {
         guard let entry = metarCache[icao] else { return nil }
         let age = Date().timeIntervalSince(entry.fetchedAt)
@@ -41,6 +45,7 @@ actor WeatherService {
     /// gets a genuine network fetch when they deliberately ask for fresh data.
     func clearMetarCache() {
         metarCache.removeAll()
+        noProductMemory.removeAll()
         Log.net.info("[cache] cleared (manual refresh)")
     }
 
@@ -64,32 +69,6 @@ actor WeatherService {
         guard u.count == 3, !u.hasPrefix("K"),
               u.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
         return "K" + u
-    }
-
-    /// True for transient connection-level failures (timeout, connection lost, network
-    /// dropped) that a quick retry on a fresh connection is likely to fix. Deliberately
-    /// does NOT include a clean "no data" response — a station that genuinely reports
-    /// nothing should fall through to advisory promptly, not retry-loop.
-    private static func isTransient(_ error: Error) -> Bool {
-        // Retryable HTTP statuses: 5xx server errors and 429 rate-limit. A 4xx (esp. 404
-        // "no such product for this station") is NOT transient — it should fall to advisory
-        // promptly rather than retry-loop.
-        if case WeatherError.httpStatus(let code) = error {
-            return code == 429 || (500...599).contains(code)
-        }
-        let ns = error as NSError
-        guard ns.domain == NSURLErrorDomain else { return false }
-        switch ns.code {
-        case NSURLErrorTimedOut,
-             NSURLErrorNetworkConnectionLost,
-             NSURLErrorCannotConnectToHost,
-             NSURLErrorNotConnectedToInternet,
-             NSURLErrorDNSLookupFailed,
-             NSURLErrorResourceUnavailable:
-            return true
-        default:
-            return false
-        }
     }
 
     // MARK: - METAR
@@ -146,7 +125,7 @@ actor WeatherService {
             throw err
         } catch {
             let ms1 = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
-            guard Self.isTransient(error) else {
+            guard FetchErrorKind(error) == .transient else {
                 Log.net.error("[net] METAR history \(icao, privacy: .public) FAILED after \(String(format: "%.0f", ms1), privacy: .public) ms (non-transient, no retry) - \(String(describing: error), privacy: .public)")
                 throw error
             }
@@ -345,6 +324,132 @@ actor WeatherService {
         try validateResponse(response)
         let raws = try JSONDecoder().decode([RawMetar].self, from: data)
         return raws.compactMap { try? MetarParser.parse(raw: $0) }
+    }
+
+    // MARK: - Outcome API
+    // Each call is one request (no retries inside: callers retry with RetryPolicy so they can show
+    // "Retrying…"), classified as loaded / no product / failed. They throw only CancellationError.
+
+    /// One METAR request for several stations, with an outcome per station. Fresh cached METARs and
+    /// remembered no-product stations are answered without asking NOAA.
+    func metarOutcomes(for icaos: [String], file: String = #fileID, function: String = #function) async throws -> [String: FetchOutcome<Metar>] {
+        var result: [String: FetchOutcome<Metar>] = [:]
+        var needed: [String] = []
+        let now = Date()
+        for icao in icaos {
+            if let cached = cachedMetar(for: icao) {
+                result[icao] = .loaded(cached)
+            } else if noProductMemory.contains(icao, at: now) {
+                result[icao] = .noProduct
+            } else {
+                needed.append(icao)
+            }
+        }
+        guard !needed.isEmpty else { return result }
+        let ids = needed.joined(separator: ",")
+        switch try await outcome("METAR-batch", ids: ids, path: "metar", params: ["ids": ids, "format": "json", "hours": "2"],
+                                 caller: FetchLog.caller(file, function)) {
+        case .noProduct:
+            for icao in needed { result[icao] = .noProduct; noProductMemory.remember(icao, at: now) }
+        case .failed(let failure):
+            for icao in needed { result[icao] = .failed(failure) }
+        case .loaded(let data):
+            guard let raws = try? JSONDecoder().decode([RawMetar].self, from: data) else {
+                let failure = FetchFailure(WeatherError.parseError("METAR batch JSON"))
+                for icao in needed { result[icao] = .failed(failure) }
+                return result
+            }
+            var parsed: [Metar] = []
+            var unparseable: Set<String> = []
+            for raw in raws {
+                if let metar = try? MetarParser.parse(raw: raw) { parsed.append(metar) } else { unparseable.insert(raw.icaoId ?? "?") }
+            }
+            let outcomes = MetarBatch.outcomes(requested: needed, parsed: parsed, unparseable: unparseable)
+            for (icao, outcome) in outcomes {
+                result[icao] = outcome
+                switch outcome {
+                case .loaded(let metar): store(metar, for: icao); noProductMemory.forget(icao)
+                case .noProduct: noProductMemory.remember(icao, at: now)
+                case .failed: break
+                }
+            }
+            let missing = needed.filter { outcomes[$0]?.isNoProduct == true }
+            if !missing.isEmpty || !unparseable.isEmpty {
+                Log.net.info("[net] batch METAR noProduct=[\(missing.joined(separator: ","), privacy: .public)] parseFailed=[\(unparseable.sorted().joined(separator: ","), privacy: .public)]")
+            }
+        }
+        return result
+    }
+
+    /// One station's METAR history (newest first). Empty or 204 is no product.
+    func metarHistoryOutcome(for icao: String, hours: Int = 6, file: String = #fileID, function: String = #function) async throws -> FetchOutcome<[Metar]> {
+        let fetched = try await outcome("METAR-history", ids: icao, path: "metar", params: ["ids": icao, "format": "json", "hours": "\(hours)"],
+                                        caller: FetchLog.caller(file, function))
+        let now = Date()
+        switch fetched {
+        case .noProduct:
+            noProductMemory.remember(icao, at: now)
+            return .noProduct
+        case .failed(let failure):
+            return .failed(failure)
+        case .loaded(let data):
+            guard let raws = try? JSONDecoder().decode([RawMetar].self, from: data) else {
+                return .failed(FetchFailure(WeatherError.parseError("METAR history JSON")))
+            }
+            guard !raws.isEmpty else {
+                noProductMemory.remember(icao, at: now)
+                return .noProduct
+            }
+            let parsed = raws.compactMap { try? MetarParser.parse(raw: $0) }
+            guard let newest = parsed.first else {
+                // NOAA has reports for it that we can't read: that's not "no product".
+                return .failed(FetchFailure(WeatherError.parseError("no parseable METAR for \(icao)")))
+            }
+            if parsed.count < raws.count {
+                Log.net.warning("[net] METAR history \(icao, privacy: .public) \(raws.count - parsed.count, privacy: .public) of \(raws.count, privacy: .public) obs failed to parse (dropped)")
+            }
+            store(newest, for: icao)
+            noProductMemory.forget(icao)
+            return .loaded(parsed)
+        }
+    }
+
+    /// The field's own TAF. 204 or an empty list is no product (the field has no TAF).
+    func tafOutcome(for icao: String, file: String = #fileID, function: String = #function) async throws -> FetchOutcome<Taf> {
+        switch try await outcome("TAF", ids: icao, path: "taf", params: ["ids": icao, "format": "json"],
+                                 caller: FetchLog.caller(file, function)) {
+        case .noProduct: return .noProduct
+        case .failed(let failure): return .failed(failure)
+        case .loaded(let data):
+            do {
+                guard let first = try JSONDecoder().decode([RawTaf].self, from: data).first else { return .noProduct }
+                return .loaded(try TafParser.parse(raw: first))
+            } catch {
+                return .failed(FetchFailure(error))
+            }
+        }
+    }
+
+    /// One GET, classified: 200 → loaded(body), 204 → no product, anything else → failed (with
+    /// Retry-After when sent). Throws only CancellationError.
+    private func outcome(_ kind: String, ids: String, path: String, params: [String: String], caller: String) async throws -> FetchOutcome<Data> {
+        do {
+            let url = try buildURL(path: path, params: params)
+            let (data, response) = try await FetchLog.request(kind, ids: ids, caller: caller) {
+                try await session.data(from: url)
+            }
+            guard let http = response as? HTTPURLResponse else { return .failed(FetchFailure(WeatherError.badResponse)) }
+            switch http.statusCode {
+            case 200: return .loaded(data)
+            case 204: return .noProduct
+            default:
+                let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+                return .failed(FetchFailure(WeatherError.httpStatus(http.statusCode), retryAfter: retryAfter))
+            }
+        } catch {
+            if FetchErrorKind(error) == .cancelled { throw CancellationError() }
+            return .failed(FetchFailure(error))
+        }
     }
 
     // MARK: - Helpers

@@ -83,6 +83,15 @@ enum NearbyTaf {
         }
     }
 
+    /// The same, from the shared fetch outcome: only a confirmed no-product may borrow.
+    static func outcome(of fetched: FetchOutcome<Taf>) -> OwnTaf {
+        switch fetched {
+        case .loaded(let taf): return .found(taf)
+        case .noProduct:       return .none
+        case .failed:          return .failed
+        }
+    }
+
     /// Borrow when the field has no TAF, or its TAF isn't current (expired). A TAF starting within
     /// 2 hours counts as current (D#13 rulings, Oct 21) and is never replaced; a failed request
     /// never borrows.

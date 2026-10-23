@@ -27,6 +27,28 @@ actor OpenMeteoService {
         return buildAdvisory(airport: airport, response: decoded)
     }
 
+    /// One advisory request, classified. Open-Meteo always has a model value for a point, so there
+    /// is no "no product": it's loaded or failed (429 / 5xx transient, with Retry-After when sent).
+    /// Throws only CancellationError.
+    func advisoryOutcome(for airport: Airport, file: String = #fileID, function: String = #function) async throws -> FetchOutcome<AdvisoryWeather> {
+        guard let url = buildURL(airport: airport) else { return .failed(FetchFailure(OpenMeteoError.badURL)) }
+        do {
+            let (data, response) = try await FetchLog.request("ADVISORY", ids: airport.icao, caller: FetchLog.caller(file, function)) {
+                try await session.data(from: url)
+            }
+            guard let http = response as? HTTPURLResponse else { return .failed(FetchFailure(OpenMeteoError.badResponse)) }
+            guard http.statusCode == 200 else {
+                let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+                return .failed(FetchFailure(WeatherError.httpStatus(http.statusCode), retryAfter: retryAfter))
+            }
+            let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+            return .loaded(buildAdvisory(airport: airport, response: decoded))
+        } catch {
+            if FetchErrorKind(error) == .cancelled { throw CancellationError() }
+            return .failed(FetchFailure(error))
+        }
+    }
+
     // MARK: - URL builder
 
     private func buildURL(airport: Airport) -> URL? {

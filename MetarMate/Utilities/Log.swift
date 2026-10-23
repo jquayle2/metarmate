@@ -112,31 +112,27 @@ nonisolated enum FetchLog {
             let body = String(decoding: data.prefix(8), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
             return body == "[]" ? "noProduct(empty)" : "ok"
         case 204: return "noProduct(204)"
-        case 429, 500...599: return "transient(http \(status))"
-        default: return "failed(http \(status))"
+        default: return FetchErrorKind.isTransient(status: status) ? "transient(http \(status))" : "failed(http \(status))"
         }
     }
 
-    /// The outcome words for a thrown error (WeatherService/OpenMeteo errors and URLErrors).
+    /// The outcome words for a thrown error: FetchErrorKind's class, with the code that decided it.
     static func classify(_ error: Error) -> String {
-        if error is CancellationError { return "cancelled" }
-        if case WeatherError.noContent = error { return "noProduct(204)" }
-        if case WeatherError.noData = error { return "noProduct(empty)" }
-        if case WeatherError.httpStatus(let code) = error {
-            return code == 429 || (500...599).contains(code) ? "transient(http \(code))" : "failed(http \(code))"
+        let underlying = (error as? FetchFailure)?.underlying ?? error
+        let detail: String = {
+            if case WeatherError.noContent = underlying { return "204" }
+            if case WeatherError.noData = underlying { return "empty" }
+            if case WeatherError.httpStatus(let code) = underlying { return "http \(code)" }
+            let ns = underlying as NSError
+            if ns.domain == NSURLErrorDomain { return "urlerr \(ns.code)" }
+            return String(describing: underlying)
+        }()
+        switch FetchErrorKind(error) {
+        case .cancelled: return "cancelled"
+        case .noProduct: return "noProduct(\(detail))"
+        case .transient: return "transient(\(detail))"
+        case .failed:    return "failed(\(detail))"
         }
-        let ns = error as NSError
-        if ns.domain == NSURLErrorDomain {
-            switch ns.code {
-            case NSURLErrorCancelled: return "cancelled"
-            case NSURLErrorTimedOut, NSURLErrorNetworkConnectionLost, NSURLErrorCannotConnectToHost,
-                 NSURLErrorNotConnectedToInternet, NSURLErrorDNSLookupFailed, NSURLErrorResourceUnavailable,
-                 NSURLErrorCannotFindHost, NSURLErrorSecureConnectionFailed:
-                return "transient(urlerr \(ns.code))"
-            default: return "failed(urlerr \(ns.code))"
-            }
-        }
-        return "failed(\(String(describing: error)))"
     }
 
     /// The outcome words for a Result (e.g. the field's own TAF request).
