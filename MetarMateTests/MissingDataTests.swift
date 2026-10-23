@@ -64,7 +64,10 @@ struct MissingDataTests {
         let notes = MetarPilotNotes.build(metar: m, history: [m])
         #expect(!notes.contains { $0.text.contains("spread") })
         #expect(!notes.contains { $0.text.contains("Near-freezing") })
-        #expect(!notes.contains { $0.text.contains("Altimeter") })
+        #expect(!notes.contains { $0.text.contains("inHg") })   // no low-pressure note off 29.92
+        // D#10: the missing fields get the symmetric "not reported" note instead.
+        #expect(notes.contains { $0.text == "Altimeter not reported — no altimeter group in this observation" })
+        #expect(notes.contains { $0.text == "Temperature and dewpoint not reported — no density altitude or fog check" })
     }
 
     /// The app-written widget snapshot carries nil, not 0 °C / 29.92.
@@ -131,7 +134,8 @@ struct MissingDataTests {
         #expect(m.ceiling == .notReported)
         #expect(m.ceilingFeet == nil)
         let notes = MetarPilotNotes.build(metar: m, history: [m])
-        #expect(!notes.contains { $0.text.contains("Ceiling") })
+        #expect(!notes.contains { $0.text.contains("0 ft") || $0.text.contains("LIFR") })
+        #expect(notes.contains { $0.text == "Ceiling not reported — a cloud layer has no base" })
         let earlier = try Self.metar(Self.full.replacingOccurrences(of: #""clouds":[]"#, with: #""clouds":[{"cover":"BKN","base":4000}]"#),
                                      raw: "METAR KTST 231451Z AUTO 20008KT 10SM BKN040 19/13 A2996", obsTime: Self.obs - 3600)
         #expect(ObservedTrend.derive(from: [m, earlier]).ceiling == .unknown)
@@ -318,5 +322,26 @@ struct MissingDataTests {
         let json = #"{"icaoId":"KTST","issueTime":"2026-10-23T11:20:00.000Z","validTimeFrom":1792756800,"validTimeTo":1792843200,"rawTAF":"synthetic","fcsts":[{"timeFrom":1792756800,"timeTo":1792843200,"wdir":200,"wspd":8,"visib":"6+","clouds":[{"cover":"BKN","base":3000}]}]}"#
         let taf = try TafParser.parse(raw: JSONDecoder().decode(RawTaf.self, from: Data(json.utf8)))
         #expect(taf.forecasts.first?.flightCategory == .mvfr)
+    }
+
+    // MARK: - D#10: symmetric "not reported" notes
+
+    @Test func missingFieldsGetSymmetricNotes() throws {
+        let m = try Self.metar(#""temp":19,"dewp":13,"altim":1014.6,"wspd":25"#,
+                               raw: "METAR KTST 231551Z AUTO ///25KT 19/13 A2996")
+        let texts = MetarPilotNotes.build(metar: m, history: [m]).map(\.text)
+        #expect(texts.contains("Wind direction not reported — crosswind can't be computed"))
+        #expect(texts.contains("Visibility not reported — no visibility group in this observation"))
+        #expect(texts.contains("Ceiling not reported — no sky condition group in this observation"))
+        let missing = MetarPilotNotes.build(metar: m, history: [m]).filter { $0.text.contains("not reported") }
+        #expect(Set(missing.map(\.severity)) == [.caution])   // same treatment for every field
+    }
+
+    // MARK: - D#11 (F17): hazards in the history line
+
+    @Test func hazardsListed() {
+        #expect(WeatherDecoder.hazards(["+TSRA", "BR"]) == ["Heavy Thunderstorm Rain"])
+        #expect(WeatherDecoder.hazards(["+FC"]) == ["Tornado/Waterspout"])
+        #expect(WeatherDecoder.hazards(["SQ", "GR", "-FZRA", "FZFG", "RA"]) == ["Squall", "Hail", "Light Freezing Rain"])
     }
 }

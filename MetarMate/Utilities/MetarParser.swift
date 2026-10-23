@@ -295,6 +295,17 @@ struct WeatherDecoder {
         return parts.joined(separator: " ")
     }
 
+    /// D#11 (F17): the hazardous present weather that must show wherever an observation is
+    /// summarized, decoded: thunderstorms (incl. VCTS), squalls, funnel cloud / tornado, hail, and
+    /// freezing precipitation. Freezing fog is not precipitation and isn't listed.
+    static func hazards(_ codes: [String]) -> [String] {
+        codes.filter { code in
+            let c = code.uppercased()
+            return c.contains("TS") || c.contains("SQ") || c.contains("FC") || c.contains("GR")
+                || (c.contains("FZ") && !c.contains("FZFG"))
+        }.map(decode)
+    }
+
     static func decodeAll(_ codes: [String]) -> String {
         codes.map { decode($0) }.joined(separator: ", ")
     }

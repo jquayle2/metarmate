@@ -102,8 +102,25 @@ enum MetarPilotNotes {
         // Missing wind group — unknown, not calm. Surface it so the reader doesn't mistake an
         // unreported wind for a genuine 00000KT. (All wind-derived notes below stay silent because
         // speed/gust are 0 when isReported is false.)
+        // D#10: every missing safety-relevant field gets the same neutral "not reported" note.
         if !wind.isReported {
             notes.append(.init(icon: "wind", text: "Wind not reported — no wind group in this observation", severity: .caution))
+        } else if wind.direction == nil && !wind.isVariable && wind.speed > 0 {
+            notes.append(.init(icon: "wind", text: "Wind direction not reported — crosswind can't be computed", severity: .caution))
+        }
+        if !metar.visibility.isKnown {
+            notes.append(.init(icon: "eye", text: "Visibility not reported — no visibility group in this observation", severity: .caution))
+        }
+        if metar.ceiling == .notReported {
+            let what = metar.skyReported ? "a cloud layer has no base" : "no sky condition group in this observation"
+            notes.append(.init(icon: "cloud", text: "Ceiling not reported — \(what)", severity: .caution))
+        }
+        if metar.temperature == nil || metar.dewpoint == nil {
+            let field = metar.temperature == nil ? (metar.dewpoint == nil ? "Temperature and dewpoint" : "Temperature") : "Dewpoint"
+            notes.append(.init(icon: "thermometer", text: "\(field) not reported — no density altitude or fog check", severity: .caution))
+        }
+        if metar.altimeter == nil {
+            notes.append(.init(icon: "gauge", text: "Altimeter not reported — no altimeter group in this observation", severity: .caution))
         }
 
         // Windshear in remarks

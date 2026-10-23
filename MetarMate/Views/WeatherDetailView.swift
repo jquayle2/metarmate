@@ -1744,13 +1744,16 @@ struct WeatherDetailView: View {
         parts.append("Vis \(visibilityText(metar.visibility))")
         parts.append(tafCompactWind(metar.wind))
         parts.append(metarAltimeterCode(metar.altimeter))
+        parts += WeatherDecoder.hazards(metar.weatherPhenomena)   // D#11: TS/SQ/FC/GR/FZ never hidden
         return parts.joined(separator: " · ")
     }
 
     // Compact line for older observations: wind · altimeter only, so a pressure drop is
-    // traceable (A2978 → A2985 → A2992) without repeating ceiling/vis every row.
+    // traceable (A2978 → A2985 → A2992) without repeating ceiling/vis every row — plus any
+    // hazardous present weather (D#11).
     private func historyConditionLineCompact(_ metar: Metar) -> String {
-        "\(tafCompactWind(metar.wind)) · \(metarAltimeterCode(metar.altimeter))"
+        ([tafCompactWind(metar.wind), metarAltimeterCode(metar.altimeter)]
+            + WeatherDecoder.hazards(metar.weatherPhenomena)).joined(separator: " · ")
     }
 
     // METAR-style altimeter group, e.g. 29.78 inHg -> "A2978".
