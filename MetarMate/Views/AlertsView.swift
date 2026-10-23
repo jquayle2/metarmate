@@ -259,7 +259,7 @@ private struct WatchRow: View {
                         if isNoCurrent {
                             Text("No current METAR")
                                 .font(.avenir(12.5, .bold))
-                                .foregroundColor(Brand.cautionOrange)
+                                .foregroundColor(Brand.slate)   // neutral: amber is for wind and pressure only
                         } else if let c = conditions {
                             conditionsSummary(c)
                         } else if isAdvisoryOnly {
@@ -292,8 +292,8 @@ private struct WatchRow: View {
                     if let c = conditions {
                         Text(freshness(c))
                             .font(.avenir(11.5, .demibold))
-                            // Late is neutral: amber is for wind and pressure only.
-                            .foregroundColor(verdict?.outcome == .noCurrent ? Brand.cautionOrange : Brand.slate)
+                            // Late and no current METAR are neutral: amber is for wind and pressure only.
+                            .foregroundColor(Brand.slate)
                             .padding(.top, 1)
                     }
                 }

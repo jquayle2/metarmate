@@ -175,7 +175,7 @@ Handoff: `docs/handoffs/NEARBY_TAF_handoff.md` (branch `feat/nearby-taf`).
 - [ ] Nearby-TAF bbox near the 180° meridian is clamped, not wrapped (western Aleutians search a narrower box)
 - [ ] Pilot Notes: consolidate repeated notes (e.g. one "Gusts 15–28 kt" line instead of five); military TAFs produce 15+ notes
 - [x] Misc, data items: `seedSimulated` empty trap, `M1/4SM`, ceiling `.first` vs `.min()`, PROB defaults (A2 `c7c34b5`, `246dc2c`); two DA formulas (A2 `1e5a761`)
-- [x] "METAR late" is neutral, not orange, on Alerts rows and every widget family (amber is for wind and pressure only; Jeff, Oct 23)
+- [x] "METAR late" and "No current METAR" are neutral, not orange, on Alerts rows and every widget family (amber is for wind and pressure only; "~Advisory" and borrowed-TAF lines keep the D#14 advisory orange; Jeff, Oct 23)
 - [x] Layout prefs no longer wiped by an unknown `SectionID` or visibility: unknown entries are dropped, the rest of the saved order and visibility kept (verdict-surfaces pass; the verdict card is not a layout section)
 - [ ] Misc, still open: search race, Open-Meteo timeouts/cancellation, alert `force` vs METAR cache
 
