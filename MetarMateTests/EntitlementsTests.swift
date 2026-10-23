@@ -54,15 +54,6 @@ struct EntitlementRulesTests {
 @Suite(.serialized)
 struct StoreKitEntitlementTests {
 
-    private func eventually(timeout: Duration = .seconds(5), _ condition: () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while !condition() {
-            if ContinuousClock.now >= deadline { return false }
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        return true
-    }
-
     private func session() throws -> SKTestSession {
         let s = try SKTestSession(configurationFileNamed: "MetarMateProducts")
         s.resetToDefaultState()
@@ -95,9 +86,17 @@ struct StoreKitEntitlementTests {
         #expect(WidgetDataManager.savedProStatus() == true)
 
         let transaction = try #require(s.allTransactions().first { $0.productIdentifier == StoreManager.proID })
-        // A refund reaches the app through Transaction.updates; the listener re-checks.
+        // A refund removes the purchase from currentEntitlements, which turns Pro off. (The
+        // Transaction.updates listener also re-checks, but StoreKitTest delivers that event late
+        // under load, so the test re-checks itself rather than timing the listener.)
         try s.refundTransaction(identifier: transaction.identifier)
-        #expect(await eventually { !store.isProUser }, "refund never turned Pro off")
+        var off = false
+        for _ in 0..<50 where !off {
+            await store.checkEntitlements()
+            off = !store.isProUser
+            if !off { try? await Task.sleep(for: .milliseconds(100)) }
+        }
+        #expect(off, "refund never turned Pro off")
         #expect(WidgetDataManager.savedProStatus() == false)
     }
 

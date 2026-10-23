@@ -23,8 +23,12 @@ struct AlertsView: View {
     @Query(sort: \MinimumsProfile.name) private var profiles: [MinimumsProfile]
     @AppStorage("activeMinimumsProfileID") private var activeProfileID: String = ""
     @StateObject private var vm = AlertsViewModel()
+    @ObservedObject private var store = StoreManager.shared
     @State private var showAddSheet = false
     @State private var showProfiles = false
+    @State private var showProSheet = false
+
+    private var canCustomize: Bool { ProGate.allows(.customProfiles, isPro: store.isProForUI) }
 
     private var activeProfile: MinimumsProfile? {
         profiles.first { $0.activeToken == activeProfileID }
@@ -39,6 +43,16 @@ struct AlertsView: View {
                 // Header: profile switcher sits as a fixed band at the top; rows scroll under it
                 // (a top safeAreaInset was colliding with the list/title).
                 profileSwitcher
+                if let active = activeProfile, !active.isBuiltIn, !canCustomize,
+                   let starter = ProfileAccess.fallbackStarter(profiles) {
+                    Text(ProfileAccess.lapsedNotice(starterName: starter.name))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("lapsedProfilesNotice")
+                }
                 Group {
                     if watches.isEmpty {
                         emptyState
@@ -88,6 +102,9 @@ struct AlertsView: View {
             }) {
                 ProfilesListView()
             }
+            .sheet(isPresented: $showProSheet) {
+                ProUpgradeView(mode: .pro)
+            }
         }
         .task(id: watches.map(\.icao)) {
             MinimumsProfile.backfillBuiltInKeys(in: context)   // assign stable starter keys (once)
@@ -111,7 +128,12 @@ struct AlertsView: View {
         Menu {
             ForEach(profiles) { profile in
                 Button {
-                    ActiveMinimumsProfile.set(profile)   // writes the active-profile pointer (stable token)
+                    // Starters are free; choosing a custom profile is Pro (D#19–20).
+                    if profile.isBuiltIn || canCustomize {
+                        ActiveMinimumsProfile.set(profile)   // writes the active-profile pointer (stable token)
+                    } else {
+                        showProSheet = true
+                    }
                 } label: {
                     // SINGLE-select: only the active profile is checked. Compare by
                     // persistentModelID (always unique per row) so exactly one row checks.

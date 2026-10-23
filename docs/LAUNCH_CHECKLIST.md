@@ -107,7 +107,7 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [x] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro` (and its hard-coded "Upgrade to Pro — $8.99" screen)
 - [x] Widgets Pro (home and lock screen) on `FeatureFlags.proGatingEnabled`; `widgetsRequirePro` retired. Allowed when the app saved Pro or StoreKit says Pro in the widget (family purchase, fresh install). The gallery preview still shows weather
 - [x] Siri Pro on the same switch: a free user hears one sentence ("Siri weather is part of MetarMate Pro…") and gets no weather; entitlements are awaited first
-- [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only
+- [x] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only. Starters are read-only for everyone; a starter a tester edited is moved at launch to "<starter> (edited)" (active if the starter was), then reset (Jeff, Oct 23). Lapsed Pro: profiles stay stored; `ProfileAccess.usableProfile(active:isPro:starters:)` gives the verdict a starter (VFR day first) and the notice names it. For `VerdictProfile.current()` to call at merge. UI test: gated build opens the paywall, TestFlight opens New Profile. Also: the A3 commit before this one is `e40e040`
 - [ ] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message
 - [x] Crosswind calculator free: there was no gate, and `ProFeature` has no crosswind case, so nothing can gate it
 - [ ] Layout customization Pro

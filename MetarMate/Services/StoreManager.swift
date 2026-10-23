@@ -26,6 +26,10 @@ class StoreManager: ObservableObject {
     @Published private(set) var isProUser = false
     /// True once the first `checkEntitlements()` has finished this launch.
     @Published private(set) var entitlementsLoaded = false
+
+    /// For UI gates: Pro, or entitlements still loading, so a payer never sees a paywall flash
+    /// in the first moment after launch.
+    var isProForUI: Bool { isProUser || !entitlementsLoaded }
     @Published private(set) var isAsosSubscriber = false
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?

@@ -41,6 +41,7 @@ struct ProUpgradeView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .accessibilityIdentifier("proPaywall")   // UI tests: a gate opened the paywall
             .task {
                 if store.products.isEmpty { await store.loadProducts() }
             }
