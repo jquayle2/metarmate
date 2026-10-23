@@ -1,14 +1,7 @@
 import Foundation
 import SwiftData
 
-// MARK: - Side
-// The binary go/no-go state. Persisted on AirportWatch as a raw string and used by the
-// GoNoGoEvaluator as its hysteresis memory — defined here because the model owns the stored
-// state. Fire only happens on a GO<->NO_GO transition.
-enum Side: String {
-    case go = "GO"
-    case noGo = "NO_GO"
-}
+// Side (GO / NO_GO) lives in VerdictEngine.swift, shared with the widget.
 
 // MARK: - AirportWatch
 // One watched airport. Personal minimums are a single globally-active MinimumsProfile (see

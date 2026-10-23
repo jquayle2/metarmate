@@ -1,29 +1,7 @@
 import Foundation
 
-struct Runway: Codable {
-    let le: String
-    let leHdg: Int
-    let he: String
-    let heHdg: Int
-    let len: Int?
-    let wid: Int?
-    let sfc: String?
-}
-
-struct RunwayEnd {
-    let ident: String
-    let heading: Int
-    let length: Int?
-    let width: Int?
-    let surface: String?
-}
-
-struct RunwayResult {
-    let runwayEnd: RunwayEnd
-    let crosswind: Int
-    let headwind: Int
-    let isLeft: Bool
-}
+// Runway, RunwayEnd, RunwayResult and the crosswind math live in VerdictEngine.swift (RunwayMath),
+// shared with the widget extension.
 
 @MainActor
 final class RunwayService {
@@ -43,16 +21,12 @@ final class RunwayService {
     }
 
     /// Numeric runway designator without the L/C/R position suffix ("12L" → "12").
-    static func runwayNumber(_ ident: String) -> String {
-        String(ident.prefix(while: { $0.isNumber }))
-    }
+    static func runwayNumber(_ ident: String) -> String { RunwayMath.runwayNumber(ident) }
 
     /// Display ident: the bare number when parallel runways share it (12L/12R have an
     /// identical heading, so identical crosswind), else the full ident.
     func displayIdent(_ end: RunwayEnd, icao: String) -> String {
-        let number = Self.runwayNumber(end.ident)
-        let count = runways(for: icao).filter { Self.runwayNumber($0.ident) == number }.count
-        return count > 1 ? number : end.ident
+        RunwayMath.displayIdent(end, among: runways(for: icao))
     }
 
     /// East-positive WMM declination at the airport, or 0 when its coordinates are unknown.
@@ -63,13 +37,6 @@ final class RunwayService {
               !(airport.latitude == 0 && airport.longitude == 0) else { return 0 }
         return MagneticDeclination.shared.declination(
             latitude: airport.latitude, longitude: airport.longitude)
-    }
-
-    /// Rotate a TRUE bearing into the MAGNETIC frame using a pre-computed declination
-    /// (east is least / subtract east), normalized to [0, 360).
-    private func magnetic(_ trueDeg: Double, declination: Double) -> Double {
-        let m = trueDeg - declination
-        return (m.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
     }
 
     func runways(for icao: String) -> [RunwayEnd] {
@@ -94,36 +61,13 @@ final class RunwayService {
         let ends = runways(for: icao)
         guard !ends.isEmpty else { return [] }
 
-        let effectiveSpeed = windGust ?? windSpeed
-        let dec = declination(for: icao)
-        let windMag = magnetic(Double(windDirection), declination: dec)
-
-        return ends.map { end in
-            let heading = magnetic(Double(end.heading), declination: dec)
-            let angle = (windMag - heading) * .pi / 180.0
-            let xw = abs(Int(round(effectiveSpeed * sin(angle))))
-            let hw = Int(round(effectiveSpeed * cos(angle)))
-            let left: Bool = {
-                let diff = ((windMag - heading).truncatingRemainder(dividingBy: 360) + 360)
-                    .truncatingRemainder(dividingBy: 360)
-                return diff > 0 && diff < 180
-            }()
-            return RunwayResult(runwayEnd: end, crosswind: xw, headwind: hw, isLeft: left)
-        }
-    }
-
-    /// Strict "a is the better runway than b" ordering, matching the pilot's preference:
-    /// a usable headwind beats a tailwind/zero; then least crosswind; then most headwind.
-    private static func preferred(_ a: RunwayResult, _ b: RunwayResult) -> Bool {
-        let aLand = a.headwind > 0, bLand = b.headwind > 0
-        if aLand != bLand { return aLand }
-        if a.crosswind != b.crosswind { return a.crosswind < b.crosswind }
-        return a.headwind > b.headwind
+        return RunwayMath.crosswinds(ends, windDirection: windDirection, windSpeed: windSpeed,
+                                     windGust: windGust, declination: declination(for: icao))
     }
 
     func bestRunway(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?) -> RunwayResult? {
         crosswinds(for: icao, windDirection: windDirection, windSpeed: windSpeed, windGust: windGust)
-            .min(by: Self.preferred)
+            .min(by: RunwayMath.preferred)
     }
 
     /// The best runway plus, when it's a genuine near-tie, the runner-up — so Pilot Notes can
@@ -134,7 +78,7 @@ final class RunwayService {
     func bestRunways(for icao: String, windDirection: Int, windSpeed: Double, windGust: Double?,
                      tieKt: Int = 3) -> [RunwayResult] {
         let ranked = crosswinds(for: icao, windDirection: windDirection, windSpeed: windSpeed, windGust: windGust)
-            .sorted(by: Self.preferred)
+            .sorted(by: RunwayMath.preferred)
         guard let best = ranked.first else { return [] }
         let bestNumber = Self.runwayNumber(best.runwayEnd.ident)
         if let second = ranked.dropFirst().first(where: { Self.runwayNumber($0.runwayEnd.ident) != bestNumber }),

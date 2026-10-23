@@ -65,23 +65,6 @@ struct AlertConditions {
         skyCode = metar.skyCode
     }
 
-    // MARK: - ASOS / Synoptic adapter
-    // SynopticObservation stores wind speed/gust as optional Doubles and derives ceiling and
-    // category via computed helpers (estimatedCategory, ceilingAGL). Wind speed and visibility
-    // stay nil when Synoptic omits them — an unreported wind must NOT become a fabricated 0 kt
-    // calm (a degraded sensor would then silently satisfy every crosswind/wind minimum). nil
-    // makes the GoNoGo wind criteria SKIP, exactly as a nil visibilitySM skips the vis criterion.
-    init(from obs: SynopticObservation) {
-        self.init(windDirection: obs.windDirection,
-                  windSpeed: obs.windSpeed.map { Int($0.rounded()) },   // nil (Synoptic omitted it) -> wind criteria skipped
-                  windGust: obs.windGust.map { Int($0.rounded()) },
-                  ceilingFeet: obs.ceilingAGL,
-                  ceilingCoverage: obs.ceilingCoverage,
-                  visibilitySM: obs.visibility,   // nil (Synoptic omitted it) -> visibility criterion skipped
-                  flightCategory: obs.estimatedCategory,
-                  source: .asos,
-                  timestamp: obs.observationTime)
-        windIsVariable = obs.windDirection == nil   // Synoptic: no direction has always read VRB here
-        ceiling = obs.ceilingAGL.map(CeilingStatus.feet) ?? .none   // ASOS (not a verdict source, D#1): unchanged
-    }
+    // The ASOS / Synoptic adapter is an extension in SynopticService.swift, so this file can be
+    // shared with the widget extension (which has no Synoptic code).
 }

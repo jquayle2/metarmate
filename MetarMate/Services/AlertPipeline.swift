@@ -88,10 +88,9 @@ enum AlertPipeline {
         var result: [String: WatchDisplay] = [:]
         for watch in watches {
             let c = conditions[watch.icao]
-            // previousSide: watch.side so the displayed side respects the same hysteresis the
-            // notifier uses. shouldFire is ignored here — display only.
-            let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: watch.side,
-                                                           wasInCheck: CheckState.isInCheck(watch.icao), icao: watch.icao) }
+            // Bare limits (previousSide nil), like the detail screen and widgets, so every surface
+            // shows the same verdict for the same report. Hysteresis only decides notifications.
+            let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: nil, icao: watch.icao) }
             result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict)
         }
         return result
