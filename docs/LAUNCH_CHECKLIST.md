@@ -129,10 +129,10 @@ Siri (#25) — handoff `docs/handoffs/SIRI_HANDS_FREE_handoff.md`, branch `feat/
 - [ ] Device check, hands-free with no touch: nearest, a favorite by ident, the new app-name phrase, location off [Jeff]
 
 Background task (#26):
-- [ ] Expiry handler stops the work; no save after cancel
-- [ ] Synoptic calls: short timeouts, not sequential
-- [ ] MainActor isolation of the handler
-- [ ] Watch `expiresAt` enforced
+- [ ] Expiry handler stops the work; no save after cancel. In the code already: the expiration handler cancels the work Task, and `AlertPipeline.runChecks` stops on cancel and skips the save. Not tested (the pipeline has no fetch seam, and it's A2's file); device test [Jeff]
+- [ ] Synoptic calls: short timeouts, not sequential. In the code already: one batched NOAA METAR request per run, 8 s request and 15 s resource timeouts (`WeatherService`). Synoptic isn't called from the background run. Device test [Jeff]
+- [x] MainActor isolation of the handler: `AlertScheduler` is `nonisolated`; only the store work hops to the MainActor. Under full Swift 6 concurrency checking the file has no warnings. The old handler was MainActor code on BGTaskScheduler's background queue, which a Swift 6 build would stop with a crash. The simulator doesn't run background tasks, so the run itself is a device test. `4387065`
+- [ ] Watch `expiresAt` enforced: not built for launch (Jeff, Oct 23). `AirportWatch.expiresAt` exists but nothing sets or reads it, so a watch runs until the pilot turns it off or deletes it
 
 Other:
 - [ ] Full suite: same unexplained failure as A2's "Full suite stopped once mid-run" line (section 3). A3 saw a run report TEST FAILED with no failing case named, and one run killed (exit 137). Likely cause found Oct 23: parallel sessions share the "iPhone 17" simulator and the same bundle ID, so one session's app and UI tests run over another's (an A3 widget screenshot showed the verdict-surfaces build). A3 now tests on its own simulator, "iPhone 17 A3"; each worktree should use its own. Recheck after integration
