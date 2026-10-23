@@ -54,28 +54,28 @@ struct FetchOutcomeTests {
     // MARK: - Retry policy
 
     @Test func threeRetriesThenStop() {
-        #expect(RetryPolicy.delay(beforeRetry: 0, retryAfter: nil) == 2)
-        #expect(RetryPolicy.delay(beforeRetry: 1, retryAfter: nil) == 5)
-        #expect(RetryPolicy.delay(beforeRetry: 2, retryAfter: nil) == 15)
-        #expect(RetryPolicy.delay(beforeRetry: 3, retryAfter: nil) == nil)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 0, retryAfter: nil) == 2)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 1, retryAfter: nil) == 5)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 2, retryAfter: nil) == 15)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 3, retryAfter: nil) == nil)
     }
 
     @Test func retryAfterIsHonoredAndCapped() {
-        #expect(RetryPolicy.delay(beforeRetry: 0, retryAfter: 10) == 10)
-        #expect(RetryPolicy.delay(beforeRetry: 2, retryAfter: 1) == 15)
-        #expect(RetryPolicy.delay(beforeRetry: 0, retryAfter: 3600) == 60)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 0, retryAfter: 10) == 10)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 2, retryAfter: 1) == 15)
+        #expect(RetryPolicy.foreground.delay(beforeRetry: 0, retryAfter: 3600) == 60)
     }
 
     @Test func runStopsOnNoProductWithoutRetrying() async throws {
         var calls = 0
-        let outcome: FetchOutcome<Int> = try await RetryPolicy.run("test") { calls += 1; return .noProduct }
+        let outcome: FetchOutcome<Int> = try await RetryPolicy.foreground.run("test") { calls += 1; return .noProduct }
         #expect(outcome.isNoProduct)
         #expect(calls == 1)
     }
 
     @Test func runDoesNotRetryNonTransientFailure() async throws {
         var calls = 0
-        let outcome: FetchOutcome<Int> = try await RetryPolicy.run("test") {
+        let outcome: FetchOutcome<Int> = try await RetryPolicy.foreground.run("test") {
             calls += 1; return .failed(FetchFailure(WeatherError.httpStatus(400)))
         }
         if case .failed = outcome {} else { Issue.record("expected failed") }

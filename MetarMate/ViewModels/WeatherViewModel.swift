@@ -157,17 +157,17 @@ class WeatherViewModel: ObservableObject {
     private func loadMETAR(icao: String, field: Airport? = nil) async -> MetarLoad {
         let service = weatherService
         do {
-            async let ownTaf = RetryPolicy.run("TAF \(icao)") { try await service.tafOutcome(for: icao) }
-            var history = try await RetryPolicy.run("METAR \(icao)") { try await service.metarHistoryOutcome(for: icao, hours: 6) }
+            async let ownTaf = RetryPolicy.foreground.run("TAF \(icao)") { try await service.tafOutcome(for: icao) }
+            var history = try await RetryPolicy.foreground.run("METAR \(icao)") { try await service.metarHistoryOutcome(for: icao, hours: 6) }
             var fetchIcao = icao
             var tafOutcome: FetchOutcome<Taf>?
 
             // For 3-char FAA LIDs (CMA, 36K, 1G4, …) without an airport record, try the K-prefixed ICAO.
             if history.isNoProduct, let kIcao = WeatherService.noaaCandidate(for: icao) {
-                history = try await RetryPolicy.run("METAR \(kIcao)") { try await service.metarHistoryOutcome(for: kIcao, hours: 6) }
+                history = try await RetryPolicy.foreground.run("METAR \(kIcao)") { try await service.metarHistoryOutcome(for: kIcao, hours: 6) }
                 if history.value != nil {
                     fetchIcao = kIcao
-                    tafOutcome = try await RetryPolicy.run("TAF \(kIcao)") { try await service.tafOutcome(for: kIcao) }
+                    tafOutcome = try await RetryPolicy.foreground.run("TAF \(kIcao)") { try await service.tafOutcome(for: kIcao) }
                 }
             }
 
@@ -291,7 +291,7 @@ class WeatherViewModel: ObservableObject {
     /// The estimate, retried on a transient failure. A failure keeps the last advisory on screen.
     private func loadAdvisory(airport: Airport) async {
         do {
-            switch try await RetryPolicy.run("ADVISORY \(airport.icao)", { try await OpenMeteoService.shared.advisoryOutcome(for: airport) }) {
+            switch try await RetryPolicy.foreground.run("ADVISORY \(airport.icao)", { try await OpenMeteoService.shared.advisoryOutcome(for: airport) }) {
             case .loaded(let advisory):
                 advisoryWeather = advisory
                 lastUpdated = Date()

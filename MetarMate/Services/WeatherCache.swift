@@ -14,7 +14,7 @@ import Combine
 @MainActor
 final class WeatherCache: ObservableObject {
     static let shared = WeatherCache()
-    private init() {}
+    init() {}   // the app uses `shared`; tests make their own
 
     struct Entry<T> {
         let value: T

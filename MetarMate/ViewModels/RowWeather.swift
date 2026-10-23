@@ -59,19 +59,31 @@ final class RowWeatherLoader {
     private let airports: [Airport]
     private let publish: ([String: RowWeather]) -> Void
     private var rows: [String: RowWeather] = [:]
-    private let cache = WeatherCache.shared
+    private let weather: WeatherService
+    private let estimates: OpenMeteoService
+    private let cache: WeatherCache
+    private let retry: RetryPolicy
 
-    private init(list: String, airports: [Airport], publish: @escaping ([String: RowWeather]) -> Void) {
+    private init(list: String, airports: [Airport], weather: WeatherService, estimates: OpenMeteoService,
+                 cache: WeatherCache, retry: RetryPolicy, publish: @escaping ([String: RowWeather]) -> Void) {
         self.list = list
         self.airports = airports
+        self.weather = weather
+        self.estimates = estimates
+        self.cache = cache
+        self.retry = retry
         self.publish = publish
     }
 
     /// `current` is what the rows show now (kept while they refresh). `force` (pull-to-refresh)
-    /// skips the fresh-cache seed so every row is fetched.
+    /// skips the fresh-cache seed so every row is fetched. The services, cache and retry policy are
+    /// the shared ones except in tests.
     static func load(list: String, airports: [Airport], current: [String: RowWeather], force: Bool,
+                     weather: WeatherService = .shared, estimates: OpenMeteoService = .shared,
+                     cache: WeatherCache = .shared, retry: RetryPolicy = .foreground,
                      publish: @escaping ([String: RowWeather]) -> Void) async {
-        let loader = RowWeatherLoader(list: list, airports: airports, publish: publish)
+        let loader = RowWeatherLoader(list: list, airports: airports, weather: weather, estimates: estimates,
+                                      cache: cache, retry: retry, publish: publish)
         await loader.run(current: current, force: force)
     }
 
@@ -109,7 +121,7 @@ final class RowWeatherLoader {
         for a in airports { rowFor[WeatherService.noaaCandidate(for: a.icao) ?? a.icao.uppercased()] = a }
         var confirmedNoMetar: [Airport] = []   // LIDs whose K-station has no METAR: these get the estimate
         try await batchWithRetries("METAR", ids: Array(rowFor.keys), rowFor: rowFor,
-                                   fetch: { try await WeatherService.shared.metarOutcomes(for: $0) }) { airport, outcome in
+                                   fetch: { try await self.weather.metarOutcomes(for: $0) }) { airport, outcome in
             switch outcome {
             case .loaded(let metar):
                 self.rows[airport.icao] = .loaded(.metar(metar))
@@ -128,7 +140,7 @@ final class RowWeatherLoader {
         guard !airports.isEmpty else { return }
         let rowFor = Dictionary(airports.map { ($0.icao, $0) }, uniquingKeysWith: { a, _ in a })
         try await batchWithRetries("ADVISORY", ids: Array(rowFor.keys), rowFor: rowFor,
-                                   fetch: { ids in try await OpenMeteoService.shared.advisoryOutcomes(for: ids.compactMap { rowFor[$0] }) }) { airport, outcome in
+                                   fetch: { ids in try await self.estimates.advisoryOutcomes(for: ids.compactMap { rowFor[$0] }) }) { airport, outcome in
             switch outcome {
             case .loaded(let advisory):
                 self.rows[airport.icao] = .loaded(.advisory(advisory))
@@ -148,7 +160,7 @@ final class RowWeatherLoader {
                                          fetch: ([String]) async throws -> [String: FetchOutcome<Value>],
                                          apply: (Airport, FetchOutcome<Value>) -> Void) async throws {
         var pending = ids
-        var retry = 0
+        var attempt = 0
         while !pending.isEmpty {
             let outcomes = try await fetch(pending)
             var failing: [String] = []
@@ -169,15 +181,15 @@ final class RowWeatherLoader {
             }
             publish(rows)
             guard !failing.isEmpty else { return }
-            guard let wait = RetryPolicy.delay(beforeRetry: retry, retryAfter: retryAfter) else {
+            guard let wait = self.retry.delay(beforeRetry: attempt, retryAfter: retryAfter) else {
                 for id in failing { if let a = rowFor[id] { rows[a.icao] = .failed(last: lastReading(a)) } }
                 publish(rows)
                 Log.load.warning("[rows] \(self.list, privacy: .public) \(kind, privacy: .public) retries used up for [\(failing.joined(separator: ","), privacy: .public)] — showing last reading + tap to retry")
                 return
             }
-            Log.load.info("[retry] \(self.list, privacy: .public) \(kind, privacy: .public) batch retry \(retry + 1, privacy: .public)/\(RetryPolicy.delays.count, privacy: .public) in \(Int(wait), privacy: .public)s for [\(failing.joined(separator: ","), privacy: .public)]")
-            try await Task.sleep(for: .seconds(wait))
-            retry += 1
+            Log.load.info("[retry] \(self.list, privacy: .public) \(kind, privacy: .public) batch retry \(attempt + 1, privacy: .public)/\(self.retry.delays.count, privacy: .public) in \(Int(wait), privacy: .public)s for [\(failing.joined(separator: ","), privacy: .public)]")
+            try await self.retry.sleep(wait)
+            attempt += 1
             pending = failing
         }
     }

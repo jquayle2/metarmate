@@ -7,10 +7,13 @@ import Foundation
 
 actor OpenMeteoService {
     static let shared = OpenMeteoService()
-    private let session = URLSession.shared
+    private let session: URLSession
     private let base = "https://api.open-meteo.com/v1/forecast"
 
-    private init() {}
+    /// The app uses `shared` (URLSession.shared); tests pass a stubbed session.
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
 
     func fetchAdvisory(for airport: Airport, file: String = #fileID, function: String = #function) async throws -> AdvisoryWeather {
         guard let url = buildURL(airport: airport) else { throw OpenMeteoError.badURL }

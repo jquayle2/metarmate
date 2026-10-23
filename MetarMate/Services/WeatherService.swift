@@ -56,7 +56,12 @@ actor WeatherService {
         config.timeoutIntervalForRequest = 8    // seconds per request (idle-between-bytes)
         config.timeoutIntervalForResource = 15   // seconds total incl. retries
         config.waitsForConnectivity = false      // fail immediately if offline
-        session = URLSession(configuration: config)
+        self.init(session: URLSession(configuration: config))
+    }
+
+    /// A service on its own session (tests: a stubbed URLProtocol). The app uses `shared`.
+    init(session: URLSession) {
+        self.session = session
     }
 
     /// NOAA `ids=` candidate for a US identifier that isn't already a 4-letter ICAO.

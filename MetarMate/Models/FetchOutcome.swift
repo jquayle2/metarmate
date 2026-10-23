@@ -62,14 +62,18 @@ nonisolated enum FetchErrorKind: Equatable {
 }
 
 // MARK: - Retry
-/// Backoff for transient failures: retry after 2 s, 5 s, then 15 s, then stop. A server Retry-After
-/// longer than the step is honored, capped at a minute.
-nonisolated enum RetryPolicy {
-    static let delays: [TimeInterval] = [2, 5, 15]
-    static let maxRetryAfter: TimeInterval = 60
+/// Backoff for transient failures: in the foreground retry after 2 s, 5 s, then 15 s, then stop. A
+/// server Retry-After longer than the step is honored, capped at a minute. A value, so tests can
+/// pass a `sleep` that records each wait instead of waiting.
+nonisolated struct RetryPolicy: Sendable {
+    let delays: [TimeInterval]
+    var maxRetryAfter: TimeInterval = 60
+    var sleep: @Sendable (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) }
+
+    static let foreground = RetryPolicy(delays: [2, 5, 15])
 
     /// The wait before retry `index` (0-based), or nil once the retries are used up.
-    static func delay(beforeRetry index: Int, retryAfter: TimeInterval?) -> TimeInterval? {
+    func delay(beforeRetry index: Int, retryAfter: TimeInterval?) -> TimeInterval? {
         guard delays.indices.contains(index) else { return nil }
         return max(delays[index], min(retryAfter ?? 0, maxRetryAfter))
     }
@@ -77,15 +81,15 @@ nonisolated enum RetryPolicy {
     /// Run `attempt` again after each transient failure, per the delays above. Returns the first
     /// outcome that isn't a transient failure, or the last failure once retries are used up. Throws
     /// CancellationError if cancelled (including during a wait).
-    static func run<Value>(_ label: String,
-                           _ attempt: () async throws -> FetchOutcome<Value>) async throws -> FetchOutcome<Value> {
+    func run<Value>(_ label: String,
+                    _ attempt: () async throws -> FetchOutcome<Value>) async throws -> FetchOutcome<Value> {
         var index = 0
         while true {
             let outcome = try await attempt()
             guard case .failed(let failure) = outcome, failure.isTransient,
                   let wait = delay(beforeRetry: index, retryAfter: failure.retryAfter) else { return outcome }
             Log.load.info("[retry] \(label, privacy: .public) retry \(index + 1, privacy: .public)/\(delays.count, privacy: .public) in \(Int(wait), privacy: .public)s after \(FetchLog.classify(failure.underlying), privacy: .public)")
-            try await Task.sleep(for: .seconds(wait))
+            try await sleep(wait)
             index += 1
         }
     }
