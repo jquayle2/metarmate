@@ -1,4 +1,5 @@
 import WidgetKit
+import os
 import SwiftUI
 import AppIntents
 
@@ -219,6 +220,7 @@ private enum WidgetFetcher {
 // fetch is failing. Line: "<run time Z> <kind> <ICAO> <configured|fallback> <outcome>".
 
 enum WidgetDiag {
+    static let log = Logger(subsystem: "com.jeffquayle.MetarMate", category: "widget")
     private static let formatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss'Z'"
@@ -298,8 +300,10 @@ struct ConfigurableProvider: AppIntentTimelineProvider {
             return (nil, nil, nil)
         }
         let cached = WidgetDataManager.load(icao: icao)
+        let start = Date()
         let fetched = await WidgetFetcher.fetchSnapshot(icao: icao)
         WidgetDiag.record(kind: kind, icao: icao, configured: configured != nil, outcome: fetched.outcome)
+        WidgetDiag.log.debug("[req] widget-\(kind, privacy: .public) ids=\(icao, privacy: .public) ms=\(Int(Date().timeIntervalSince(start) * 1000), privacy: .public) outcome=\(fetched.outcome, privacy: .public) showing=\(fetched.snapshot != nil ? "live" : (cached != nil ? "cached" : "none"), privacy: .public)")
         if let live = fetched.snapshot {
             let merged = WidgetWeatherSnapshot.merge(live: live, cached: cached)
             WidgetDataManager.save(snapshot: merged, reload: false)
