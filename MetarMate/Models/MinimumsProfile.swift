@@ -228,3 +228,14 @@ enum ActiveMinimumsProfile {
         return matches.count == 1 ? matches[0] : nil
     }
 }
+
+// MARK: - VerdictProfile
+// The one seam for "which profile does a verdict judge against", used by the detail screen,
+// Alerts, notifications and the widget snapshot. Today: the active profile. The Pro rule (a lapsed
+// user's custom profile falls back to a starter) belongs here and only here.
+enum VerdictProfile {
+    @MainActor
+    static func current(in context: ModelContext) -> MinimumsProfile? {
+        ActiveMinimumsProfile.resolve(in: context)
+    }
+}

@@ -21,7 +21,7 @@ enum AlertPipeline {
         let watches = (try? context.fetch(
             FetchDescriptor<AirportWatch>(predicate: #Predicate { $0.isEnabled })
         )) ?? []
-        guard !watches.isEmpty, let profile = ActiveMinimumsProfile.resolve(in: context) else {
+        guard !watches.isEmpty, let profile = VerdictProfile.current(in: context) else {
             return Outcome(watchesChecked: 0, notificationsFired: 0)
         }
 
@@ -77,12 +77,13 @@ enum AlertPipeline {
     struct WatchDisplay {
         let conditions: AlertConditions?
         let verdict: Verdict?
+        let profile: VerdictProfileSnapshot   // the profile the verdict was judged against (its label)
     }
 
     // `force` (pull-to-refresh) bypasses the shared cache's freshness window; the auto/appear
     // refresh reads through it so a tab revisit within 5 min doesn't re-fetch.
     static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext, force: Bool = false) async -> [String: WatchDisplay] {
-        guard !watches.isEmpty, let profile = ActiveMinimumsProfile.resolve(in: context) else { return [:] }
+        guard !watches.isEmpty, let profile = VerdictProfile.current(in: context) else { return [:] }
         let icaos = Array(Set(watches.map { $0.icao }))
         let conditions = await fetchConditions(for: icaos, force: force)
         var result: [String: WatchDisplay] = [:]
@@ -91,7 +92,8 @@ enum AlertPipeline {
             // Bare limits (previousSide nil), like the detail screen and widgets, so every surface
             // shows the same verdict for the same report. Hysteresis only decides notifications.
             let verdict = c.map { GoNoGoEvaluator.evaluate(profile, $0, previousSide: nil, icao: watch.icao) }
-            result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict)
+            result[watch.icao] = WatchDisplay(conditions: c, verdict: verdict,
+                                              profile: GoNoGoEvaluator.snapshot(of: profile))
         }
         return result
     }

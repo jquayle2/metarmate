@@ -18,7 +18,7 @@ enum Side: String {
 // Pure result of testing one set of limits against one AlertConditions snapshot. The engine
 // does NOT fetch and does NOT post notifications — AlertPipeline owns fetching, firing the
 // UNUserNotification, and persisting newSide back into AirportWatch.lastSide.
-struct Verdict {
+nonisolated struct Verdict {
     /// GO / NO-GO, CHECK when a requested minimum can't be evaluated (D#2: never GO, never green),
     /// or no verdict at all when the METAR is over 75 min old (D#4).
     enum Outcome: Equatable { case go, noGo, check, noCurrent }
@@ -35,9 +35,9 @@ struct Verdict {
     let sourceLabel: String        // "via live ASOS, 18:53Z" / "via METAR, 18:53Z"
 }
 
-/// One failing minimum as value against limit: "Crosswind Rwy 12 · 18 kt · limit 12 kt".
+/// One failing minimum as value against limit: "Rwy 12 crosswind 18 kt · limit 12 kt".
 nonisolated struct VerdictFactorLine: Equatable, Sendable {
-    let name: String    // "Crosswind Rwy 12"
+    let name: String    // "Rwy 12 crosswind"
     let value: String   // "18 kt"
     let limit: String   // "12 kt"
     var text: String { "\(name) \(value) · limit \(limit)" }
@@ -65,6 +65,55 @@ nonisolated struct VerdictProfileSnapshot: Codable, Equatable, Sendable {
 
     /// "vs VFR day starter" for a starter, "vs Night XC" for a custom profile.
     var againstLabel: String { isStarter ? "vs \(name) starter" : "vs \(name)" }
+}
+
+// MARK: - VerdictDisplay
+// What every surface shows for a verdict: one wording and one color rule, so the detail screen,
+// Alerts and widgets read the same. Green/red only for a current GO/NO-GO; CHECK, a late METAR
+// and no current METAR are neutral (D#2, D#4).
+nonisolated struct VerdictDisplay: Equatable {
+    enum Tone: Equatable { case go, noGo, neutral }
+
+    let headline: String    // "GO", "NO-GO", "CHECK", "No current METAR"
+    let tone: Tone
+    let against: String     // "vs VFR day starter"
+    let lines: [String]     // failing value-vs-limit lines, then what couldn't be checked; GO: qualifiers
+    let status: String      // "via METAR, 18:53Z · 12 min ago" / "METAR late: 68 min old" / "Last report 2 h ago"
+    let isLate: Bool
+
+    init(_ v: Verdict, profile: VerdictProfileSnapshot) {
+        against = profile.againstLabel
+        isLate = v.lateMinutes != nil
+        let unchecked = v.uncheckedFactors.map(Self.sentenceCase)
+        switch v.outcome {
+        case .go:
+            headline = "GO"
+            tone = isLate ? .neutral : .go
+            lines = v.notes
+        case .noGo:
+            headline = "NO-GO"
+            tone = isLate ? .neutral : .noGo
+            lines = v.failingLines.map(\.text) + unchecked
+        case .check:
+            headline = "CHECK"
+            tone = .neutral
+            lines = unchecked
+        case .noCurrent:
+            headline = "No current METAR"
+            tone = .neutral
+            lines = []
+        }
+        if v.outcome == .noCurrent {
+            status = "Last report \(WidgetWeatherSnapshot.ageText(minutes: v.reportAgeMinutes)) ago"
+        } else if let late = v.lateMinutes {
+            status = "METAR late: \(late) min old"
+        } else {
+            status = "\(v.sourceLabel) · \(v.reportAgeMinutes) min ago"
+        }
+    }
+
+    /// "visibility not reported" -> "Visibility not reported".
+    static func sentenceCase(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
 }
 
 // MARK: - Runway math
@@ -253,7 +302,7 @@ enum VerdictEngine {
                     value: xw, limit: crosswindLimit, deadband: Deadband.crosswindKt,
                     worseWhenHigher: true,
                     failureText: "Rwy \(ident) crosswind \(Int(xw)) kt over \(Int(crosswindLimit)) kt",
-                    line: VerdictFactorLine(name: "Crosswind Rwy \(ident)", value: kt(xw), limit: kt(crosswindLimit))))
+                    line: VerdictFactorLine(name: "Rwy \(ident) crosswind", value: kt(xw), limit: kt(crosswindLimit))))
             } else {
                 // No component: direction not reported (`///25KT`) or no runway data. Jeff, Oct 23:
                 // passes when the whole wind is within the limit, otherwise CHECK.

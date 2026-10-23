@@ -52,8 +52,7 @@ struct AlertsView: View {
                                 let airport = AirportService.shared.airport(icao: watch.icao)
                                 let row = WatchRow(watch: watch,
                                                    display: vm.displays[watch.icao],
-                                                   airport: airport,
-                                                   starterName: activeProfile.flatMap { $0.isBuiltIn ? $0.name : nil })
+                                                   airport: airport)
                                 Group {
                                     if let airport {
                                         NavigationLink(destination: WeatherDetailView(airport: airport)) {
@@ -195,10 +194,14 @@ private struct WatchRow: View {
     let watch: AirportWatch
     let display: AlertPipeline.WatchDisplay?
     let airport: Airport?
-    let starterName: String?   // active profile is a built-in starter: label the verdict with it (D#19)
 
     private var conditions: AlertConditions? { display?.conditions }
     private var verdict: Verdict? { display?.verdict }
+    // Shared wording and color rule with the detail screen and widgets.
+    private var shown: VerdictDisplay? {
+        guard let display, let verdict = display.verdict else { return nil }
+        return VerdictDisplay(verdict, profile: display.profile)
+    }
 
     // A station-less airport we've already tried (display present) with no METAR: advisory-only.
     // A GO/NO-GO verdict on estimated data would be misleading, so we mark & suppress it.
@@ -315,22 +318,21 @@ private struct WatchRow: View {
                 .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .overlay(Capsule().stroke(Brand.slate.opacity(0.5), lineWidth: 1))
-        } else if let v = verdict, v.outcome == .go || v.outcome == .noGo {
-            let isNoGo = v.outcome == .noGo
+        } else if let shown, shown.tone != .neutral {
             VStack(alignment: .trailing, spacing: 3) {
-                Text(isNoGo ? "NO-GO" : "GO")
+                Text(shown.headline)
                     .font(.avenir(13, .heavy)).tracking(0.5)
                     .foregroundColor(.white)
                     .padding(.horizontal, 11)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(isNoGo ? Brand.dangerRed : Brand.vfrGreen))
+                    .background(Capsule().fill(shown.tone == .noGo ? Brand.dangerRed : Brand.vfrGreen))
                 starterCaption
             }
             .accessibilityElement(children: .combine)
-        } else if let v = verdict, v.outcome == .check {
-            // Neutral: not green, not red (D#2). The reason is on the detail line.
+        } else if let shown, verdict?.outcome != .noCurrent {
+            // Neutral: CHECK (D#2) or a late METAR's GO/NO-GO (D#4). The reason is on the detail line.
             VStack(alignment: .trailing, spacing: 3) {
-                Text("CHECK")
+                Text(shown.headline)
                     .font(.avenir(13, .heavy)).tracking(0.5)
                     .foregroundColor(Brand.cloud)
                     .padding(.horizontal, 11)
@@ -388,29 +390,19 @@ private struct WatchRow: View {
         return "\(dir)@\(spd)"
     }
 
-    // "vs VFR day starter" under the badge, so a starter verdict is never mistaken for the
-    // pilot's own minimums (D#19).
+    // "vs VFR day starter" / "vs Night XC" under the badge: a verdict always names its profile, so a
+    // starter verdict is never mistaken for the pilot's own minimums (D#19).
     @ViewBuilder private var starterCaption: some View {
-        if let starterName {
-            Text("vs \(starterName) starter")
+        if let against = shown?.against {
+            Text(against)
                 .font(.avenir(10.5, .demibold))
                 .foregroundColor(Brand.slate)
         }
     }
 
     private var verdictDetail: String? {
-        guard let v = verdict else { return nil }
-        switch v.outcome {
-        case .noGo:
-            let parts = v.failingFactors + v.uncheckedFactors
-            return parts.isEmpty ? nil : parts.joined(separator: " · ")
-        case .check:
-            return "CHECK: " + v.uncheckedFactors.joined(separator: " · ")
-        case .go:
-            return v.notes.isEmpty ? nil : v.notes.joined(separator: " · ")
-        case .noCurrent:
-            return nil
-        }
+        guard let lines = shown?.lines, !lines.isEmpty else { return nil }
+        return lines.joined(separator: " · ")
     }
 
     private func freshness(_ c: AlertConditions) -> String {

@@ -32,7 +32,7 @@ struct VerdictEngineTests {
                                        runways: rwy12_30, now: now)
         #expect(v.outcome == .noGo)
         #expect(v.failingLines.map(\.text) == [
-            "Crosswind Rwy 12 18 kt · limit 12 kt",
+            "Rwy 12 crosswind 18 kt · limit 12 kt",
             "Visibility 4 SM · limit 6 SM",
             "Ceiling 1,200 ft · limit 3,000 ft",
             "Category MVFR · limit VFR",
@@ -93,5 +93,46 @@ struct VerdictEngineTests {
     @Test func profileLabels() {
         #expect(VerdictProfileSnapshot(name: "VFR day", isStarter: true, limits: vfrDay).againstLabel == "vs VFR day starter")
         #expect(VerdictProfileSnapshot(name: "Night XC", isStarter: false, limits: vfrDay).againstLabel == "vs Night XC")
+    }
+
+    // MARK: - VerdictDisplay: one wording and color rule for every surface
+
+    func shown(_ c: AlertConditions, minutesAgo: Double = 10) -> VerdictDisplay {
+        var c = c
+        c.timestamp = now.addingTimeInterval(-minutesAgo * 60)
+        let v = VerdictEngine.evaluate(vfrDay, c, runways: rwy12_30, now: now)
+        return VerdictDisplay(v, profile: VerdictProfileSnapshot(name: "VFR day", isStarter: true, limits: vfrDay))
+    }
+
+    @Test func currentGoAndNoGoAreColored() {
+        let go = shown(conditions())
+        #expect(go.headline == "GO" && go.tone == .go && go.against == "vs VFR day starter")
+        #expect(go.status.hasPrefix("via METAR, ") && go.status.hasSuffix(" · 10 min ago"))
+        let noGo = shown(conditions(vis: 4))
+        #expect(noGo.headline == "NO-GO" && noGo.tone == .noGo)
+        #expect(noGo.lines == ["Visibility 4 SM · limit 6 SM"])
+    }
+
+    /// D#4: 65–75 min keeps the verdict but drops green/red.
+    @Test func lateVerdictIsNeutral() {
+        let late = shown(conditions(), minutesAgo: 68)
+        #expect(late.headline == "GO" && late.tone == .neutral && late.isLate)
+        #expect(late.status == "METAR late: 68 min old")
+        #expect(shown(conditions(vis: 4), minutesAgo: 70).tone == .neutral)
+    }
+
+    @Test func noCurrentHasNoVerdict() {
+        let stale = shown(conditions(vis: 4), minutesAgo: 130)
+        #expect(stale.headline == "No current METAR" && stale.tone == .neutral && stale.lines.isEmpty)
+        #expect(stale.status == "Last report 2 h 10 min ago")
+    }
+
+    @Test func checkIsNeutralWithReasons() {
+        let check = shown(conditions(vis: nil))
+        #expect(check.headline == "CHECK" && check.tone == .neutral)
+        #expect(check.lines == ["Visibility not reported"])
+        // A known failure plus something missing: NO-GO, listing both.
+        #expect(shown(conditions(vis: 4, ceiling: .notReported)).lines
+                    == ["Visibility 4 SM · limit 6 SM", "Ceiling not reported"])
     }
 }

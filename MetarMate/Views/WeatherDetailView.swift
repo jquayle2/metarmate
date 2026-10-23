@@ -38,6 +38,11 @@ struct WeatherDetailView: View {
                     errorView(error)
                 } else {
                     headerSection
+                    // Go/no-go from the METAR only (D#1), above the 5-minute ASOS section.
+                    if let metar = vm.metar {
+                        VerdictCard(metar: metar, icao: airport.icao,
+                                    allowsSwitching: simulatedInjection == nil)
+                    }
                     if store.isAsosUser, vm.hasASOSData, let obs = vm.synopticLatest {
                         decodedASOSSection(obs)
                     } else if FeatureFlags.asosAvailable, !store.isAsosUser, vm.metar != nil {
