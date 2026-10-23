@@ -64,6 +64,8 @@ struct MetarMateApp: App {
                     FavoritesReconciler.reconcile(in: Self.sharedModelContainer.mainContext)
                     // Submit an initial background alert-check request.
                     AlertScheduler.schedule()
+                    // Once per install: NOAA elevations, in feet, for favorites not in airports.json.
+                    await FavoriteElevationRefetch.runIfNeeded(in: Self.sharedModelContainer.mainContext)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     // Re-submit when entering background (the canonical place — that's when iOS

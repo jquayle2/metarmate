@@ -110,7 +110,7 @@ Pro gating (launch-blocking; scope in D#19–20):
 - [x] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only. Starters are read-only for everyone; a starter a tester edited is moved at launch to "<starter> (edited)" (active if the starter was), then reset (Jeff, Oct 23). Lapsed Pro: profiles stay stored; `ProfileAccess.usableProfile(active:isPro:starters:)` gives the verdict a starter (VFR day first) and the notice names it. For `VerdictProfile.current()` to call at merge. UI test: gated build opens the paywall, TestFlight opens New Profile. Also: the A3 commit before this one is `e40e040`
 - [x] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message ("Alerts are paused. Your watches are saved and resume with MetarMate Pro.", rows say "Paused"; nothing deleted). The background task waits for entitlements, then skips. Simulator: watch added in a TestFlight build shows paused in a gated Debug build. `4835714` is 3b
 - [x] Crosswind calculator free: there was no gate, and `ProFeature` has no crosswind case, so nothing can gate it
-- [x] Layout customization Pro: the Customize Layout button opens the paywall without Pro (UI test both ways). Open: what a lapsed user's saved layout does (kept for now) [Jeff]. `e15e793` is 3c
+- [x] Layout customization Pro: the Customize Layout button opens the paywall without Pro (UI test both ways). A lapsed user keeps the saved layout and starting tab (Jeff, Oct 23). `78c427c`
 - [ ] Paywall screen: lists what Pro adds; restore purchases; $5.99 shown from StoreKit (never hard-coded)
 - [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
 - [ ] TestFlight testers get Pro via offer codes (D#20)
@@ -136,7 +136,7 @@ Background task (#26):
 
 Other:
 - [ ] Full suite: same unexplained failure as A2's "Full suite stopped once mid-run" line (section 3). A3 saw a run report TEST FAILED with no failing case named, and one run killed (exit 137). Likely cause found Oct 23: parallel sessions share the "iPhone 17" simulator and the same bundle ID, so one session's app and UI tests run over another's (an A3 widget screenshot showed the verdict-surfaces build). A3 now tests on its own simulator, "iPhone 17 A3"; each worktree should use its own. Recheck after integration
-- [ ] A2 hand-off: favorites of non-bundled airports saved before `9025643` keep the meter elevation. The #27 reconcile only refreshes airports in airports.json, so these aren't fixed yet
+- [x] A2 hand-off: favorites of non-bundled airports saved before `9025643` kept the meter elevation. Once per install, each one's elevation is re-read from NOAA station info and stored in feet; 0 when NOAA has none (Jeff, Oct 23). A network failure retries next launch. Live check: KDEN stored as 1656 became 5433. Needs `9025643` merged too, so new favorites save feet
 - [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched. `86fc14b`
 - [ ] Merge A3 [Jeff]
 
