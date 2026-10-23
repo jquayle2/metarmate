@@ -11,9 +11,8 @@ struct FavoritesView: View {
         AirportFavorite.ordered(favorites)
     }
     @Environment(\.modelContext) private var modelContext
-    @State private var favMetars: [String: Metar] = [:]
-    @State private var favAdvisories: [String: AdvisoryWeather] = [:]
-    @State private var isLoading = false
+    @State private var favRows: [String: RowWeather] = [:]
+    @State private var loadSeq = 0   // .task, onChange and pull can overlap; only the newest load publishes
     @State private var editMode: EditMode = .inactive
     @State private var showInjectionHarness = false   // Test Harness (Debug/TestFlight only)
 
@@ -39,12 +38,9 @@ struct FavoritesView: View {
                         ForEach(sortedFavorites) { fav in
                             let airport = fav.asAirport
                             NavigationLink(destination: WeatherDetailView(airport: airport)) {
-                                AirportRowView(
-                                    airport: airport,
-                                    metar: favMetars[airport.icao],
-                                    distance: nil,
-                                    advisory: favAdvisories[airport.icao]
-                                )
+                                AirportRowView(airport: airport, distance: nil,
+                                               state: favRows[airport.icao] ?? .loading,
+                                               onRetry: { Task { await fetchMetars() } })
                             }
                             .listRowBackground(Color.clear)
                             .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 16))
@@ -57,11 +53,6 @@ struct FavoritesView: View {
                     .environment(\.editMode, $editMode)
                     .refreshable {
                         await fetchMetars(force: true)
-                    }
-                    .overlay {
-                        if isLoading && favMetars.isEmpty {
-                            ProgressView()
-                        }
                     }
                 }
             }
@@ -116,60 +107,16 @@ struct FavoritesView: View {
         }
     }
 
-    /// Read-through the shared cache: seed the render dicts from fresh cached weather, fetch only
-    /// the misses, then write the fetched results back. `force` (pull-to-refresh) skips the cache
-    /// seed so every favorite is re-fetched and the cache overwritten.
+    /// Rows from fresh cache; only the misses are fetched (RowWeatherLoader), with retries and the
+    /// estimate only on a confirmed no METAR. `force` (pull-to-refresh) re-fetches every favorite.
     private func fetchMetars(force: Bool = false) async {
         guard !favorites.isEmpty else { return }
-        isLoading = true
-
-        // 1. Seed render dicts from fresh cache (makes a tab revisit instant, no fetch).
-        var metars: [String: Metar] = [:]
-        var advisories: [String: AdvisoryWeather] = [:]
-        if !force {
-            for fav in favorites {
-                if let m = weatherCache.freshMetar(for: fav.icao) { metars[fav.icao] = m }
-                if let a = weatherCache.freshAdvisory(for: fav.icao) { advisories[fav.icao] = a }
-            }
-            favMetars = metars
-            favAdvisories = advisories
+        loadSeq += 1
+        let seq = loadSeq
+        let airports = sortedFavorites.map { $0.asAirport }
+        await RowWeatherLoader.load(list: "favorites", airports: airports, current: favRows, force: force) { rows in
+            if seq == loadSeq { favRows = rows }
         }
-
-        // 2. METARs for the misses among reporting stations + resolvable LIDs (36K→K36K),
-        //    mapped back to the id. On force, `metars` is empty so all are fetched.
-        var noaaToOriginal: [String: String] = [:]
-        var noaaIds: [String] = []
-        for fav in favorites where fav.hasMetar || WeatherService.noaaCandidate(for: fav.icao) != nil {
-            if metars[fav.icao] != nil { continue }   // fresh cached METAR — skip
-            let id = WeatherService.noaaCandidate(for: fav.icao) ?? fav.icao
-            noaaIds.append(id); noaaToOriginal[id] = fav.icao
-        }
-        if !noaaIds.isEmpty, let fetched = try? await WeatherService.shared.fetchMetars(for: noaaIds) {
-            var mapped: [String: Metar] = [:]
-            for (k, m) in fetched { mapped[noaaToOriginal[k] ?? k] = m }
-            weatherCache.store(metars: mapped)
-            for (k, m) in mapped { metars[k] = m }
-        }
-        favMetars = metars
-
-        // 3. Advisory estimates for genuinely station-less favorites still lacking any weather.
-        let advisoryTargets = favorites
-            .filter { metars[$0.icao] == nil && advisories[$0.icao] == nil && !$0.hasMetar }
-            .map { $0.asAirport }
-        let fetchedAdvisories = await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
-            for a in advisoryTargets {
-                group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
-            }
-            var result: [String: AdvisoryWeather] = [:]
-            for await (icao, adv) in group { if let adv { result[icao] = adv } }
-            return result
-        }
-        if !fetchedAdvisories.isEmpty {
-            weatherCache.store(advisories: fetchedAdvisories)
-            for (k, v) in fetchedAdvisories { advisories[k] = v }
-        }
-        favAdvisories = advisories
-        isLoading = false
     }
 
     private func deleteFavorites(at offsets: IndexSet) {
