@@ -37,6 +37,11 @@ final class WeatherCache: ObservableObject {
         return e.value
     }
 
+    /// The last value fetched, at any age: the "last good reading" a row keeps showing (with its
+    /// observation age) while a refresh fails. Callers judge staleness from the observation time.
+    func lastMetar(for icao: String) -> Metar? { metars[icao]?.value }
+    func lastAdvisory(for icao: String) -> AdvisoryWeather? { advisories[icao]?.value }
+
     // MARK: Writes — stamp with now.
     func store(metar: Metar, for icao: String) { metars[icao] = Entry(value: metar, fetchedAt: Date()) }
     func store(advisory: AdvisoryWeather, for icao: String) { advisories[icao] = Entry(value: advisory, fetchedAt: Date()) }

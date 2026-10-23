@@ -89,9 +89,9 @@ struct NearestAirportsView: View {
                     } label: {
                         AirportRowView(
                             airport: airport,
-                            metar: airportVM.nearestMetars[airport.icao],
+                            metar: airportVM.nearestRows[airport.icao]?.displayMetar(at: Date()),
                             distance: airportVM.distance(to: airport),
-                            advisory: airportVM.nearestAdvisories[airport.icao]
+                            advisory: airportVM.nearestRows[airport.icao]?.displayAdvisory
                         )
                     }
                     .buttonStyle(.plain)

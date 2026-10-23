@@ -15,11 +15,9 @@ class AirportViewModel: ObservableObject {
         didSet { performSearch() }
     }
     @Published var isLoadingNearest = false
-    @Published var nearestMetars: [String: Metar] = [:]
-    @Published var searchMetars: [String: Metar] = [:]
-    // Estimated conditions for genuinely station-less (advisory) airports.
-    @Published var nearestAdvisories: [String: AdvisoryWeather] = [:]
-    @Published var searchAdvisories: [String: AdvisoryWeather] = [:]
+    // Row weather (METAR, advisory estimate, or loading / no product / retrying / failed), keyed by airport id.
+    @Published var nearestRows: [String: RowWeather] = [:]
+    @Published var searchRows: [String: RowWeather] = [:]
 
     // MARK: - Search History
     private static let historyKey = "searchHistory"
@@ -68,14 +66,13 @@ class AirportViewModel: ObservableObject {
     private var nearestLoadsInFlight = 0
 
     private let airportService = AirportService.shared
-    private let weatherService = WeatherService.shared
     private let locationService = LocationService.shared
 
     // MARK: - Search
     func performSearch() {
         guard !searchText.isEmpty else {
             searchResults = []
-            searchMetars = [:]
+            searchRows = [:]
             return
         }
         let local = airportService.search(query: searchText)
@@ -107,71 +104,14 @@ class AirportViewModel: ObservableObject {
     }
 
     private func fetchSearchMetars() async {
-        // Official stations AND short/numeric LIDs that may publish under a K-ICAO (36K→K36K).
-        let metarAirports = searchResults.filter { $0.hasMetar || WeatherService.noaaCandidate(for: $0.icao) != nil }
-        guard !metarAirports.isEmpty else { return }
-
-        // Build lookup: NOAA ICAO -> original airport ICAO (e.g. KCMA -> CMA)
-        var noaaToOriginal: [String: String] = [:]
-        var noaaIds: [String] = []
-        for airport in metarAirports {
-            let code = airport.icao.uppercased()
-            let id = WeatherService.noaaCandidate(for: code) ?? code
-            noaaIds.append(id)
-            noaaToOriginal[id] = code
-        }
-
-        let fetchedMetars: [String: Metar]?
-        do { fetchedMetars = try await weatherService.fetchMetars(for: noaaIds) } catch {
-            Log.load.error("[rows] search results METAR batch: \(FetchLog.classify(error), privacy: .public) — rows keep no METAR")
-            fetchedMetars = nil
-        }
-        if let metars = fetchedMetars {
-            // Map results back to original airport ICAO codes
-            var mapped: [String: Metar] = [:]
-            for (key, metar) in metars {
-                if let original = noaaToOriginal[key] {
-                    mapped[original] = metar
-                } else {
-                    mapped[key] = metar
-                }
-            }
-            searchMetars = mapped
-        }
-        let advisoryTargets = searchResults.filter { searchMetars[$0.icao] == nil && !$0.hasMetar }
-        searchAdvisories = await fetchAdvisories(for: advisoryTargets)
-        Self.logRows("search", airports: searchResults, metars: searchMetars, advisories: searchAdvisories)
-    }
-
-    /// Diagnostics: what each row will render now, so a "METAR unavailable" / "Advisory weather only"
-    /// row can be matched to the fetch that left it empty. Mirrors AirportRowView's conditionsLine.
-    static func logRows(_ list: String, airports: [Airport], metars: [String: Metar], advisories: [String: AdvisoryWeather]) {
-        var unavailable: [String] = [], advisoryOnly: [String] = []
-        for a in airports where metars[a.icao] == nil && advisories[a.icao] == nil {
-            if a.hasMetar { unavailable.append(a.icao) } else { advisoryOnly.append(a.icao) }
-        }
-        let filled = airports.count - unavailable.count - advisoryOnly.count
-        Log.load.info("[rows] \(list, privacy: .public): \(filled, privacy: .public)/\(airports.count, privacy: .public) with weather; 'METAR unavailable'=[\(unavailable.joined(separator: ","), privacy: .public)] 'Advisory weather only'=[\(advisoryOnly.joined(separator: ","), privacy: .public)] cancelled=\(Task.isCancelled, privacy: .public)")
-    }
-
-    /// Fetch Open-Meteo advisory conditions for station-less airports, in parallel.
-    private func fetchAdvisories(for airports: [Airport]) async -> [String: AdvisoryWeather] {
-        guard !airports.isEmpty else { return [:] }
-        return await withTaskGroup(of: (String, AdvisoryWeather?).self) { group in
-            for a in airports {
-                group.addTask { (a.icao, try? await OpenMeteoService.shared.fetchAdvisory(for: a)) }
-            }
-            var result: [String: AdvisoryWeather] = [:]
-            for await (icao, adv) in group { if let adv { result[icao] = adv } }
-            return result
+        await RowWeatherLoader.load(list: "search", airports: searchResults, current: searchRows, force: false) { [weak self] rows in
+            self?.searchRows = rows
         }
     }
 
     // MARK: - Nearest Airports
-    /// Read-through the shared cache: seed the published dicts from fresh cached weather, fetch
-    /// only the misses, then write results back. `force` (pull-to-refresh) skips the cache seed
-    /// so every nearby airport is re-fetched and the cache overwritten. GPS/location logic and
-    /// the LID-normalization untouched.
+    /// Rows show fresh cached weather at once, else what they showed, else loading; then the misses
+    /// are fetched (RowWeatherLoader). `force` (pull-to-refresh) fetches every row.
     func loadNearestAirports(force: Bool = false) async {
         guard let location = locationService.currentLocation else { return }
         isLoadingNearest = true
@@ -181,59 +121,9 @@ class AirportViewModel: ObservableObject {
         Log.load.info("[rows] nearest load #\(seq, privacy: .public) START force=\(force, privacy: .public) overlapping=\(self.nearestLoadsInFlight - 1, privacy: .public)")
 
         nearestAirports = airportService.nearest(to: location, count: 15)
-
-        // Seed from fresh cache first (instant on tab revisit).
-        var metars: [String: Metar] = [:]
-        var advisories: [String: AdvisoryWeather] = [:]
-        if !force {
-            for a in nearestAirports {
-                if let m = WeatherCache.shared.freshMetar(for: a.icao) { metars[a.icao] = m }
-                if let adv = WeatherCache.shared.freshAdvisory(for: a.icao) { advisories[a.icao] = adv }
-            }
-            nearestMetars = metars
-            nearestAdvisories = advisories
+        await RowWeatherLoader.load(list: "nearest #\(seq)", airports: nearestAirports, current: nearestRows, force: force) { [weak self] rows in
+            self?.nearestRows = rows
         }
-        // Rows are on screen from here, before any fetch returns.
-        Self.logRows("nearest #\(seq) published before fetch", airports: nearestAirports, metars: metars, advisories: advisories)
-
-        // Fetch METARs only for the misses among airports with official reporting stations.
-        // K-prefix 3-letter FAA codes for NOAA lookup, then map results back.
-        let metarNearby = nearestAirports.filter { $0.hasMetar || WeatherService.noaaCandidate(for: $0.icao) != nil }
-        var nearNoaaToOrig: [String: String] = [:]
-        var nearNoaaIds: [String] = []
-        for airport in metarNearby {
-            let code = airport.icao.uppercased()
-            if metars[code] != nil { continue }   // fresh cached METAR — skip
-            let id = WeatherService.noaaCandidate(for: code) ?? code
-            nearNoaaIds.append(id)
-            nearNoaaToOrig[id] = code
-        }
-        var nearFetched: [String: Metar]?
-        if !nearNoaaIds.isEmpty {
-            do { nearFetched = try await weatherService.fetchMetars(for: nearNoaaIds) } catch {
-                Log.load.error("[rows] nearest #\(seq, privacy: .public) METAR batch: \(FetchLog.classify(error), privacy: .public) — \(nearNoaaIds.count, privacy: .public) rows keep no METAR")
-            }
-        }
-        if let fetched = nearFetched {
-            var mapped: [String: Metar] = [:]
-            for (key, metar) in fetched {
-                mapped[nearNoaaToOrig[key] ?? key] = metar
-            }
-            WeatherCache.shared.store(metars: mapped)
-            for (k, m) in mapped { metars[k] = m }
-        }
-        nearestMetars = metars
-
-        let advisoryTargets = nearestAirports.filter {
-            metars[$0.icao] == nil && advisories[$0.icao] == nil && !$0.hasMetar
-        }
-        let fetchedAdv = await fetchAdvisories(for: advisoryTargets)
-        if !fetchedAdv.isEmpty {
-            WeatherCache.shared.store(advisories: fetchedAdv)
-            for (k, v) in fetchedAdv { advisories[k] = v }
-        }
-        nearestAdvisories = advisories
-        Self.logRows("nearest #\(seq) DONE", airports: nearestAirports, metars: metars, advisories: advisories)
         isLoadingNearest = false
     }
 
