@@ -20,17 +20,12 @@ struct MetarParser {
         let clouds = parseClouds(raw.clouds, vertVis: raw.vertVis)
         let phenomena = parseWeatherPhenomena(raw.wxString, rawOb: rawText)
 
-        // Round toward nearest, not toward zero: a raw -0.6 C is -1 C, not 0.
-        let temp = Int((raw.temp ?? 0).rounded())
-        let dewp = Int((raw.dewp ?? 0).rounded())
+        // Round toward nearest, not toward zero: a raw -0.6 C is -1 C, not 0. Missing stays nil.
+        let temp = raw.temp.map { Int($0.rounded()) }
+        let dewp = raw.dewp.map { Int($0.rounded()) }
 
-        // API returns altim in hPa — convert to inHg
-        let altimInHg: Double
-        if let hpa = raw.altim {
-            altimInHg = hpa * 0.02953
-        } else {
-            altimInHg = 29.92
-        }
+        // API returns altim in hPa — convert to inHg. Missing stays nil.
+        let altimInHg = raw.altim.map { $0 * 0.02953 }
 
         // API uses "fltCat" field
         let category = FlightCategory(rawValue: raw.fltCat ?? "") ?? .unknown

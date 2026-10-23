@@ -104,21 +104,24 @@ enum HistoryRules {
     /// pressureTrend(metars) — metars newest-first (matches WeatherViewModel.metarHistory).
     /// Returns nil if fewer than 2 samples exist (no trend is knowable).
     static func pressureTrend(from metars: [Metar]) -> PressureTrend? {
-        guard metars.count >= 2 else { return nil }
-        let sorted = metars.sorted { $0.observationTime > $1.observationTime }  // defensive re-sort
+        // Only reports that carry an altimeter: a missing one is not 29.92, and treating it as one
+        // faked a "falling rapidly" trend (audit #8).
+        let reported = metars.compactMap { m in m.altimeter.map { (m, $0) } }
+        guard reported.count >= 2 else { return nil }
+        let sorted = reported.sorted { $0.0.observationTime > $1.0.observationTime }  // defensive re-sort
         let current = sorted[0]
-        let targetTime = current.observationTime.addingTimeInterval(-3 * 3600)
+        let targetTime = current.0.observationTime.addingTimeInterval(-3 * 3600)
 
         // Closest sample AT OR BEFORE the 3-hr-ago mark; falls back to the oldest available
         // sample if history doesn't span 3 hrs yet. Either way, report the TRUE delta/span —
         // never extrapolated to a fixed 3-hr-equivalent number, which would amplify a short
         // window's noise into a misleadingly larger delta.
-        let reference = sorted.first(where: { $0.observationTime <= targetTime }) ?? sorted.last!
+        let reference = sorted.first(where: { $0.0.observationTime <= targetTime }) ?? sorted.last!
 
-        let spanHours = current.observationTime.timeIntervalSince(reference.observationTime) / 3600
+        let spanHours = current.0.observationTime.timeIntervalSince(reference.0.observationTime) / 3600
         guard spanHours > 0 else { return nil }   // duplicate-timestamp guard
 
-        let delta = current.altimeter - reference.altimeter
+        let delta = current.1 - reference.1
         let ratePerHour = delta / spanHours
 
         let state: PressureState
@@ -133,12 +136,12 @@ enum HistoryRules {
         let isRapid = state == .falling && ratePerHour <= -0.05
 
         return PressureTrend(
-            currentAltimeter: current.altimeter,
+            currentAltimeter: current.1,
             deltaInHg: delta,
             spanHours: spanHours,
             state: state,
             isRapid: isRapid,
-            sparklineValues: sorted.reversed().map { $0.altimeter }
+            sparklineValues: sorted.reversed().map { $0.1 }
         )
     }
 }

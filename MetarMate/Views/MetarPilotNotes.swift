@@ -150,11 +150,12 @@ enum MetarPilotNotes {
             }
         }
 
-        // Fog risk: temp/dewpoint spread ≤4° (red at ≤2°, yellow at 3–4°)
-        let tempDewSpread = metar.temperature - metar.dewpoint
-        if tempDewSpread <= 2 {
+        // Fog risk: temp/dewpoint spread ≤4° (red at ≤2°, yellow at 3–4°). Only when both were
+        // reported — a missing value is not 0 °C, which faked a 0° spread (audit #8).
+        let tempDewSpread: Int? = metar.temperature.flatMap { t in metar.dewpoint.map { t - $0 } }
+        if let tempDewSpread, tempDewSpread <= 2 {
             notes.append(.init(icon: "cloud.fog.fill", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog or low stratus imminent", severity: .warning))
-        } else if tempDewSpread <= 4 {
+        } else if let tempDewSpread, tempDewSpread <= 4 {
             notes.append(.init(icon: "cloud.fog", text: "Temp/dewpoint spread \(tempDewSpread)°C — fog risk; watch for rapid deterioration", severity: .caution))
         }
 
@@ -168,17 +169,18 @@ enum MetarPilotNotes {
         }
 
         // Low altimeter — only flag when pressure is genuinely low, not just below ISA standard
-        if metar.altimeter < 29.70 {
-            notes.append(.init(icon: "gauge.low", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — deep low pressure system; check area weather and PIREPs", severity: .warning))
-        } else if metar.altimeter < 29.80 {
-            notes.append(.init(icon: "gauge", text: "Altimeter \(String(format: "%.2f", metar.altimeter)) inHg — notable low pressure; monitor for developing weather", severity: .caution))
+        if let altimeter = metar.altimeter, altimeter < 29.70 {
+            notes.append(.init(icon: "gauge.low", text: "Altimeter \(String(format: "%.2f", altimeter)) inHg — deep low pressure system; check area weather and PIREPs", severity: .warning))
+        } else if let altimeter = metar.altimeter, altimeter < 29.80 {
+            notes.append(.init(icon: "gauge", text: "Altimeter \(String(format: "%.2f", altimeter)) inHg — notable low pressure; monitor for developing weather", severity: .caution))
         }
 
-        // Falling altimeter trend from history
-        if history.count >= 3 {
-            let recent = Array(history.prefix(3))
-            let oldest = recent.last!.altimeter
-            let newest = recent.first!.altimeter
+        // Falling altimeter trend from history (reports that carried an altimeter only)
+        let reportedAltimeters = history.compactMap(\.altimeter)
+        if reportedAltimeters.count >= 3 {
+            let recent = Array(reportedAltimeters.prefix(3))
+            let oldest = recent.last!
+            let newest = recent.first!
             let drop = oldest - newest
             if drop >= 0.06 {
                 notes.append(.init(icon: "arrow.down.circle.fill", text: String(format: "Altimeter falling %.2f inHg over recent observations — deepening low pressure", drop), severity: .warning))
@@ -205,7 +207,7 @@ enum MetarPilotNotes {
             notes.append(.init(icon: "thermometer.snowflake", text: "Freezing precipitation — icing on aircraft and runway surfaces", severity: .danger))
         } else if hasFreezingFog {
             notes.append(.init(icon: "cloud.fog.fill", text: "Freezing fog — icing and obscuration", severity: .warning))
-        } else if metar.temperature <= 2 && metar.temperature - metar.dewpoint <= 3 {
+        } else if let t = metar.temperature, let tempDewSpread, t <= 2 && tempDewSpread <= 3 {
             notes.append(.init(icon: "thermometer.snowflake", text: "Near-freezing with high moisture — frost or freezing precip risk", severity: .caution))
         }
 

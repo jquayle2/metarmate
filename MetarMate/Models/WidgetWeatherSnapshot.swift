@@ -276,12 +276,9 @@ nonisolated struct WidgetWeatherSnapshot: Codable, Sendable {
             visibilityReported: metar.visibility.isKnown,
             visibilityIsGreaterThan: metar.visibility.isGreaterThan,
             ceilingFeet: metar.ceilingFeet,
-            // temp/dewp/altimeter are read from `raw` (NOT `metar`) on purpose: Metar's fields are
-            // non-optional and substitute 0 °C / 29.92 inHg for missing values (Finding 15), which
-            // would fabricate a reading here. `raw.*.map` preserves nil = unknown.
-            temperature: raw.temp.map { Int($0.rounded()) },
-            dewpoint: raw.dewp.map { Int($0.rounded()) },
-            altimeter: raw.altim.map { $0 * 0.02953 },
+            temperature: metar.temperature,
+            dewpoint: metar.dewpoint,
+            altimeter: metar.altimeter,
             trendDirection: .unknown,
             trendHeadline: Self.widgetRefreshHeadline,
             tafAccuracyPct: nil,

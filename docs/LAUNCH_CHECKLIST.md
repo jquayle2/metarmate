@@ -65,7 +65,7 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [ ] #5 VRB worst-case crosswind (D#3)
 - [ ] #6 Unknown sky ≠ unlimited ceiling
 - [ ] #7 Staleness gate on verdicts (D#4)
-- [ ] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot)
+- [x] #8 / F15 Missing temp/dewp/altim are optional, not 0 °C / 29.92 (density altitude, pressure trend, fog, app-written widget snapshot); shown as "Not reported"
 - [ ] #9 Visibility trend against "10+" (P6SM); `.unknown` not `.steady` when both axes unknown
 - [ ] #10 Missing wind direction/speed not reported as 000° / 0 kt
 - [ ] #11 Red-tier crosswind not hidden under "Red only" Pilot Notes
@@ -77,7 +77,7 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 - [ ] #18 Category boundary drift (`cloudLayerColor`, Synoptic LIFR, ASOS/advisory category)
 - [ ] #19 TAF Pilot Notes: strong steady winds and overlay gusts
 - [ ] #20 Gust approach speed = ½ gust factor, one shared function (D#8)
-- [x] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; now 4,887 ft (NWS virtual-temperature method). Missing temp or altimeter → no DA. Table-driven ForeFlight test ready for more samples (`DensityAltitudeTests.foreFlightSamples`)
+- [x] Density altitude includes humidity (virtual temperature from the dewpoint); dry-air formula only when the dewpoint is missing; one shared function (also closes the "two DA formulas" P3 item). Oct 22: KIGM 19/13 A2996 elev 3,449 showed 4,706 ft vs ForeFlight 4,884 ft; now 4,887 ft (NWS virtual-temperature method). Missing temp or altimeter → no DA. Table-driven ForeFlight test ready for more samples (`DensityAltitudeTests.foreFlightSamples`). `1e5a761`
 - [ ] Starter-profile verdicts labeled with the profile ("GO vs VFR day starter") (D#19)
 - [ ] D#10 symmetric missing-field notes; D#11 F17 hazards in history; D#12 PROB TSRA in headline
 - [ ] F16 present-weather chip off the category red; F18 "Clear" with only FEW/SCT

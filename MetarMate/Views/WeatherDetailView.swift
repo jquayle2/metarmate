@@ -130,8 +130,8 @@ struct WeatherDetailView: View {
         let hasRedNote   = notes.contains(where: { $0.severity == .warning || $0.severity == .danger })
 
         let da = DensityAltitude.calculate(
-            temperatureC: Double(metar.temperature),
-            dewpointC: Double(metar.dewpoint),
+            temperatureC: metar.temperature.map(Double.init),
+            dewpointC: metar.dewpoint.map(Double.init),
             altimeterInHg: metar.altimeter,
             fieldElevationFt: airport.elevation
         )
@@ -687,10 +687,9 @@ struct WeatherDetailView: View {
             if !metar.clouds.isEmpty {
                 cloudsView(metar.clouds)
             }
-            conditionRow("thermometer", "Temp / Dew",
-                         "\(metar.temperature)°C / \(metar.dewpoint)°C · Δ\(metar.temperature - metar.dewpoint)",
+            conditionRow("thermometer", "Temp / Dew", tempDewText(metar),
                          color: tempDewConditionColor(temp: metar.temperature, dew: metar.dewpoint))
-            conditionRow("gauge", "Altimeter", String(format: "%.2f inHg", metar.altimeter),
+            conditionRow("gauge", "Altimeter", metar.altimeter.map { String(format: "%.2f inHg", $0) } ?? "Not reported",
                          color: altimeterConditionColor(metar.altimeter))
             if !metar.weatherPhenomena.isEmpty {
                 conditionRow("cloud.bolt.rain.fill", "Weather",
@@ -761,13 +760,24 @@ struct WeatherDetailView: View {
     }
 
     // Temp/dewpoint spread: tight spread = fog risk.
-    private func tempDewConditionColor(temp: Int, dew: Int) -> Color {
-        ColorRules.spreadColor(tempC: temp, dewpointC: dew)
+    // Missing temperature or dewpoint is "not reported" (D#2); the spread only when both are.
+    private func tempDewText(_ metar: Metar) -> String {
+        guard metar.temperature != nil || metar.dewpoint != nil else { return "Not reported" }
+        let t = metar.temperature.map { "\($0)°C" } ?? "not reported"
+        let d = metar.dewpoint.map { "\($0)°C" } ?? "not reported"
+        guard let tc = metar.temperature, let dc = metar.dewpoint else { return "\(t) / \(d)" }
+        return "\(t) / \(d) · Δ\(tc - dc)"
+    }
+
+    private func tempDewConditionColor(temp: Int?, dew: Int?) -> Color {
+        guard let temp, let dew else { return Brand.slate }   // unknown spread -> neutral
+        return ColorRules.spreadColor(tempC: temp, dewpointC: dew)
     }
 
     // Altimeter: genuinely-low pressure reads caution (accent orange); normal is neutral.
-    private func altimeterConditionColor(_ alt: Double) -> Color {
-        ColorRules.altimeterColor(alt)
+    private func altimeterConditionColor(_ alt: Double?) -> Color {
+        guard let alt else { return Brand.slate }
+        return ColorRules.altimeterColor(alt)
     }
 
     // Present weather: situational caution; TS/FZ/SQ/FC escalate to danger.
@@ -1724,8 +1734,9 @@ struct WeatherDetailView: View {
     }
 
     // METAR-style altimeter group, e.g. 29.78 inHg -> "A2978".
-    private func metarAltimeterCode(_ inHg: Double) -> String {
-        "A" + String(format: "%04.0f", (inHg * 100).rounded())
+    private func metarAltimeterCode(_ inHg: Double?) -> String {
+        guard let inHg else { return "altimeter not reported" }
+        return "A" + String(format: "%04.0f", (inHg * 100).rounded())
     }
 
     // MARK: - Worst Recent Conditions

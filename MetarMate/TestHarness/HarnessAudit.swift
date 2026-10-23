@@ -41,10 +41,10 @@ enum HarnessAudit {
             let wx   = m.weatherPhenomena.isEmpty ? "none" : m.weatherPhenomena.joined(separator: " ")
             out.append("     current: station=\(m.stationId) cat=\(m.flightCategory.rawValue) vis=\(vis) wind=\(windText(m.wind)) ceiling=\(ceil) wx=[\(wx)]")
 
-            let da = DensityAltitude.calculate(temperatureC: Double(m.temperature), dewpointC: Double(m.dewpoint),
+            let da = DensityAltitude.calculate(temperatureC: m.temperature.map(Double.init), dewpointC: m.dewpoint.map(Double.init),
                                                altimeterInHg: m.altimeter, fieldElevationFt: fx.airport.elevation)
-            let altimNote = abs(m.altimeter - 29.92) < 0.001 ? " (29.92 — may be the fabricated default; see Finding 15)" : ""
-            out.append("     temp=\(m.temperature)°C dew=\(m.dewpoint)°C altim=\(String(format: "%.2f", m.altimeter)) inHg\(altimNote)  DA=\(da.map { "\($0.densityAltitudeFt) ft MSL" } ?? "none") (elev \(fx.airport.elevation) ft)")
+            func shown<T>(_ v: T?) -> String { v.map { "\($0)" } ?? "not reported" }
+            out.append("     temp=\(shown(m.temperature))°C dew=\(shown(m.dewpoint))°C altim=\(m.altimeter.map { String(format: "%.2f inHg", $0) } ?? "not reported")  DA=\(da.map { "\($0.densityAltitudeFt) ft MSL" } ?? "none") (elev \(fx.airport.elevation) ft)")
 
             let obs = WeatherTrend.derive(metars: inj.metars, taf: inj.taf).observed
             out.append("     trend(\(inj.metars.count) obs): vis=\(obs.visibility.rawValue) ceiling=\(obs.ceiling.rawValue) wind=\(obs.wind.rawValue) — \(obs.summaryText)")

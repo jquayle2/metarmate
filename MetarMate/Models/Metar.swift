@@ -112,9 +112,11 @@ struct Metar: Identifiable, Codable {
     var wind: Wind
     var visibility: Visibility   // .exact / .greaterThan (P6SM/P10SM) / .unknown — see Visibility
     var clouds: [CloudLayer]
-    var temperature: Int     // Celsius
-    var dewpoint: Int        // Celsius
-    var altimeter: Double    // inHg
+    // nil = not reported. Never 0 °C or 29.92 (audit #8 / F15): those fed density altitude, the
+    // pressure trend, the fog note and the widget snapshot as if they'd been observed.
+    var temperature: Int?    // Celsius
+    var dewpoint: Int?       // Celsius
+    var altimeter: Double?   // inHg
     var flightCategory: FlightCategory
     var weatherPhenomena: [String]
     var remarks: String?
