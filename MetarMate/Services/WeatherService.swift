@@ -56,6 +56,7 @@ actor WeatherService {
         config.timeoutIntervalForRequest = 8    // seconds per request (idle-between-bytes)
         config.timeoutIntervalForResource = 15   // seconds total incl. retries
         config.waitsForConnectivity = false      // fail immediately if offline
+        UITestNetwork.install(in: config)        // UI tests only (DEBUG); no-op otherwise
         self.init(session: URLSession(configuration: config))
     }
 

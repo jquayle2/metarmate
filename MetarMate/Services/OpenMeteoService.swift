@@ -6,7 +6,7 @@ import Foundation
 // Data is for situational awareness only — not certified aviation weather.
 
 actor OpenMeteoService {
-    static let shared = OpenMeteoService()
+    static let shared = OpenMeteoService(session: UITestNetwork.session(or: .shared))
     private let session: URLSession
     private let base = "https://api.open-meteo.com/v1/forecast"
 
