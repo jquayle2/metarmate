@@ -75,6 +75,24 @@ final class PullToRefreshUITests: XCTestCase {
         XCTAssertFalse(text(app, containing: "Couldn't reach weather service").exists, "a row is still failed after the pull")
     }
 
+    /// Network off at launch and back while the rows are still in their retry backoff: a pull loads
+    /// them at once, before the launch load's next retry (15 s after its third try) would have.
+    @MainActor
+    func testPullDuringRetryBackoffLoadsAtOnce() throws {
+        let backOnline = Date().addingTimeInterval(20)
+        let app = try launch(network: "offline-until:\(Int(backOnline.timeIntervalSince1970))")
+        XCTAssertTrue(text(app, containing: "Retrying").waitForExistence(timeout: 15), "offline rows never showed Retrying…")
+        let firstFailure = Date()   // the launch load's tries: now, +2 s, +7 s, then +22 s
+        let remaining = backOnline.timeIntervalSinceNow + 1
+        if remaining > 0 { Thread.sleep(forTimeInterval: remaining) }   // the stub is online again
+        XCTAssertFalse(text(app, containing: "180@").exists, "the launch load's retries already reached the network")
+        let deadline = firstFailure.addingTimeInterval(21).timeIntervalSinceNow
+        guard deadline > 3 else { throw XCTSkip("launch too slow: the launch load's last retry is due before a pull could prove anything") }
+        pull(app)
+        XCTAssertTrue(text(app, containing: "180@").waitForExistence(timeout: deadline),
+                      "the pull during the retry backoff didn't load the rows")
+    }
+
     // MARK: - Weather detail
 
     @MainActor
