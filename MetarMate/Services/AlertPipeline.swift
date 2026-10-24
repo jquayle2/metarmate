@@ -18,9 +18,10 @@ enum AlertPipeline {
     // distinct ICAOs (METAR only) → run each through the GoNoGoEvaluator → fire a notification
     // on a verdict transition vs lastSide → persist the new side + evaluation time.
     // `retry`: the background task's short budget by default (2 s, 5 s); "Check now" uses the
-    // foreground policy.
+    // foreground policy. `weather` is the shared service except in tests.
     @discardableResult
-    static func runChecks(in context: ModelContext, retry: RetryPolicy = .background) async -> Outcome {
+    static func runChecks(in context: ModelContext, retry: RetryPolicy = .background,
+                          weather: WeatherService = .shared) async -> Outcome {
         let watches = (try? context.fetch(
             FetchDescriptor<AirportWatch>(predicate: #Predicate { $0.isEnabled })
         )) ?? []
@@ -29,9 +30,10 @@ enum AlertPipeline {
         }
 
         let icaos = Array(Set(watches.map { $0.icao }))
-        // Background checks always fetch fresh (force) so notification verdicts never ride on a
-        // stale cached METAR; the fetch still warms the shared cache for the UI.
-        let conditions = await fetchConditions(for: icaos, force: true, retry: retry)
+        // Background checks always ask NOAA (force + fresh: neither the shared cache nor
+        // WeatherService's 5-min cache) so notification verdicts never ride on a stale cached METAR;
+        // the fetch still warms the shared cache for the UI.
+        let conditions = await fetchConditions(for: icaos, force: true, fresh: true, retry: retry, weather: weather)
 
         var fired = 0
         for watch in watches {
@@ -157,7 +159,7 @@ enum AlertPipeline {
 
     /// `fresh` also skips WeatherService's own METAR cache and no-product memory (a user's pull).
     private static func fetchConditions(for icaos: [String], force: Bool, fresh: Bool = false,
-                                        retry: RetryPolicy) async -> [String: ConditionsResult] {
+                                        retry: RetryPolicy, weather: WeatherService = .shared) async -> [String: ConditionsResult] {
         // Read-through the shared cache for METARs: keep fresh cached values, and only fetch the
         // misses. Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K) for the fetch,
         // then map back to the watch's own id so numeric-LID stations are actually evaluated.
@@ -177,7 +179,7 @@ enum AlertPipeline {
         // Transient failures retry (only the failing stations); cancellation (BG expiry) leaves
         // those watches out entirely, as if this check never ran for them.
         guard let outcomes = try? await retry.runBatch("alerts METAR", ids: noaaIds, {
-            try await WeatherService.shared.metarOutcomes(for: $0, fresh: fresh)
+            try await weather.metarOutcomes(for: $0, fresh: fresh)
         }) else { return result }
         for (id, outcome) in outcomes {
             let code = noaaToOriginal[id] ?? id

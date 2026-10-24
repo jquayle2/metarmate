@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import SwiftData
 @testable import MetarMate
 
 // The list retry path end to end: RowWeatherLoader → WeatherService → URLSession, with a stubbed
@@ -170,6 +171,23 @@ struct RowRetryIntegrationTests {
         #expect(published.last.map { Self.name($0["KVGT"]!) } == "failed")
         #expect(published.last.map { Self.name($0["KLAS"]!) } == "loaded")
         #expect(published.last?["KLAS"]?.reading?.metar?.stationId == "KLAS")
+    }
+
+    /// A background Alerts check asks NOAA even when WeatherService fetched the station moments ago:
+    /// a notification verdict never comes from its 5-min cache.
+    @Test func backgroundAlertCheckBypassesTheServiceMetarCache() async throws {
+        StubURLProtocol.reset([Self.noaa: [.http(200, body: Self.metarJSON("KVGT")), .http(200, body: Self.metarJSON("KVGT"))]])
+        let service = WeatherService(session: Self.session())
+        _ = try? await service.metarOutcomes(for: ["KVGT"])   // the service now holds KVGT for 5 min
+        let pointer = UserDefaults.standard.object(forKey: ActiveMinimumsProfile.key)   // resolving may rewrite it
+        defer { UserDefaults.standard.set(pointer, forKey: ActiveMinimumsProfile.key); AlertPipeline.CheckState.set("KVGT", inCheck: false) }
+        let schema = Schema([MinimumsProfile.self, AirportWatch.self])
+        let context = ModelContext(try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]))
+        context.insert(MinimumsProfile(name: "VFR day", isBuiltIn: true, builtInKey: "vfrDay"))
+        context.insert(AirportWatch(icao: "KVGT"))
+        let outcome = await AlertPipeline.runChecks(in: context, retry: RetryPolicy(delays: [], sleep: { _ in }), weather: service)
+        #expect(outcome.watchesChecked == 1)
+        #expect(StubURLProtocol.requests(toHost: Self.noaa).count == 2)   // the priming fetch + the check
     }
 
     /// A minimal Open-Meteo single-location response (current + hourly blocks).
