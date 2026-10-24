@@ -121,8 +121,10 @@ struct WeatherDetailView: View {
         }
         .refreshable {
             // No network in simulated mode. Default nil → unchanged pull-to-refresh.
+            // Own Task, as in NearestAirportsView: awaited directly, the load's first state change
+            // re-rendered this view and SwiftUI cancelled the pull (METAR-history and TAF -999).
             if simulatedInjection == nil {
-                await vm.load(airport: airport, force: true)
+                await Task { await vm.load(airport: airport, force: true) }.value
             }
         }
     }
