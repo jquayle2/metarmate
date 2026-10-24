@@ -153,6 +153,13 @@ class StoreManager: ObservableObject {
                               savedStatus: WidgetDataManager.savedProStatus())
     }
 
+    /// Pro status for which profile a verdict may use (VerdictProfile): the same rule without the
+    /// wait, so a payer's custom profile never drops to a starter while StoreKit loads at launch.
+    var isProForVerdicts: Bool {
+        Self.proStatus(loaded: entitlementsLoaded, isPro: isProUser,
+                       savedStatus: WidgetDataManager.savedProStatus())
+    }
+
     nonisolated static func proStatus(loaded: Bool, isPro: Bool, savedStatus: Bool?) -> Bool {
         if loaded { return isPro }
         return savedStatus ?? true

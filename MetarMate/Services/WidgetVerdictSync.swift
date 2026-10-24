@@ -55,9 +55,11 @@ enum WidgetVerdictSync {
 
 // MARK: - Sync triggers
 // Attached at the app root, inside the model container. Re-publishes when the active profile is
-// switched, a profile is edited (limits or name), or favorites change.
+// switched, a profile is edited (limits or name), Pro status changes (a lapsed custom profile
+// falls back to a starter), or favorites change.
 struct WidgetVerdictSyncModifier: ViewModifier {
     @Environment(\.modelContext) private var context
+    @ObservedObject private var store = StoreManager.shared
     @Query private var profiles: [MinimumsProfile]
     @Query private var favorites: [AirportFavorite]
     @AppStorage(ActiveMinimumsProfile.key) private var activeProfileID: String = ""
@@ -73,6 +75,9 @@ struct WidgetVerdictSyncModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onChange(of: profileSignature) {
+                if WidgetVerdictSync.publishProfile(in: context) { WidgetDataManager.reloadWidgets() }
+            }
+            .onChange(of: store.isProForVerdicts) {
                 if WidgetVerdictSync.publishProfile(in: context) { WidgetDataManager.reloadWidgets() }
             }
             .onChange(of: favorites.map(\.icao)) { _, icaos in

@@ -231,11 +231,28 @@ enum ActiveMinimumsProfile {
 
 // MARK: - VerdictProfile
 // The one seam for "which profile does a verdict judge against", used by the detail screen,
-// Alerts, notifications and the widget snapshot. Today: the active profile. The Pro rule (a lapsed
-// user's custom profile falls back to a starter) belongs here and only here.
+// Alerts, notifications and the widget snapshot: the active profile, unless it's custom and Pro
+// has lapsed, when ProfileAccess picks a starter (the custom profile stays selected).
 enum VerdictProfile {
+    /// `isPro` nil = StoreManager's verdict status (real once loaded, else last saved, else Pro).
     @MainActor
-    static func current(in context: ModelContext) -> MinimumsProfile? {
-        ActiveMinimumsProfile.resolve(in: context)
+    static func current(in context: ModelContext, isPro: Bool? = nil,
+                        gatingEnabled: Bool = FeatureFlags.proGatingEnabled) -> MinimumsProfile? {
+        let active = ActiveMinimumsProfile.resolve(in: context)
+        let all = (try? context.fetch(FetchDescriptor<MinimumsProfile>())) ?? []
+        return ProfileAccess.usableProfile(active: active,
+                                           isPro: isPro ?? StoreManager.shared.isProForVerdicts,
+                                           starters: all.filter(\.isBuiltIn),
+                                           gatingEnabled: gatingEnabled)
+    }
+
+    /// The starter a verdict fell back to: non-nil only when `active` is custom and not allowed.
+    @MainActor
+    static func fallbackStarter(in context: ModelContext, isPro: Bool? = nil,
+                                gatingEnabled: Bool = FeatureFlags.proGatingEnabled) -> MinimumsProfile? {
+        guard let active = ActiveMinimumsProfile.resolve(in: context), !active.isBuiltIn,
+              let used = current(in: context, isPro: isPro, gatingEnabled: gatingEnabled),
+              used.persistentModelID != active.persistentModelID else { return nil }
+        return used
     }
 }
