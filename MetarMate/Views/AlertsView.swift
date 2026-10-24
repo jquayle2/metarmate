@@ -231,24 +231,27 @@ struct AlertsView: View {
 //   • Left strip + FlightCategoryBadge = CATEGORY axis (VFR/MVFR/IFR/LIFR).
 //   • GO/NO-GO badge                   = VERDICT axis (red NO-GO / green GO).
 //   • Wind text in the conditions line = WIND axis (amber/red only, otherwise secondary).
-private struct WatchRow: View {
+struct WatchRow: View {
     let watch: AirportWatch
     let display: AlertPipeline.WatchDisplay?
     let airport: Airport?
     var paused = false   // alerts are Pro and Pro has lapsed: nothing is being checked
 
-    private var conditions: AlertConditions? { display?.conditions }
-    private var verdict: Verdict? { display?.verdict }
+    // Paused overrides everything (Jeff, Oct 24): a display left from before the lapse shows no
+    // weather, no category and no GO/NO-GO, only "Paused".
+    var current: AlertPipeline.WatchDisplay? { paused ? nil : display }
+    var conditions: AlertConditions? { current?.conditions }
+    private var verdict: Verdict? { current?.verdict }
     // Shared wording and color rule with the detail screen and widgets.
-    private var shown: VerdictDisplay? {
-        guard let display, let verdict = display.verdict else { return nil }
-        return VerdictDisplay(verdict, profile: display.profile)
+    var shown: VerdictDisplay? {
+        guard let current, let verdict = current.verdict else { return nil }
+        return VerdictDisplay(verdict, profile: current.profile)
     }
 
     // A station-less airport we've already tried (display present) with no METAR: advisory-only.
     // A GO/NO-GO verdict on estimated data would be misleading, so we mark & suppress it.
     private var isAdvisoryOnly: Bool {
-        airport?.hasMetar == false && conditions == nil && display != nil
+        airport?.hasMetar == false && conditions == nil && current != nil
     }
 
     // CATEGORY axis — left strip color (brand category palette; gray when unknown).
@@ -298,7 +301,11 @@ private struct WatchRow: View {
 
                     // Conditions summary ("CLR · 10+SM · 180@19G30") or a status placeholder.
                     Group {
-                        if isNoCurrent {
+                        if paused {
+                            Text("Paused")
+                                .font(.brandMono(13, weight: .medium))
+                                .foregroundColor(Brand.slate)
+                        } else if isNoCurrent {
                             Text("No current METAR")
                                 .font(.avenir(12.5, .bold))
                                 .foregroundColor(Brand.slate)   // neutral: amber is for wind and pressure only
@@ -308,11 +315,7 @@ private struct WatchRow: View {
                             Text("Advisory weather only")
                                 .font(.avenir(12.5, .bold))
                                 .foregroundColor(Brand.slate)
-                        } else if paused {
-                            Text("Paused")
-                                .font(.brandMono(13, weight: .medium))
-                                .foregroundColor(Brand.slate)
-                        } else if display == nil {
+                        } else if current == nil {
                             Text("Checking…")
                                 .font(.brandMono(13, weight: .medium))
                                 .foregroundColor(Brand.slate)
