@@ -101,12 +101,13 @@ enum AlertPipeline {
         let lastGoodCheck: Date?
     }
 
-    // `force` (pull-to-refresh) bypasses the shared cache's freshness window; the auto/appear
-    // refresh reads through it so a tab revisit within 5 min doesn't re-fetch.
+    // `force` (pull-to-refresh) asks NOAA for every watch: no shared-cache freshness window and no
+    // WeatherService METAR cache. The auto/appear refresh reads through them so a tab revisit
+    // within 5 min doesn't re-fetch.
     static func evaluateForDisplay(_ watches: [AirportWatch], in context: ModelContext, force: Bool = false) async -> [String: WatchDisplay] {
         guard !watches.isEmpty, let profile = VerdictProfile.current(in: context) else { return [:] }
         let icaos = Array(Set(watches.map { $0.icao }))
-        let conditions = await fetchConditions(for: icaos, force: force, retry: .foreground)
+        let conditions = await fetchConditions(for: icaos, force: force, fresh: force, retry: .foreground)
         var result: [String: WatchDisplay] = [:]
         let now = Date()
         for watch in watches {
@@ -154,7 +155,9 @@ enum AlertPipeline {
         case failed
     }
 
-    private static func fetchConditions(for icaos: [String], force: Bool, retry: RetryPolicy) async -> [String: ConditionsResult] {
+    /// `fresh` also skips WeatherService's own METAR cache and no-product memory (a user's pull).
+    private static func fetchConditions(for icaos: [String], force: Bool, fresh: Bool = false,
+                                        retry: RetryPolicy) async -> [String: ConditionsResult] {
         // Read-through the shared cache for METARs: keep fresh cached values, and only fetch the
         // misses. Normalize FAA LIDs to their K-prefixed ICAO for NOAA (36K→K36K) for the fetch,
         // then map back to the watch's own id so numeric-LID stations are actually evaluated.
@@ -174,7 +177,7 @@ enum AlertPipeline {
         // Transient failures retry (only the failing stations); cancellation (BG expiry) leaves
         // those watches out entirely, as if this check never ran for them.
         guard let outcomes = try? await retry.runBatch("alerts METAR", ids: noaaIds, {
-            try await WeatherService.shared.metarOutcomes(for: $0)
+            try await WeatherService.shared.metarOutcomes(for: $0, fresh: fresh)
         }) else { return result }
         for (id, outcome) in outcomes {
             let code = noaaToOriginal[id] ?? id
