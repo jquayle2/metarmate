@@ -107,7 +107,9 @@ struct NearestAirportsView: View {
         }
         .scrollIndicators(.hidden)
         .refreshable {
-            await airportVM.loadNearestAirports(force: true)
+            // Its own Task: any AirportViewModel change mid-pull re-renders this view, and SwiftUI
+            // then cancels the refreshable task. Awaited directly, the load's first publish cancelled it.
+            await Task { await airportVM.loadNearestAirports(force: true) }.value
             lastUpdated = Date()
         }
     }

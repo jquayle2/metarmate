@@ -52,7 +52,8 @@ struct FavoritesView: View {
                     .scrollContentBackground(.hidden)
                     .environment(\.editMode, $editMode)
                     .refreshable {
-                        await fetchMetars(force: true)
+                        // Own Task, as in NearestAirportsView, so no view update can cancel the pull.
+                        await Task { await fetchMetars(force: true) }.value
                     }
                 }
             }
