@@ -65,4 +65,30 @@ struct VerdictProfileSeamTests {
         #expect(StoreManager.proStatus(loaded: false, isPro: false, savedStatus: true) == true)
         #expect(StoreManager.proStatus(loaded: false, isPro: false, savedStatus: nil) == true)
     }
+
+    // Detail card profile menu: starters for everyone; a custom profile goes through the Pro gate.
+    @Test func cardMenuGatesCustomProfilesOnly() throws {
+        let ctx = try makeContext()
+        let starter = try #require(MinimumsProfile.builtInStarters().first)
+        let mine = MinimumsProfile(name: "Mine", isBuiltIn: false)
+        ctx.insert(starter); ctx.insert(mine)
+        for isPro in [true, false] {
+            for gating in [true, false] {
+                #expect(VerdictCard.menuAction(for: starter, isPro: isPro, gatingEnabled: gating) == .select)
+            }
+        }
+        #expect(VerdictCard.menuAction(for: mine, isPro: true, gatingEnabled: true) == .select)
+        #expect(VerdictCard.menuAction(for: mine, isPro: false, gatingEnabled: true) == .paywall)
+        #expect(VerdictCard.menuAction(for: mine, isPro: false, gatingEnabled: false) == .select)
+    }
+
+    // The card's notice names the starter the verdict actually used.
+    @Test func cardNoticeNamesTheFallbackStarter() throws {
+        try withCustomActive { ctx, _ in
+            let starter = try #require(VerdictProfile.fallbackStarter(in: ctx, isPro: false, gatingEnabled: true))
+            #expect(ProfileAccess.lapsedNotice(starterName: starter.name)
+                    == "Your custom profiles are saved. Verdicts use the \(starter.name) starter until Pro is restored.")
+            #expect(VerdictProfile.current(in: ctx, isPro: false, gatingEnabled: true) === starter)
+        }
+    }
 }

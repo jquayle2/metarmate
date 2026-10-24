@@ -14,17 +14,41 @@ struct VerdictCard: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \MinimumsProfile.name) private var profiles: [MinimumsProfile]
     @AppStorage(ActiveMinimumsProfile.key) private var activeProfileID: String = ""
+    @ObservedObject private var store = StoreManager.shared
     @State private var profile: MinimumsProfile?
+    @State private var lapsedStarter: MinimumsProfile?   // set when a lapsed custom profile fell back
+    @State private var showProSheet = false
+
+    /// What choosing a profile from the card's menu does: starters are free (D#19); a custom
+    /// profile needs Pro (D#20), else the paywall.
+    enum MenuAction: Equatable { case select, paywall }
+
+    static func menuAction(for profile: MinimumsProfile, isPro: Bool,
+                           gatingEnabled: Bool = FeatureFlags.proGatingEnabled) -> MenuAction {
+        profile.isBuiltIn || ProGate.allows(.customProfiles, isPro: isPro, gatingEnabled: gatingEnabled)
+            ? .select : .paywall
+    }
 
     var body: some View {
         Group {
             if let profile {
-                // Re-evaluated every 30 s so late (65 min) and no current METAR (over 75) arrive on time.
-                TimelineView(.periodic(from: .now, by: 30)) { tl in
-                    let verdict = GoNoGoEvaluator.evaluate(profile, AlertConditions(from: metar),
-                                                           previousSide: nil, icao: icao, now: tl.date)
-                    let shown = VerdictDisplay(verdict, profile: GoNoGoEvaluator.snapshot(of: profile))
-                    VerdictCardFace(shown: shown) { profileLabel(shown.against) }
+                // One view, so Group's modifiers below attach once.
+                VStack(spacing: 0) {
+                    // Re-evaluated every 30 s so late (65 min) and no current METAR (over 75) arrive on time.
+                    TimelineView(.periodic(from: .now, by: 30)) { tl in
+                        let verdict = GoNoGoEvaluator.evaluate(profile, AlertConditions(from: metar),
+                                                               previousSide: nil, icao: icao, now: tl.date)
+                        let shown = VerdictDisplay(verdict, profile: GoNoGoEvaluator.snapshot(of: profile))
+                        VerdictCardFace(shown: shown) { profileLabel(shown.against) }
+                    }
+                    if let lapsedStarter {
+                        Text(ProfileAccess.lapsedNotice(starterName: lapsedStarter.name))
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 6)
+                            .accessibilityIdentifier("verdictLapsedNotice")
+                    }
                 }
             } else {
                 // Not EmptyView: .task never runs on an empty view, so the profile would never resolve.
@@ -32,8 +56,15 @@ struct VerdictCard: View {
             }
         }
         // Resolve outside body: resolve() can heal the stored pointer, which is a state write.
-        .task(id: activeProfileID) { profile = VerdictProfile.current(in: context) }
-        .onChange(of: profiles.map(\.persistentModelID)) { profile = VerdictProfile.current(in: context) }
+        .task(id: activeProfileID) { resolveProfile() }
+        .onChange(of: profiles.map(\.persistentModelID)) { resolveProfile() }
+        .onChange(of: store.isProForVerdicts) { resolveProfile() }
+        .sheet(isPresented: $showProSheet) { ProUpgradeView(mode: .pro) }
+    }
+
+    private func resolveProfile() {
+        profile = VerdictProfile.current(in: context)
+        lapsedStarter = VerdictProfile.fallbackStarter(in: context)
     }
 
     // "vs VFR day starter ▾": tap to judge against another profile. Writes the one active-profile
@@ -54,7 +85,10 @@ struct VerdictCard: View {
             Menu {
                 ForEach(profiles) { p in
                     Button {
-                        ActiveMinimumsProfile.set(p)
+                        switch Self.menuAction(for: p, isPro: store.isProForUI) {
+                        case .select:  ActiveMinimumsProfile.set(p)
+                        case .paywall: showProSheet = true
+                        }
                     } label: {
                         let name = p.isBuiltIn ? "\(p.name) starter" : p.name
                         if p.persistentModelID == profile?.persistentModelID {
