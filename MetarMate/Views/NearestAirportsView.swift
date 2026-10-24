@@ -92,7 +92,8 @@ struct NearestAirportsView: View {
                             airport: airport,
                             distance: airportVM.distance(to: airport),
                             state: airportVM.nearestRows[airport.icao] ?? .loading,
-                            onRetry: { Task { await airportVM.loadNearestAirports() } }
+                            onRetry: { Task { await airportVM.loadNearestAirports() } },
+                            showsChevron: true   // a ScrollView, not a List: the link draws no chevron here
                         )
                     }
                     .buttonStyle(.plain)

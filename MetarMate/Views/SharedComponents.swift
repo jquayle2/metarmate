@@ -134,6 +134,9 @@ struct AirportRowView: View {
     var state: RowWeather? = nil
     /// Retry for a failed row: a small trailing button, on failed rows only.
     var onRetry: (() -> Void)? = nil
+    /// The row's own ›. Only for a NavigationLink outside a List (Nearest's ScrollView): in a List
+    /// the link already draws its chevron, and both showed.
+    var showsChevron = false
 
     private var railColor: Color {
         // A resolved METAR (incl. numeric LIDs like 36K→K36K) drives the category color.
@@ -175,7 +178,7 @@ struct AirportRowView: View {
             .frame(maxHeight: .infinity)
 
             VStack(alignment: .leading, spacing: 2) {
-                // Line 1: ICAO + IATA · distance + chevron
+                // Line 1: ICAO + IATA · distance (+ chevron)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(airport.icao)
                         .font(.avenir(19, .heavy))
@@ -187,9 +190,11 @@ struct AirportRowView: View {
                             .font(.brandMono(13, weight: .medium))
                             .foregroundColor(Brand.slate)
                     }
-                    Text("›")
-                        .font(.system(size: 16))
-                        .foregroundColor(Brand.monoDim2)
+                    if showsChevron {
+                        Text("›")
+                            .font(.system(size: 16))
+                            .foregroundColor(Brand.monoDim2)
+                    }
                 }
 
                 // Line 2: airport name
@@ -404,7 +409,8 @@ struct AirportRowView: View {
 
 extension AirportRowView {
     /// A row driven by RowWeatherLoader state (Nearest, Search, Recents).
-    init(airport: Airport, distance: String?, state: RowWeather, onRetry: (() -> Void)?) {
-        self.init(airport: airport, metar: nil, distance: distance, advisory: nil, state: state, onRetry: onRetry)
+    init(airport: Airport, distance: String?, state: RowWeather, onRetry: (() -> Void)?, showsChevron: Bool = false) {
+        self.init(airport: airport, metar: nil, distance: distance, advisory: nil, state: state, onRetry: onRetry,
+                  showsChevron: showsChevron)
     }
 }
