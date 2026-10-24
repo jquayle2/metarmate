@@ -49,6 +49,16 @@ struct LayoutSettingsView: View {
                 } else {
                     advisoryListSection
                 }
+
+                // Version line, every build; TestFlight builds add "· TestFlight".
+                Section {
+                } footer: {
+                    Text(BuildChannel.versionLine)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .accessibilityIdentifier("versionLine")
+                }
             }
             .listStyle(.insetGrouped)
             .environment(\.editMode, .constant(.active))

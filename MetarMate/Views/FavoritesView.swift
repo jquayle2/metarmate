@@ -3,9 +3,7 @@ import SwiftData
 
 struct FavoritesView: View {
     @Query(sort: \AirportFavorite.addedDate, order: .forward) private var favorites: [AirportFavorite]
-    @ObservedObject private var store = StoreManager.shared
     @EnvironmentObject private var weatherCache: WeatherCache
-    @State private var showProSheet = false
 
     private var sortedFavorites: [AirportFavorite] {
         AirportFavorite.ordered(favorites)
@@ -15,14 +13,14 @@ struct FavoritesView: View {
     @State private var favAdvisories: [String: AdvisoryWeather] = [:]
     @State private var isLoading = false
     @State private var editMode: EditMode = .inactive
+    #if DEBUG || TESTFLIGHT
     @State private var showInjectionHarness = false   // Test Harness (Debug/TestFlight only)
+    #endif
 
     var body: some View {
         NavigationStack {
             Group {
-                if FeatureFlags.favoritesRequirePro && !store.isProUser {
-                    proRequiredView
-                } else if favorites.isEmpty {
+                if favorites.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "star.circle")
                             .font(.system(size: 48))
@@ -79,13 +77,14 @@ struct FavoritesView: View {
                     }
                 }
             }
+            #if DEBUG || TESTFLIGHT
             // Test Harness entry (Debug/TestFlight only): FIVE taps on this chip open the METAR
             // Injection screen. Moved OFF the nav-bar header — the top ~20 pt screen edge is where
             // iOS's system gesture gate wins ("System gesture gate timed out"), which starved the old
             // long-press so the app's recognizer never fired. A 5-tap target inside the content area,
-            // clear of the top edge, competes with no system gesture. The receipt check on
-            // TestHarnessGate.isAvailable is UNCHANGED and remains the actual App Store boundary — this
-            // whole inset is absent in a production build, so it can't be reached or seen there.
+            // clear of the top edge, competes with no system gesture. This whole inset is compiled only
+            // into Debug and TestFlight builds (audit #21); TestHarnessGate.isAvailable is a second,
+            // runtime layer inside those builds.
             .safeAreaInset(edge: .bottom) {
                 if TestHarnessGate.isAvailable {
                     HStack(spacing: 6) {
@@ -107,6 +106,7 @@ struct FavoritesView: View {
             .fullScreenCover(isPresented: $showInjectionHarness) {
                 MetarInjectionHarnessView()
             }
+            #endif
         }
         .task {
             await fetchMetars()
@@ -183,36 +183,6 @@ struct FavoritesView: View {
         reordered.move(fromOffsets: source, toOffset: destination)
         for (index, fav) in reordered.enumerated() {
             fav.sortOrder = index
-        }
-    }
-
-    private var proRequiredView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "star.circle")
-                .font(.system(size: 56))
-                .foregroundColor(.yellow.opacity(0.7))
-            Text("Favorites requires Pro")
-                .font(.title3.bold())
-            Text("Save unlimited airports for instant access with MetarMate Pro.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button {
-                showProSheet = true
-            } label: {
-                Text("Upgrade to Pro — $8.99")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(Color.cyan)
-                    .cornerRadius(12)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .sheet(isPresented: $showProSheet) {
-            ProUpgradeView(mode: .pro)
         }
     }
 }

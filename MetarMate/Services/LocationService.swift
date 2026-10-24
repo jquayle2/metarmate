@@ -16,7 +16,9 @@ class LocationService: NSObject, ObservableObject {
     private override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        // Kilometer, not Best: matches the coarse-location declaration in PrivacyInfo.xcprivacy
+        // (audit #28), and is plenty to rank nearby airports.
+        manager.desiredAccuracy = kCLLocationAccuracyKilometer
         manager.distanceFilter = 500   // update every 500m
     }
 

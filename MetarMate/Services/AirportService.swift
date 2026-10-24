@@ -46,6 +46,12 @@ class AirportService {
         icaoIndex[icao.uppercased()] != nil
     }
 
+    /// airports.json only, never the live-resolved cache. The launch reconcile (#27) treats the
+    /// bundled database as the source of truth for favorites.
+    func bundledAirport(icao: String) -> Airport? {
+        icaoIndex[icao.uppercased()]
+    }
+
     func airport(iata: String) -> Airport? {
         iataIndex[iata.uppercased()]
     }

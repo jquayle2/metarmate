@@ -3,19 +3,29 @@ import SwiftData
 
 // MARK: - ProfilesListView
 // Manage minimums profiles: create, clone, edit, delete. Reached from the Alerts profile area.
+// Built-in starters are read-only for everyone; creating, cloning and editing a custom profile is
+// Pro (D#20). Deleting your own profile is always allowed.
 struct ProfilesListView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \MinimumsProfile.name) private var profiles: [MinimumsProfile]
     @AppStorage("activeMinimumsProfileID") private var activeProfileID: String = ""
+    @ObservedObject private var store = StoreManager.shared
     @State private var path = NavigationPath()
     @State private var showNewSheet = false
+    @State private var showProSheet = false
+
+    private var canCustomize: Bool { ProGate.allows(.customProfiles, isPro: store.isProForUI) }
+    private var hasCustomProfiles: Bool { profiles.contains { !$0.isBuiltIn } }
 
     var body: some View {
         NavigationStack(path: $path) {
             List {
                 ForEach(profiles) { profile in
-                    NavigationLink(value: profile) {
+                    Button {
+                        // Starters open read-only for everyone; a custom profile needs Pro.
+                        if profile.isBuiltIn || canCustomize { path.append(profile) } else { showProSheet = true }
+                    } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
                                 Text(profile.name).font(.headline)
@@ -32,6 +42,7 @@ struct ProfilesListView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
+                        .foregroundColor(.primary)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         if !profile.isBuiltIn {
@@ -39,11 +50,21 @@ struct ProfilesListView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
-                        Button { clone(profile) } label: {
+                        Button { canCustomize ? clone(profile) : (showProSheet = true) } label: {
                             Label("Clone", systemImage: "doc.on.doc")
                         }
                         .tint(.indigo)
                     }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !canCustomize, hasCustomProfiles,
+                   let starter = ProfileAccess.fallbackStarter(profiles) {
+                    Text(ProfileAccess.lapsedNotice(starterName: starter.name))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .padding()
+                        .accessibilityIdentifier("lapsedProfilesNotice")
                 }
             }
             .navigationTitle("Minimums Profiles")
@@ -53,11 +74,15 @@ struct ProfilesListView: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showNewSheet = true } label: { Image(systemName: "plus") }
+                    Button { canCustomize ? (showNewSheet = true) : (showProSheet = true) } label: { Image(systemName: "plus") }
+                        .accessibilityIdentifier("newProfileButton")
                 }
             }
             .sheet(isPresented: $showNewSheet) {
                 NewProfileSheet(container: context.container)
+            }
+            .sheet(isPresented: $showProSheet) {
+                ProUpgradeView(mode: .pro)
             }
         }
     }
@@ -107,10 +132,11 @@ struct ProfilesListView: View {
 // MARK: - ProfileEditorView
 struct ProfileEditorView: View {
     @Bindable var profile: MinimumsProfile
-    @Environment(\.modelContext) private var context
 
     var body: some View {
         Form {
+            // Built-in starters are read-only (Jeff, Oct 23): a verdict "vs VFR day starter" must
+            // mean the canonical values. Clone a starter to make your own.
             Section("Name") {
                 if profile.isBuiltIn {
                     // Built-in names are fixed so "Reset to Default" can match by name.
@@ -134,17 +160,13 @@ struct ProfileEditorView: View {
             } header: {
                 Text("Minimums")
             } footer: {
-                Text("Leave a factor blank to skip it. Crosswind is always checked against at least your global minimum, even when blank.")
-            }
-
-            if profile.isBuiltIn {
-                Section {
-                    Button("Reset to Default") {
-                        profile.resetToBuiltInDefault()
-                        try? context.save()
-                    }
+                if profile.isBuiltIn {
+                    Text("Built-in starters can't be changed. Clone one to make your own.")
+                } else {
+                    Text("Leave a factor blank to skip it. Crosswind is always checked against at least your global minimum, even when blank.")
                 }
             }
+            .disabled(profile.isBuiltIn)
         }
         .navigationTitle(profile.name.isEmpty ? "New Profile" : profile.name)
         .navigationBarTitleDisplayMode(.inline)

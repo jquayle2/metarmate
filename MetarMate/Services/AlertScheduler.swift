@@ -11,7 +11,12 @@ import SwiftData
 // in Info.plist; any drift makes the task silently never run (the classic background-task bug).
 // Keeping it as one constant means the two Swift call sites can't disagree — only the Info.plist
 // literal is hand-typed, and it's verified against this value.
-enum AlertScheduler {
+//
+// nonisolated (audit #26): BGTaskScheduler calls the launch and expiration handlers on its own
+// background queue. Under the target's MainActor default they'd be MainActor code running off the
+// main thread, which Swift 6's runtime isolation check stops with a crash. Only the store work
+// below hops to the MainActor, explicitly.
+nonisolated enum AlertScheduler {
     static let taskIdentifier = "com.jeffquayle.MetarMate.alertcheck"
 
     // Register the launch handler. Must be called once at launch BEFORE launch completes
@@ -48,12 +53,19 @@ enum AlertScheduler {
         schedule()
 
         let work = Task { @MainActor in
+            // Alerts are Pro (D#20). A lapsed or refunded user's watches stop here, with nothing
+            // deleted. Entitlements are awaited first, so a payer's checks never stop on a cold launch.
+            guard ProGate.allows(.alerts, isPro: await StoreManager.shared.isProWhenLoaded()) else {
+                print("[AlertScheduler] skipped: alerts need MetarMate Pro")
+                return
+            }
             // Build a dedicated, short-lived container for THIS run. Scoping it to this closure
             // means its SQLite connection — and the App Group store's WAL lock — is released the
             // moment the work finishes, BEFORE we report completion and iOS suspends the process.
             // A long-lived container held across suspension is what triggers RunningBoard
             // 0xdead10cc. runChecks saves internally, so nothing is lost when the container goes.
-            let container = ModelStore.makeContainer(for: "bgtask")
+            // nil: the store won't open. Skip the run; never recover from the background (#23).
+            guard let container = ModelStore.makeBackgroundContainer() else { return }
             await AlertPipeline.runChecks(in: container.mainContext)
             // container + its mainContext go out of scope here → connection closed, lock released.
         }
@@ -61,11 +73,15 @@ enum AlertScheduler {
         // is still torn down promptly rather than held until the watchdog fires.
         task.expirationHandler = { work.cancel() }
 
+        let completion = Completion(task: task)
         Task {
             // Awaiting work.value returns only after the @MainActor closure above has fully
             // returned and released its container, so the lock is gone before we complete.
             _ = await work.value
-            task.setTaskCompleted(success: !work.isCancelled)
+            completion.task.setTaskCompleted(success: !work.isCancelled)
         }
     }
+
+    // BGTask isn't marked Sendable, but setTaskCompleted may be called from any thread.
+    private struct Completion: @unchecked Sendable { let task: BGTask }
 }

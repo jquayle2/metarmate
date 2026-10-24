@@ -103,24 +103,29 @@ Handoff: `docs/handoffs/A2_MISSING_DATA_handoff.md` (branch `fix/a2-missing-data
 Handoff: `docs/handoffs/A3_RELEASE_handoff.md` (branch `fix/a3-release`, worktree `MetarMate-a3`, off `feat/nearby-taf`). Siri items below were done on `feat/siri-hands-free`.
 
 App Review blockers (required regardless of section 0):
-- [ ] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk)
-- [ ] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]
+- [x] #21 Test harness compiled out with a `TESTFLIGHT` flag set only on TestFlight archives (2.2 rejection risk). New build configuration **TestFlight** (Release + `TESTFLIGHT`) and shared scheme **MetarMate TestFlight**, which archives with it. App Store archives use scheme **MetarMate** (Release). Built Release binary: 0 harness symbols or strings; TestFlight and Debug still carry it
+- [x] #21 TestFlight builds say "TestFlight" on a version line (Jeff, Oct 23): bottom of Customize Layout, every build shows "Version x (n)", TestFlight builds add "· TestFlight"
+- [x] #21 Add a UI test that the harness entry chip is absent in a Release (App Store) build [Code]. `295af22`. `HarnessAbsentUITests`: forces the runtime gate open, then the chip is present in Debug/TestFlight and absent in Release (all three run)
 - [x] #22 Privacy manifest: app declares UserDefaults (CA92.1, 1C8F.1); widget extension has its own manifest (1C8F.1). Both verified in the built bundles; no other required-reason APIs in use. `7fb7c29`
-- [ ] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure
-- [ ] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration
+- [x] #23 SwiftData `VersionedSchema` V1 + migration plan; no `fatalError` on container failure. Store open: retry once, then in-memory for the session with a notice (store untouched); moved aside (renamed, never deleted) only after 3 failed launches in a row; the background task skips the run and never recovers (Jeff, Oct 23). A store written by earlier unversioned builds opens with V1 and keeps its data (unit test plus the simulator's Oct 21 store). The store stays in the App Group (A1 did not move it). Remaining `fatalError`: only if an in-memory store fails, which means an invalid schema. `07c7ea9`
+- [x] #28 Info.plist: drop unused `processing` background mode, Siri entitlement / `NSSiriUsageDescription`; location accuracy matches coarse declaration. `27a04d6`. Verified in the built bundle; the App Shortcut still runs from the Shortcuts app in the simulator without the entitlement (voice Siri on device: see the A3 device list)
 
 Pro gating (launch-blocking; scope in D#19–20):
-- [ ] #24 Siri waits for entitlements before reading `isProUser`
-- [ ] #24 Lock-screen widgets gated
-- [ ] #24 StoreKit listener started in `App.init`
+- [x] One switch, `FeatureFlags.proGatingEnabled`: off in TestFlight builds, on in Release (App Store) and Debug. `FeatureFlags.swift` is compiled into the app and the widget; `TESTFLIGHT` is set on the TestFlight configuration of every target. Verified in the simulator: the widget's diag line reads gating=off from a TestFlight build and gating=on from Debug, matching the app. `f99f3cd`
+- [x] #24 Siri waits for entitlements before reading `isProUser`: up to 3 s, then the last saved status, then allow (a payer never hears "Pro required"). `StoreManager.proAccessForSiri`
+- [x] #24 Lock-screen widgets gated: every widget family goes through `WidgetProAccess`; a locked entry carries no weather and shows "MetarMate Pro" (simulator: Debug build shows the lock, TestFlight build shows weather)
+- [x] #24 StoreKit listener started in `App.init`
 - [x] #24 ASOS product IDs requested only when `FeatureFlags.asosAvailable` is on. `49dd6d5`
-- [ ] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro`
-- [ ] Widgets Pro: `WidgetDataManager.widgetsRequirePro = true` (home and lock screen)
-- [ ] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only
-- [ ] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message
-- [ ] Crosswind calculator free: remove any Pro gate on it
-- [ ] Layout customization Pro
-- [ ] Paywall screen: lists what Pro adds; restore purchases; $5.99 shown from StoreKit (never hard-coded)
+- [x] Entitlements: `StoreManager.isProUser` = Pro purchase (own or family-shared) OR active ASOS subscription; `entitlementsLoaded` state; refunds/revocations turn it off; only the newest overlapping entitlement check publishes. StoreKit test session: purchase turns Pro on, refund turns it off via `Transaction.updates`, ASOS includes Pro
+- [x] `MetarMateProducts.storekit` rewritten in Xcode's format (the hand-written file never loaded products): Pro $5.99, Family Sharing on, current copy; ASOS prices there are placeholders until D#21. The MetarMate scheme's Run action uses it; Jeff: confirm in Xcode, Edit Scheme > Run > Options > StoreKit Configuration
+- [x] Favorites stay free: remove the Pro check on the detail-view star; retire `FeatureFlags.favoritesRequirePro` (and its hard-coded "Upgrade to Pro — $8.99" screen)
+- [x] Widgets Pro (home and lock screen) on `FeatureFlags.proGatingEnabled`; `widgetsRequirePro` retired. Allowed when the app saved Pro or StoreKit says Pro in the widget (family purchase, fresh install). The gallery preview still shows weather
+- [x] Siri Pro on the same switch: a free user hears one sentence ("Siri weather is part of MetarMate Pro…") and gets no weather; entitlements are awaited first
+- [x] Custom minimums profiles Pro: creating/cloning/editing a non-built-in profile requires Pro; free users can select the built-in starters only. Starters are read-only for everyone; a starter a tester edited is moved at launch to "<starter> (edited)" (active if the starter was), then reset (Jeff, Oct 23). Lapsed Pro: profiles stay stored; `ProfileAccess.usableProfile(active:isPro:starters:)` gives the verdict a starter (VFR day first) and the notice names it. For `VerdictProfile.current()` to call at merge. UI test: gated build opens the paywall, TestFlight opens New Profile. Also: the A3 commit before this one is `e40e040`
+- [x] Alerts Pro: creating an airport watch requires Pro; existing watches of a lapsed/refunded user stop with a clear message ("Alerts are paused. Your watches are saved and resume with MetarMate Pro.", rows say "Paused"; nothing deleted). The background task waits for entitlements, then skips. Simulator: watch added in a TestFlight build shows paused in a gated Debug build. `4835714` is 3b
+- [x] Crosswind calculator free: there was no gate, and `ProFeature` has no crosswind case, so nothing can gate it
+- [x] Layout customization Pro: the Customize Layout button opens the paywall without Pro (UI test both ways). A lapsed user keeps the saved layout and starting tab (Jeff, Oct 23). `78c427c`
+- [x] Paywall screen: lists what Pro adds (no Apple Watch until it ships); Buy Pro with the price from StoreKit (never hard-coded); Family Sharing note; Restore Purchases (says so when nothing is found) and Redeem Code (Apple's offer-code sheet); no links out (3.1.1). UI test: $5.99 from the scheme's .storekit, every line, restore message. Redeem Code sheet and a real purchase are device tests. `208866e`
 - [ ] Beta-tester migration: TestFlight users on Pro features get offer codes before the gate goes live
 - [ ] TestFlight testers get Pro via offer codes (D#20)
 
@@ -138,14 +143,15 @@ Siri (#25) — handoff `docs/handoffs/SIRI_HANDS_FREE_handoff.md`, branch `feat/
 - [ ] Device check, hands-free with no touch: nearest, a favorite by ident, the new app-name phrase, location off [Jeff]
 
 Background task (#26):
-- [ ] Expiry handler stops the work; no save after cancel
-- [ ] Synoptic calls: short timeouts, not sequential
-- [ ] MainActor isolation of the handler
-- [ ] Watch `expiresAt` enforced
+- [ ] Expiry handler stops the work; no save after cancel. In the code already: the expiration handler cancels the work Task, and `AlertPipeline.runChecks` stops on cancel and skips the save. Not tested (the pipeline has no fetch seam, and it's A2's file); device test [Jeff]
+- [ ] Synoptic calls: short timeouts, not sequential. In the code already: one batched NOAA METAR request per run, 8 s request and 15 s resource timeouts (`WeatherService`). Synoptic isn't called from the background run. Device test [Jeff]
+- [x] MainActor isolation of the handler: `AlertScheduler` is `nonisolated`; only the store work hops to the MainActor. Under full Swift 6 concurrency checking the file has no warnings. The old handler was MainActor code on BGTaskScheduler's background queue, which a Swift 6 build would stop with a crash. The simulator doesn't run background tasks, so the run itself is a device test. `4387065`
+- [ ] Watch `expiresAt` enforced: not built for launch (Jeff, Oct 23). `AirportWatch.expiresAt` exists but nothing sets or reads it, so a watch runs until the pilot turns it off or deletes it
 
 Other:
-- [ ] #27 Favorites reconcile with `airports.json` at launch
-  - [ ] Favorites not in airports.json: refetch NOAA station info once, store elevation in feet
+- [ ] Full suite: same unexplained failure as A2's "Full suite stopped once mid-run" line (section 3). A3 saw a run report TEST FAILED with no failing case named, and one run killed (exit 137). Likely cause found Oct 23: parallel sessions share the "iPhone 17" simulator and the same bundle ID, so one session's app and UI tests run over another's (an A3 widget screenshot showed the verdict-surfaces build). A3 now tests on its own simulator, "iPhone 17 A3"; each worktree should use its own. Recheck after integration
+- [x] A2 hand-off: favorites of non-bundled airports saved before `9025643` kept the meter elevation. Once per install, each one's elevation is re-read from NOAA station info and stored in feet; 0 when NOAA has none (Jeff, Oct 23). A network failure retries next launch. Live check: KDEN stored as 1656 became 5433. Needs `9025643` merged too, so new favorites save feet
+- [x] #27 Favorites reconcile with `airports.json` at launch: name, IATA, coordinates, elevation, `hasMetar` (Jeff, Oct 23), keyed by ICAO. An ICAO missing from airports.json keeps its favorite unchanged; order and date added untouched. `86fc14b`
 - [ ] Merge A3 [Jeff]
 
 ## 4b. Nearby-TAF fallback — launch (D#13–17) [Code]
@@ -210,7 +216,7 @@ Source decided Oct 21: Synoptic paid plan. New trial token (~7 days) incoming. M
 
 ## 7. App Store Connect and submission [Jeff]
 
-- [ ] Version/build bumped (app + widget, Debug + Release)
+- [ ] Version/build bumped in all six configurations: app and widget × Debug, Release, TestFlight. The App Store archive (scheme MetarMate, Release) and the TestFlight archive (scheme MetarMate TestFlight) are separate uploads, so each needs its own build number
 - [ ] Pro IAP (non-consumable) at $5.99 in App Store Connect, Family Sharing on, review screenshot + notes
 - [ ] App name, subtitle, keywords, description
 - [ ] Screenshots: 6.9" and 6.5" iPhone, 13" iPad (iPad is supported)

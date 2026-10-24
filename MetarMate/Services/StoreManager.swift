@@ -9,9 +9,9 @@ class StoreManager: ObservableObject {
     static let shared = StoreManager()
 
     // MARK: - Product IDs
-    static let proID              = "com.jeffquayle.MetarMate.pro"
-    static let asosMonthlyID      = "com.jeffquayle.MetarMate.asosupdates.monthly"
-    static let asosAnnualID       = "com.jeffquayle.MetarMate.asosupdates.annual"
+    static let proID              = ProEntitlement.proID
+    static let asosMonthlyID      = ProEntitlement.asosMonthlyID
+    static let asosAnnualID       = ProEntitlement.asosAnnualID
     // Only products that can be sold: the ASOS subscriptions are requested only once ASOS is
     // switched on, so a build with ASOS off never shows or offers them (audit #24).
     private static var requestedIDs: Set<String> {
@@ -20,7 +20,16 @@ class StoreManager: ObservableObject {
 
     // MARK: - Published state
     @Published private(set) var products: [Product] = []
+    /// Pro features unlocked: the Pro purchase (own or family-shared) OR an active ASOS Updates
+    /// subscription, which includes Pro (D#21). False until entitlements load; check
+    /// `entitlementsLoaded` (or use `proAccessForSiri`) before telling anyone they lack Pro.
     @Published private(set) var isProUser = false
+    /// True once the first `checkEntitlements()` has finished this launch.
+    @Published private(set) var entitlementsLoaded = false
+
+    /// For UI gates: Pro, or entitlements still loading, so a payer never sees a paywall flash
+    /// in the first moment after launch.
+    var isProForUI: Bool { isProUser || !entitlementsLoaded }
     @Published private(set) var isAsosSubscriber = false
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
@@ -33,7 +42,15 @@ class StoreManager: ObservableObject {
     }
 
     private var updateTask: Task<Void, Never>?
+    // checkEntitlements runs from launch, the Transaction.updates listener, foreground and
+    // purchase/restore, and suspends inside StoreKit, so runs overlap. Only the most recently
+    // started run publishes; an older run finishing later would overwrite newer state (a stale
+    // "not Pro" right after a purchase).
+    private var entitlementCheckGeneration = 0
 
+    // Created from App.init (audit #24) so the Transaction.updates listener runs from launch, not
+    // from the first screen that happens to touch the store. Opens no SwiftData store, so it's
+    // safe on background launches.
     private init() {
         updateTask = listenForTransactions()
         Task { await checkEntitlements() }
@@ -83,6 +100,8 @@ class StoreManager: ObservableObject {
 
     // MARK: - Entitlement check
     func checkEntitlements() async {
+        entitlementCheckGeneration += 1
+        let generation = entitlementCheckGeneration
         // Sweep unfinished transactions first. A verified-but-unfinished transaction
         // (seen on iOS 26 TestFlight/sandbox) can block entitlements from resolving.
         for await result in Transaction.unfinished {
@@ -91,24 +110,52 @@ class StoreManager: ObservableObject {
             }
         }
 
-        var foundPro = false
-        var foundAsos = false
-
+        var records: [EntitlementRecord] = []
         for await result in Transaction.currentEntitlements {
             guard let transaction = try? checkVerified(result) else { continue }
-            switch transaction.productID {
-            case Self.proID:
-                foundPro = true
-            case Self.asosMonthlyID, Self.asosAnnualID:
-                foundAsos = true
-            default:
-                break
-            }
+            records.append(EntitlementRecord(transaction))
         }
 
-        isProUser = foundPro
-        isAsosSubscriber = foundAsos
-        WidgetDataManager.saveProStatus(foundPro)
+        guard generation == entitlementCheckGeneration else { return }   // a newer check owns the result
+        let resolved = Self.resolve(records)
+        isProUser = resolved.pro
+        isAsosSubscriber = resolved.asos
+        entitlementsLoaded = true
+        WidgetDataManager.saveProStatus(resolved.pro)
+    }
+
+    // MARK: - Entitlement rule (shared with the widget: ProAccess.swift)
+
+    typealias EntitlementRecord = ProEntitlement.Record
+
+    nonisolated static func resolve(_ records: [EntitlementRecord]) -> (pro: Bool, asos: Bool) {
+        ProEntitlement.resolve(records)
+    }
+
+    // MARK: - Waiting for entitlements (Siri, background alerts)
+
+    /// Waits up to `timeout` for the first entitlement check. Returns whether it finished.
+    func waitUntilEntitlementsLoaded(timeout: Duration = .seconds(3)) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while !entitlementsLoaded && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return entitlementsLoaded
+    }
+
+    /// Pro status for code that can run before StoreKit answers: Siri and the background alert
+    /// task launch the app cold (#24). A paying user must never be told "Pro required", so if
+    /// entitlements haven't loaded in time it uses the last status the app saved, and says Pro
+    /// when there is none.
+    func isProWhenLoaded(timeout: Duration = .seconds(3)) async -> Bool {
+        let loaded = await waitUntilEntitlementsLoaded(timeout: timeout)
+        return Self.proStatus(loaded: loaded, isPro: isProUser,
+                              savedStatus: WidgetDataManager.savedProStatus())
+    }
+
+    nonisolated static func proStatus(loaded: Bool, isPro: Bool, savedStatus: Bool?) -> Bool {
+        if loaded { return isPro }
+        return savedStatus ?? true
     }
 
     // MARK: - Transaction listener

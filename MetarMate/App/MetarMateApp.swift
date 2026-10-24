@@ -32,6 +32,9 @@ struct MetarMateApp: App {
         // exactly what RunningBoard kills with 0xdead10cc. The task builds its own short-lived
         // container only when it actually fires.
         AlertScheduler.register()
+        // Start StoreKit now (audit #24): the Transaction.updates listener and the first
+        // entitlement check run from launch, including Siri and background launches.
+        _ = StoreManager.shared
     }
 
     // Lazy, process-wide singleton: a `static let` is built on first access, not during
@@ -46,19 +49,25 @@ struct MetarMateApp: App {
         WindowGroup {
             SplashScreenView()
                 .task {
-                    // Log the App Store receipt filename at launch so the Test Harness gate's real
-                    // runtime value is observable in any build (incl. a Release-config run). This is
-                    // the honest production-unreachability evidence: the gate is DENIED unless this
-                    // reads "sandboxReceipt" (Debug/TestFlight); an App Store install reads "receipt".
+                    #if DEBUG || TESTFLIGHT
+                    // Log the receipt filename at launch so the Test Harness gate's runtime layer is
+                    // observable in Debug/TestFlight builds. The App Store build has no harness at all.
                     Log.load.info("[harness] launch receiptName=\(TestHarnessGate.receiptName ?? "nil", privacy: .public) harnessAvailable=\(TestHarnessGate.isAvailable, privacy: .public)")
+                    #endif
                     // Set the notification delegate so foreground notifications present.
                     UNUserNotificationCenter.current().delegate = NotificationManager.shared
                     // Seed the built-in minimums profiles on first launch (idempotent).
                     MinimumsProfile.seedBuiltInsIfNeeded(in: Self.sharedModelContainer.mainContext)
+                    // Starters are read-only now: move any tester edits into custom profiles.
+                    StarterProfileMigration.migrateEditedStarters(in: Self.sharedModelContainer.mainContext)
+                    // Refresh favorites' airport details from airports.json (audit #27).
+                    FavoritesReconciler.reconcile(in: Self.sharedModelContainer.mainContext)
                     // Widget verdict inputs: active profile + runways for widget/favorite airports.
                     await WidgetVerdictSync.syncAll(in: Self.sharedModelContainer.mainContext)
                     // Submit an initial background alert-check request.
                     AlertScheduler.schedule()
+                    // Once per install: NOAA elevations, in feet, for favorites not in airports.json.
+                    await FavoriteElevationRefetch.runIfNeeded(in: Self.sharedModelContainer.mainContext)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     // Re-submit when entering background (the canonical place — that's when iOS

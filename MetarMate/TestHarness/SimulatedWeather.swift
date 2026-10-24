@@ -1,5 +1,27 @@
 import SwiftUI
 
+// MARK: - Injection payload
+//
+// The already-parsed model to seed into a real WeatherViewModel. Parsing happens up front (via
+// SimulatedDecode) so a parse FAILURE is surfaced honestly in the harness list — never papered over
+// with a fallback model. `metars` is newest-first; `metars.first` becomes the current observation.
+//
+// Compiled into EVERY build: WeatherDetailView / WeatherViewModel take an optional injection, and
+// keeping this plain data type avoids #if in those files. Nothing outside the harness (below,
+// Debug/TestFlight only) can create one, so an App Store build always passes nil.
+struct SimulatedInjection: Equatable {
+    var metars: [Metar]
+    var taf: Taf?
+
+    static func == (lhs: SimulatedInjection, rhs: SimulatedInjection) -> Bool {
+        lhs.metars.map(\.id) == rhs.metars.map(\.id) && lhs.taf?.id == rhs.taf?.id
+    }
+}
+
+// Everything below is compiled only into Debug and TestFlight builds; the App Store build has none
+// of it (audit #21).
+#if DEBUG || TESTFLIGHT
+
 // MARK: - Simulated Weather infrastructure (Test Harness only)
 //
 // Everything here supports the METAR Injection harness. None of it touches the network, SwiftData,
@@ -20,20 +42,6 @@ extension EnvironmentValues {
     var isSimulatedWeather: Bool {
         get { self[IsSimulatedWeatherKey.self] }
         set { self[IsSimulatedWeatherKey.self] = newValue }
-    }
-}
-
-// MARK: - Injection payload
-//
-// The already-parsed model to seed into a real WeatherViewModel. Parsing happens up front (via
-// SimulatedDecode) so a parse FAILURE is surfaced honestly in the harness list — never papered over
-// with a fallback model. `metars` is newest-first; `metars.first` becomes the current observation.
-struct SimulatedInjection: Equatable {
-    var metars: [Metar]
-    var taf: Taf?
-
-    static func == (lhs: SimulatedInjection, rhs: SimulatedInjection) -> Bool {
-        lhs.metars.map(\.id) == rhs.metars.map(\.id) && lhs.taf?.id == rhs.taf?.id
     }
 }
 
@@ -179,3 +187,5 @@ private struct SimulatedWatermark: View {
         }
     }
 }
+
+#endif
