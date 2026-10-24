@@ -40,7 +40,8 @@ enum RowWeather {
 ///    2 s / 5 s / 15 s (only the failing rows), then `.failed(last:)`.
 /// 3. A LID gets the estimate only once NOAA confirms its K-station has no METAR — never because a
 ///    METAR request failed.
-/// Cancellation stops the load and leaves the rows as last published.
+/// Cancellation stops the load and puts rows it left loading or retrying back to what they showed
+/// before it (a newer load that replaced it publishes over them anyway).
 @MainActor
 final class RowWeatherLoader {
     private let list: String
@@ -51,6 +52,7 @@ final class RowWeatherLoader {
     private let estimates: OpenMeteoService
     private let cache: WeatherCache
     private let retry: RetryPolicy
+    private var fresh = false   // a user's pull: NOAA is asked for every row, no service-side cache
 
     private init(list: String, airports: [Airport], weather: WeatherService, estimates: OpenMeteoService,
                  cache: WeatherCache, retry: RetryPolicy, publish: @escaping ([String: RowWeather]) -> Void) {
@@ -76,6 +78,7 @@ final class RowWeatherLoader {
     }
 
     private func run(current: [String: RowWeather], force: Bool) async {
+        fresh = force
         var toFetch: [Airport] = []
         for a in airports {
             if !force, let m = cache.freshMetar(for: a.icao) {
@@ -103,7 +106,9 @@ final class RowWeatherLoader {
             async let advisories: Void = loadAdvisories(advisoryOnly)
             _ = try await (metars, advisories)
         } catch {
-            Log.load.info("[rows] \(self.list, privacy: .public) load cancelled — rows left as last published")
+            restoreAfterCancel(current)
+            publish(rows)
+            logRows("load cancelled — loading/retrying rows restored")
             return
         }
         logRows("DONE")
@@ -115,7 +120,7 @@ final class RowWeatherLoader {
         for a in airports { rowFor[WeatherService.noaaCandidate(for: a.icao) ?? a.icao.uppercased()] = a }
         var confirmedNoMetar: [Airport] = []   // LIDs whose K-station has no METAR: these get the estimate
         try await batchWithRetries("METAR", ids: Array(rowFor.keys), rowFor: rowFor,
-                                   fetch: { try await self.weather.metarOutcomes(for: $0) }) { airport, outcome in
+                                   fetch: { try await self.weather.metarOutcomes(for: $0, fresh: self.fresh) }) { airport, outcome in
             switch outcome {
             case .loaded(let metar):
                 self.rows[airport.icao] = .loaded(.metar(metar))
@@ -185,6 +190,29 @@ final class RowWeatherLoader {
             try await self.retry.sleep(wait)
             attempt += 1
             pending = failing
+        }
+    }
+
+    /// After a cancel, no row may stay loading or retrying with nothing running: each goes back to its
+    /// settled state from before this load. A row with none keeps "—" (nothing is known about it).
+    private func restoreAfterCancel(_ current: [String: RowWeather]) {
+        for a in airports {
+            switch rows[a.icao] {
+            case .loading?, .retrying?: break
+            default: continue
+            }
+            if let before = current[a.icao], Self.isSettled(before) {
+                rows[a.icao] = before
+            } else if case .retrying(let last)? = rows[a.icao] {
+                rows[a.icao] = .failed(last: last)   // nothing settled before, but a failure was seen
+            }
+        }
+    }
+
+    private static func isSettled(_ row: RowWeather) -> Bool {
+        switch row {
+        case .loaded, .noProduct, .failed: return true
+        case .loading, .retrying: return false
         }
     }
 

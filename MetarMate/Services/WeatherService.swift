@@ -339,14 +339,16 @@ actor WeatherService {
 
     /// One METAR request for several stations, with an outcome per station. Fresh cached METARs and
     /// remembered no-product stations are answered without asking NOAA.
-    func metarOutcomes(for icaos: [String], file: String = #fileID, function: String = #function) async throws -> [String: FetchOutcome<Metar>] {
+    /// `fresh` (a user's pull) asks NOAA for every station: no 5-min METAR cache, no no-product memory.
+    func metarOutcomes(for icaos: [String], fresh: Bool = false,
+                       file: String = #fileID, function: String = #function) async throws -> [String: FetchOutcome<Metar>] {
         var result: [String: FetchOutcome<Metar>] = [:]
         var needed: [String] = []
         let now = Date()
         for icao in icaos {
-            if let cached = cachedMetar(for: icao) {
+            if !fresh, let cached = cachedMetar(for: icao) {
                 result[icao] = .loaded(cached)
-            } else if noProductMemory.contains(icao, at: now) {
+            } else if !fresh, noProductMemory.contains(icao, at: now) {
                 result[icao] = .noProduct
             } else {
                 needed.append(icao)

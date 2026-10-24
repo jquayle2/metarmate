@@ -112,6 +112,66 @@ struct RowRetryIntegrationTests {
         #expect(StubURLProtocol.requests(toHost: Self.openMeteo).count == 1)
     }
 
+    // MARK: - Pull-to-refresh
+
+    static func session() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [StubURLProtocol.self]
+        return URLSession(configuration: config)
+    }
+
+    /// A pull (force) asks NOAA even when the service cached the METAR seconds ago; an automatic
+    /// load is answered by that cache.
+    @Test func pullBypassesTheServiceMetarCache() async {
+        StubURLProtocol.reset([Self.noaa: [.http(200, body: Self.metarJSON("KVGT")), .http(200, body: Self.metarJSON("KVGT")),
+                                           .http(200, body: Self.metarJSON("KVGT"))]])
+        let service = WeatherService(session: Self.session())
+        _ = try? await service.metarOutcomes(for: ["KVGT"])   // the service now holds KVGT for 5 min
+        for force in [false, true] {
+            await RowWeatherLoader.load(list: "test", airports: [Self.kvgt], current: [:], force: force,
+                                        weather: service, estimates: OpenMeteoService(session: Self.session()),
+                                        cache: WeatherCache(), retry: .foreground) { _ in }
+        }
+        #expect(StubURLProtocol.requests(toHost: Self.noaa).count == 2)   // the priming fetch + the pull
+    }
+
+    /// A pull also re-asks a station NOAA said had no METAR (the 10-min no-product memory is for
+    /// automatic loads only).
+    @Test func pullBypassesTheNoProductMemory() async {
+        StubURLProtocol.reset([Self.noaa: [.http(204), .http(200, body: Self.metarJSON("KVGT"))]])
+        let service = WeatherService(session: Self.session())
+        _ = try? await service.metarOutcomes(for: ["KVGT"])   // remembered as no product
+        let auto = try? await service.metarOutcomes(for: ["KVGT"])
+        let pull = try? await service.metarOutcomes(for: ["KVGT"], fresh: true)
+        #expect(auto?["KVGT"]?.isNoProduct == true)
+        #expect(pull?["KVGT"]?.value?.stationId == "KVGT")
+        #expect(StubURLProtocol.requests(toHost: Self.noaa).count == 2)
+    }
+
+    /// A load cancelled while it retries leaves no row on "Retrying…": each goes back to what it
+    /// showed before the load (a failed row stays failed with its retry button; a loaded row keeps
+    /// its reading).
+    @Test func cancelledLoadPutsRowsBackToWhatTheyShowed() async throws {
+        let shown = try MetarParser.parse(raw: JSONDecoder().decode([RawMetar].self, from: Self.metarJSON("KLAS"))[0])
+        let klas = Airport(icao: "KLAS", iata: "LAS", name: "Harry Reid", latitude: 36.08, longitude: -115.15, elevation: 2181)
+        StubURLProtocol.reset([Self.noaa: [.http(503)]])
+        let blocking = RetryPolicy(delays: [2, 5, 15], sleep: { _ in try await Task.sleep(for: .seconds(60)) })
+        var published: [[String: RowWeather]] = []
+        let load = Task {
+            await RowWeatherLoader.load(list: "test", airports: [Self.kvgt, klas],
+                                        current: ["KVGT": .failed(last: nil), "KLAS": .loaded(.metar(shown))], force: true,
+                                        weather: WeatherService(session: Self.session()), estimates: OpenMeteoService(session: Self.session()),
+                                        cache: WeatherCache(), retry: blocking) { published.append($0) }
+        }
+        for _ in 0..<500 where published.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(published.last.map { Self.name($0["KVGT"]!) } == "retrying")   // mid-retry when cancelled
+        load.cancel()
+        await load.value
+        #expect(published.last.map { Self.name($0["KVGT"]!) } == "failed")
+        #expect(published.last.map { Self.name($0["KLAS"]!) } == "loaded")
+        #expect(published.last?["KLAS"]?.reading?.metar?.stationId == "KLAS")
+    }
+
     /// A minimal Open-Meteo single-location response (current + hourly blocks).
     static let openMeteoJSON = Data(#"""
     {"latitude":34.26,"longitude":-116.85,"current":{"time":1792770600,"temperature_2m":12.0,"dewpoint_2m":2.0,"relative_humidity_2m":50,"wind_speed_10m":8.0,"wind_gusts_10m":14.0,"wind_direction_10m":240,"cloud_cover":20,"precipitation":0.0,"precipitation_probability":0,"surface_pressure":810.0,"visibility":24000},"hourly":{"time":[1792767000,1792770600],"temperature_2m":[11.0,12.0],"dewpoint_2m":[2.0,2.0],"wind_speed_10m":[7.0,8.0],"wind_gusts_10m":[12.0,14.0],"wind_direction_10m":[240,240],"cloud_cover":[20,20],"precipitation":[0.0,0.0],"visibility":[24000,24000],"surface_pressure":[810.0,810.0]}}
